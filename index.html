@@ -296,7 +296,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       <button class="topbar-settings" onclick="openSettings()">⚙</button>
     </div>
     <div class="topbar-stats">
-      <div class="ts-item"><div class="ts-val brand" id="tb-stunden">—</div><div class="ts-label">Stunden</div></div>
       <div class="ts-item"><div class="ts-val amber" id="tb-ueberstunden">—</div><div class="ts-label">Überstd.</div></div>
       <div class="ts-item"><div class="ts-val green" id="tb-auslöse">—</div><div class="ts-label">Auslöse</div></div>
     </div>
@@ -1118,7 +1117,6 @@ function selectMonth(m) { activeMonth = m; renderMonthBar(); renderTimeline(); r
 function renderTopbar() {
   const s = monthSummary(shifts, activeMonth, config.weeklyNorm);
   document.getElementById('topbar-updated').textContent = 'Letzte Aktualisierung: ' + LAST_UPDATED;
-  document.getElementById('tb-stunden').textContent = fmtH(s.totalHours);
   document.getElementById('tb-ueberstunden').textContent = s.overtimeHours > 0 ? fmtH(s.overtimeHours) : '0h';
   document.getElementById('tb-auslöse').textContent = s.auslöseTotal > 0 ? s.auslöseTotal + ' €' : '—';
 }
