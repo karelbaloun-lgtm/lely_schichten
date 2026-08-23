@@ -55,6 +55,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .topbar-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
 .topbar-title { margin: 0; font-family: var(--sans); font-size: 16.8px; font-weight: 800; color: #fff; letter-spacing: .02em; text-transform: uppercase; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-sub { margin: 4px 0 0; font-size: 11.52px; color: rgba(255,255,255,.85); font-family: 'Consolas', monospace; letter-spacing: .04em; }
+.topbar-updated { margin: 2px 0 0; font-size: 10px; color: rgba(255,255,255,.6); font-family: 'Consolas', monospace; letter-spacing: .03em; }
 .topbar-stats { display: flex; gap: 20px; align-items: flex-end; justify-content: flex-end; flex-wrap: wrap; }
 .ts-item { text-align: right; }
 .ts-val { font-family: var(--mono); font-size: 17px; font-weight: 500; color: #fff; line-height: 1; }
@@ -292,6 +293,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       <div class="topbar-left">
         <div class="topbar-title">Lely Schichten</div>
         <div class="topbar-sub" id="topbar-period">—</div>
+        <div class="topbar-updated" id="topbar-updated"></div>
       </div>
       <button class="topbar-settings" onclick="openSettings()">⚙</button>
     </div>
@@ -1034,6 +1036,7 @@ function buildWeekExportXlsx(shifts, mondayIso, person, hotelAddresses) {
 const DAYS_DE = ['So','Mo','Di','Mi','Do','Fr','Sa'];
 const MONTHS_DE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 const MONTHS_SHORT_DE = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const LAST_UPDATED = '23.08.2026';
 
 function monthKey(iso) { return iso.slice(0, 7); }
 function fmtDateDE(iso) { const d = parseISODate(iso); return `${DAYS_DE[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`; }
@@ -1118,6 +1121,7 @@ function renderTopbar() {
   const [y, mo] = activeMonth.split('-');
   const s = monthSummary(shifts, activeMonth, config.weeklyNorm);
   document.getElementById('topbar-period').textContent = MONTHS_DE[parseInt(mo) - 1] + ' ' + y;
+  document.getElementById('topbar-updated').textContent = 'Letzte Aktualisierung: ' + LAST_UPDATED;
   document.getElementById('tb-stunden').textContent = fmtH(s.totalHours);
   document.getElementById('tb-ueberstunden').textContent = s.overtimeHours > 0 ? fmtH(s.overtimeHours) : '0h';
   document.getElementById('tb-auslöse').textContent = s.auslöseTotal > 0 ? s.auslöseTotal + ' €' : '—';
