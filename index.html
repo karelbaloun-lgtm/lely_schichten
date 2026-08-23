@@ -30,8 +30,8 @@
   --dim:       #374151;
   --green:     #34d399;
   --green-dim: rgba(52,211,153,0.12);
-  --brand:     #E2001A;
-  --brand-dark:#a80014;
+  --brand:     #C8102E;
+  --brand-dark:#970C22;
   --brand-dim: rgba(226,0,26,0.1);
   --slate:     #64748b;
   --amber:     #fbbf24;
@@ -49,8 +49,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 
 .app { display: grid; grid-template-rows: auto auto 1fr auto; height: 100dvh; max-width: 900px; margin: 0 auto; }
 
-.topbar { display: flex; flex-direction: column; border-bottom: 1px solid var(--border); background: linear-gradient(135deg, var(--brand), var(--brand-dark)); padding: 10px 0; box-shadow: 0 2px 10px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 10; width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
-.topbar-row1 { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 900px; margin: 0 auto; padding: 0 20px; }
+.topbar { display: flex; flex-direction: column; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); box-shadow: 0 2px 10px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 10; width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
+.topbar-row1 { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 900px; margin: 0 auto; padding: 10px 20px 12px; box-sizing: border-box; }
 .lely-badge { flex: 0 0 auto; }
 .topbar-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
 .topbar-title { margin: 0; font-family: var(--sans); font-size: 16.8px; font-weight: 800; color: #fff; letter-spacing: .02em; text-transform: uppercase; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
