@@ -453,6 +453,17 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
 </div>
 
+<div class="confirm-overlay" id="confirm-holiday-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Achtung: Feiertag!</div>
+    <div class="confirm-text" id="confirm-holiday-text"></div>
+    <div class="confirm-actions">
+      <button class="btn-main secondary" onclick="cancelHolidaySave()">ABBRECHEN</button>
+      <button class="btn-main primary" onclick="confirmHolidaySave()">TROTZDEM SPEICHERN</button>
+    </div>
+  </div>
+</div>
+
 <div class="confirm-overlay" id="confirm-buro-overlay">
   <div class="confirm-box">
     <div class="confirm-title">Büro schon diese Woche?</div>
@@ -1585,6 +1596,30 @@ function saveShift() {
   if (candidate.type === 'work') {
     const gross = grossShiftHours(candidate);
     if (gross === 0) { toast('⚠ Mindestens einen Zeitabschnitt eintragen'); return; }
+    if (isWorkdayHoliday(candidate.date)) {
+      pendingHolidayShift = candidate;
+      document.getElementById('confirm-holiday-text').textContent =
+        `${fmtDateDE(candidate.date)} ist ein Feiertag (${holidayName(candidate.date)}). Trotzdem als Arbeitstag speichern?`;
+      document.getElementById('confirm-holiday-overlay').classList.add('open');
+      return;
+    }
+  }
+  continueSaveAfterHolidayCheck(candidate);
+}
+let pendingHolidayShift = null;
+function cancelHolidaySave() {
+  document.getElementById('confirm-holiday-overlay').classList.remove('open');
+  pendingHolidayShift = null;
+}
+function confirmHolidaySave() {
+  document.getElementById('confirm-holiday-overlay').classList.remove('open');
+  const candidate = pendingHolidayShift;
+  pendingHolidayShift = null;
+  if (candidate) continueSaveAfterHolidayCheck(candidate);
+}
+function continueSaveAfterHolidayCheck(candidate) {
+  if (candidate.type === 'work') {
+    const gross = grossShiftHours(candidate);
     const check = breakCheck(candidate);
     if (!check.ok) {
       pendingShift = candidate;
