@@ -1994,7 +1994,31 @@ function renderSettings() {
     <div style="margin-top:10px;">
       <button class="btn-main secondary" style="width:100%;" onclick="openSheet('sheet-help')">📱 Zum Startbildschirm hinzufügen</button>
     </div>
+    <div style="margin-top:10px;">
+      <button class="btn-main secondary" style="width:100%;" onclick="diagnoseShare()">🔍 Teilen-Diagnose (temporär)</button>
+    </div>
     <div style="margin-top:24px;text-align:center;font-size:11px;color:var(--muted);">© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Alle Rechte vorbehalten</div>`;
+}
+function diagnoseShare() {
+  const lines = [];
+  lines.push('navigator.share: ' + (typeof navigator.share === 'function' ? 'vorhanden' : 'FEHLT'));
+  lines.push('navigator.canShare: ' + (typeof navigator.canShare === 'function' ? 'vorhanden' : 'FEHLT'));
+  if (typeof navigator.canShare === 'function') {
+    try {
+      const testFile = new File([new Blob(['test'])], 'test.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      lines.push('canShare(xlsx-Datei): ' + (navigator.canShare({ files: [testFile] }) ? 'JA' : 'NEIN'));
+    } catch (e) {
+      lines.push('canShare-Fehler: ' + e.message);
+    }
+    try {
+      const textOnly = new File([new Blob(['test'])], 'test.txt', { type: 'text/plain' });
+      lines.push('canShare(txt-Datei): ' + (navigator.canShare({ files: [textOnly] }) ? 'JA' : 'NEIN'));
+    } catch (e) {
+      lines.push('canShare(txt)-Fehler: ' + e.message);
+    }
+  }
+  lines.push('Protokoll: ' + location.protocol);
+  alert(lines.join('\n'));
 }
 function updateConfigField(key, value) { config[key] = value; saveConfig(); renderAll(); }
 function importFromJson(input) {
