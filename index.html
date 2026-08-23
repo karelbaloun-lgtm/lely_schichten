@@ -302,6 +302,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
         <div class="fab-item" onclick="fabAction('sick')"><span class="fi-icon">🤒</span> Krank</div>
         <div class="fab-item" onclick="fabAction('vacation')"><span class="fi-icon">🌴</span> Urlaub</div>
         <div class="fab-item" onclick="fabAction('work')"><span class="fi-icon">🔨</span> Schicht</div>
+        <div class="fab-item" onclick="fabAction('buro')"><span class="fi-icon">🗂</span> Büro (1h)</div>
       </div>
     </div>
     <button class="nav-btn" id="nav-summary" onclick="openSummary()"><span class="icon">📊</span>Übersicht</button>
@@ -452,6 +453,17 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
 </div>
 
+<div class="confirm-overlay" id="confirm-buro-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Büro schon diese Woche?</div>
+    <div class="confirm-text">Für diese Woche ist bereits ein Büro-Eintrag vorhanden. Trotzdem einen weiteren hinzufügen?</div>
+    <div class="confirm-actions">
+      <button class="btn-main secondary" onclick="closeBuroConfirm()">ÜBERSPRINGEN</button>
+      <button class="btn-main primary" onclick="confirmAddBuroAnyway()">TROTZDEM HINZUFÜGEN</button>
+    </div>
+  </div>
+</div>
+
 <datalist id="customer-history"></datalist>
 
 <div class="toast" id="toast"></div>
@@ -484,6 +496,15 @@ function timeToMinutes(hhmm) { if (!hhmm) return null; const p = hhmm.split(':')
 function segmentHours(start, end) { if (!start || !end) return 0; let mins = timeToMinutes(end)-timeToMinutes(start); if (mins<0) mins+=24*60; return mins/60; }
 function mondayOf(iso) { const d = parseISODate(iso); const dow = (d.getDay()+6)%7; d.setDate(d.getDate()-dow); return d.toISOString().slice(0,10); }
 function weekDates(mondayIso) { const dates=[]; const d=parseISODate(mondayIso); for (let i=0;i<7;i++){ dates.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); } return dates; }
+// ─── Letztes Datum (für "Kopieren" -> automatisch nächster Werktag) ────────
+function getLastDate() { return localStorage.getItem('monteur_last_date') || new Date().toISOString().slice(0, 10); }
+function saveLastDate(d) { localStorage.setItem('monteur_last_date', d); }
+function getSuggestedDate(lastIso) {
+  const d = parseISODate(lastIso);
+  d.setDate(d.getDate() + 1);
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
 function daysInMonth(monthKey) { const p = monthKey.split('-').map(Number); return new Date(p[0], p[1], 0).getDate(); }
 function legGrossHours(leg) { return segmentHours(leg.arrivalStart, leg.arrivalEnd) + segmentHours(leg.installStart, leg.installEnd); }
 function legPaidHours(leg) { const arrival=segmentHours(leg.arrivalStart, leg.arrivalEnd); const install=segmentHours(leg.installStart, leg.installEnd); const pauseHours=(leg.pause||0)/60; return arrival + Math.max(0, install-pauseHours); }
@@ -1242,7 +1263,10 @@ function copyDetailShift() {
   document.getElementById('f-departure-end').value = s.departureEnd || '';
   document.getElementById('f-departure-end').dataset.depEndAuto = '0';
   document.getElementById('f-note').value = s.note || '';
-  toast('Kopiert — Datum anpassen und speichern');
+  const suggestedDate = getSuggestedDate(getLastDate());
+  document.getElementById('f-date').value = suggestedDate;
+  document.getElementById('date-tile-val').textContent = fmtDateDE(suggestedDate);
+  toast('Kopiert — Datum bei Bedarf anpassen und speichern');
 }
 
 function deleteDetailShift() {
@@ -1266,8 +1290,51 @@ function openSettings() { renderSettings(); openSheet('sheet-settings'); }
 let fabOpen = false;
 function toggleFab() { fabOpen = !fabOpen; document.getElementById('fab-menu').classList.toggle('open', fabOpen); document.getElementById('fab-btn').textContent = fabOpen ? '✕' : '＋'; }
 function closeFab() { fabOpen = false; document.getElementById('fab-menu').classList.remove('open'); document.getElementById('fab-btn').textContent = '＋'; }
-function fabAction(type) { closeFab(); openEdit(null, type); }
+function fabAction(type) {
+  closeFab();
+  if (type === 'buro') { addBuro(); return; }
+  openEdit(null, type);
+}
 document.addEventListener('click', e => { if (fabOpen && !e.target.closest('.fab')) closeFab(); });
+
+// ─── Büro (1-Klick-Kurzeintrag, max. 1× pro Woche ohne Nachfrage) ──────────
+function addBuro() {
+  const today = new Date().toISOString().slice(0, 10);
+  const monday = mondayOf(today);
+  const weekDays = weekDates(monday);
+  const hasBuroThisWeek = shifts.some(function (s) {
+    return weekDays.includes(s.date) && (s.legs || []).some(function (leg) { return leg.note === 'Büro'; });
+  });
+  if (hasBuroThisWeek) {
+    document.getElementById('confirm-buro-overlay').classList.add('open');
+    return;
+  }
+  createBuroEntry(today);
+}
+function closeBuroConfirm() { document.getElementById('confirm-buro-overlay').classList.remove('open'); }
+function confirmAddBuroAnyway() {
+  document.getElementById('confirm-buro-overlay').classList.remove('open');
+  createBuroEntry(new Date().toISOString().slice(0, 10));
+}
+function createBuroEntry(dateIso) {
+  const buroLeg = { arrivalStart: '', arrivalEnd: '', installStart: '07:00', installEnd: '08:00', pause: 0, note: 'Büro', pauseAuto: false };
+  const existingIdx = shifts.findIndex(function (s) { return s.date === dateIso; });
+  if (existingIdx >= 0 && shifts[existingIdx].type === 'work') {
+    shifts[existingIdx].legs = (shifts[existingIdx].legs || []).concat([buroLeg]);
+  } else if (existingIdx >= 0) {
+    toast('⚠ Für heute existiert bereits ein Krank/Urlaub-Eintrag');
+    return;
+  } else {
+    shifts.push({
+      id: Date.now().toString(), type: 'work', date: dateIso, stay: 'home', note: '',
+      departureStart: '', departureEnd: '', legs: [buroLeg]
+    });
+  }
+  saveLastDate(dateIso);
+  saveData();
+  renderAll();
+  toast('✓ Büro hinzugefügt · ' + fmtDateDE(dateIso));
+}
 
 // Komfort: Ende der Anfahrt füllt automatisch den Start der Installation
 // derselben Kunden-Karte vor (nur bei manueller Eingabe, nicht beim Öffnen
@@ -1553,6 +1620,7 @@ function finishSaveShift(candidate) {
 
   const i = shifts.findIndex(s => s.id === candidate.id);
   if (i >= 0) shifts[i] = candidate; else shifts.push(candidate);
+  saveLastDate(candidate.date);
   saveData();
   renderAll();
   closeSheet('sheet-edit');
