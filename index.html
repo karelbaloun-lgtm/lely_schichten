@@ -48,17 +48,18 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 
 .app { display: grid; grid-template-rows: auto auto 1fr auto; height: 100dvh; max-width: 900px; margin: 0 auto; }
 
-.topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 1px solid var(--border); background: var(--bg); position: relative; z-index: 10; }
+.topbar { display: flex; flex-direction: column; gap: 10px; padding: 16px 20px 12px; border-bottom: 1px solid var(--border); background: var(--bg); position: relative; z-index: 10; }
+.topbar-row1 { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .topbar-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .topbar-title { font-family: var(--sans); font-size: 18px; font-weight: 800; color: var(--brand); letter-spacing: -0.01em; text-transform: uppercase; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-sub { font-size: 11px; color: var(--muted); font-family: var(--mono); letter-spacing: 0.05em; }
-.topbar-stats { display: flex; gap: 20px; align-items: flex-end; }
+.topbar-stats { display: flex; gap: 20px; align-items: flex-end; justify-content: flex-end; flex-wrap: wrap; }
 .ts-item { text-align: right; }
 .ts-val { font-family: var(--mono); font-size: 17px; font-weight: 500; color: var(--brand); line-height: 1; }
 .ts-val.amber { color: var(--amber); }
 .ts-val.green { color: var(--green); }
 .ts-label { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.08em; }
-.topbar-settings { width: 38px; height: 38px; border-radius: 10px; background: var(--s2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; margin-left: 16px; transition: background 0.15s; touch-action: manipulation; }
+.topbar-settings { flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; background: var(--s2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: background 0.15s; touch-action: manipulation; }
 .topbar-settings:active { background: var(--s3); }
 
 .month-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg); overflow-x: auto; scrollbar-width: none; }
@@ -275,17 +276,17 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 
 <div class="app">
   <header class="topbar">
-    <div class="topbar-left">
-      <div class="topbar-title">Lely Schichten</div>
-      <div class="topbar-sub" id="topbar-period">—</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:4px;">
-      <div class="topbar-stats">
-        <div class="ts-item"><div class="ts-val brand" id="tb-stunden">—</div><div class="ts-label">Stunden</div></div>
-        <div class="ts-item"><div class="ts-val amber" id="tb-ueberstunden">—</div><div class="ts-label">Überstd.</div></div>
-        <div class="ts-item"><div class="ts-val green" id="tb-auslöse">—</div><div class="ts-label">Auslöse</div></div>
+    <div class="topbar-row1">
+      <div class="topbar-left">
+        <div class="topbar-title">Lely Schichten</div>
+        <div class="topbar-sub" id="topbar-period">—</div>
       </div>
       <button class="topbar-settings" onclick="openSettings()">⚙</button>
+    </div>
+    <div class="topbar-stats">
+      <div class="ts-item"><div class="ts-val brand" id="tb-stunden">—</div><div class="ts-label">Stunden</div></div>
+      <div class="ts-item"><div class="ts-val amber" id="tb-ueberstunden">—</div><div class="ts-label">Überstd.</div></div>
+      <div class="ts-item"><div class="ts-val green" id="tb-auslöse">—</div><div class="ts-label">Auslöse</div></div>
     </div>
   </header>
 
