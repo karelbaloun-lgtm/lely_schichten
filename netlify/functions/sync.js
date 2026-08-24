@@ -9,6 +9,11 @@
 // diese Function-Laufzeit gekoppelt — im klassischen CommonJS-Handler-Format
 // (exports.handler) schlug getStore() mit "environment has not been
 // configured to use Netlify Blobs" fehl, obwohl die Function selbst lief.
+//
+// consistency:'strong' ist nötig: der Standardmodus (eventual) lieferte in
+// Tests direkt nach einem Schreibvorgang noch mehrere Sekunden lang "not
+// found" zurück — für den Pairing-Ablauf (Gerät A schreibt, Gerät B liest
+// kurz danach denselben Code) inakzeptabel.
 import { getStore } from '@netlify/blobs';
 
 // Reine Funktion (kein I/O) -> separat testbar, siehe tests/sync.test.mjs.
@@ -39,7 +44,7 @@ export default async (req) => {
   if (!/^\d{6}$/.test(code)) {
     return jsonResponse({ error: 'invalid code' }, 400);
   }
-  const store = getStore('syncs');
+  const store = getStore('syncs', { consistency: 'strong' });
 
   if (req.method === 'GET') {
     const existing = await store.get(code, { type: 'json' });
