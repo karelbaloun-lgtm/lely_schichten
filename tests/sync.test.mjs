@@ -1,9 +1,15 @@
-// netlify/functions/sync.test.mjs
+// tests/sync.test.mjs
 // Reiner Logik-Test für resolveSyncWrite — läuft ohne Netlify, ohne Netzwerk,
 // mit einfachem node:assert (kein Test-Framework nötig für eine einzelne
-// Funktion). Aufruf: node netlify/functions/sync.test.mjs
+// Funktion). Aufruf: node tests/sync.test.mjs
+//
+// WICHTIG: liegt bewusst außerhalb von netlify/functions/ — Netlify
+// behandelt JEDE Datei in diesem Ordner als Kandidat für eine eigene
+// serverlose Function. Ein Punkt im Dateinamen (sync.test.mjs -> Function-
+// Name "sync.test") ist dort ungültig und lässt den GESAMTEN Build
+// fehlschlagen, nicht nur diese eine Datei.
 import assert from 'node:assert/strict';
-import { resolveSyncWrite } from './sync.js';
+import { resolveSyncWrite } from '../netlify/functions/sync.js';
 
 // 1) Erster Push zu einem neuen Code: kein bestehender Eintrag -> kein Konflikt.
 {
