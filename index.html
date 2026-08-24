@@ -486,6 +486,17 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
 </div>
 
+<div class="confirm-overlay" id="confirm-sync-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Daten unterscheiden sich</div>
+    <div class="confirm-text">Die Daten auf diesem Telefon unterscheiden sich von denen auf dem anderen Telefon. Welche Version soll gelten?</div>
+    <div class="confirm-actions">
+      <button class="btn-main secondary" onclick="resolveSyncConflict('remote')">ANDERES TELEFON</button>
+      <button class="btn-main primary" onclick="resolveSyncConflict('local')">DIESES TELEFON</button>
+    </div>
+  </div>
+</div>
+
 <datalist id="customer-history"></datalist>
 
 <div class="toast" id="toast"></div>
@@ -1081,8 +1092,10 @@ function loadData() {
     saveConfig();
   }
 }
-function saveData() { localStorage.setItem('monteur_shifts', JSON.stringify(shifts)); }
-function saveConfig() { localStorage.setItem('monteur_config', JSON.stringify(config)); }
+function saveDataLocalOnly() { localStorage.setItem('monteur_shifts', JSON.stringify(shifts)); }
+function saveConfigLocalOnly() { localStorage.setItem('monteur_config', JSON.stringify(config)); }
+function saveData() { saveDataLocalOnly(); scheduleSyncPush(); }
+function saveConfig() { saveConfigLocalOnly(); scheduleSyncPush(); }
 
 // ─── Theme ──────────────────────────────────────────────────────────────
 function applyTheme(mode) {
@@ -2019,6 +2032,7 @@ applyTheme(localStorage.getItem('monteur_theme') || 'auto');
 loadData();
 if (!activeMonth) activeMonth = getMonths()[getMonths().length - 1];
 renderAll();
+initSync();
 
 // Service Worker nur registrieren, wenn unterstützt und nicht bei file://
 // (dort schlägt die Registrierung ohnehin fehl — kein Fehler, einfach übersprungen).
@@ -2108,6 +2122,7 @@ function renderSettings() {
         <button class="theme-btn${theme==='auto'?' active':''}" data-theme="auto" onclick="setTheme('auto')">🌗</button>
       </div>
     </div>
+    ${renderSyncSection()}
     <div style="margin-top:20px;">
       <button class="btn-main secondary" style="width:100%;" onclick="openExport('download')">📤 Exportieren (Excel)</button>
     </div>
@@ -2119,6 +2134,35 @@ function renderSettings() {
       <button class="btn-main secondary" style="width:100%;" onclick="openSheet('sheet-help')">📱 Zum Startbildschirm hinzufügen</button>
     </div>
     <div style="margin-top:24px;text-align:center;font-size:11px;color:var(--muted);">© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Alle Rechte vorbehalten</div>`;
+}
+function renderSyncSection() {
+  if (syncEnabled()) {
+    return `
+    <div class="setting-row" style="margin-top:20px;">
+      <div><div class="setting-label">Synchronisierung</div><div class="setting-sub" id="sync-status">Aktiv — Code: ${syncCode()}</div></div>
+    </div>
+    <div style="margin-top:10px;">
+      <button class="btn-main secondary" style="width:100%;" onclick="stopSync()">Synchronisierung beenden</button>
+    </div>`;
+  }
+  return `
+    <div class="setting-row" style="margin-top:20px;">
+      <div><div class="setting-label">Synchronisierung</div><div class="setting-sub" id="sync-status">Nicht aktiv</div></div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button class="btn-main secondary" style="flex:1;" onclick="startSync()">Sync starten</button>
+      <button class="btn-main secondary" style="flex:1;" onclick="toggleSyncCodeInput()">Code eingeben</button>
+    </div>
+    <div id="sync-code-input-row" style="display:none;margin-top:10px;">
+      <div class="field">
+        <input class="note-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="sync-code-field" placeholder="6-stelliger Code">
+      </div>
+      <button class="btn-main primary" style="width:100%;margin-top:8px;" onclick="pairSync(document.getElementById('sync-code-field').value.trim())">Verbinden</button>
+    </div>`;
+}
+function toggleSyncCodeInput() {
+  const row = document.getElementById('sync-code-input-row');
+  row.style.display = row.style.display === 'none' ? 'block' : 'none';
 }
 function updateConfigField(key, value) { config[key] = value; saveConfig(); renderAll(); }
 function importFromJson(input) {
@@ -2247,6 +2291,167 @@ function downloadBlob(blob, filename, toastPrefix) {
   URL.revokeObjectURL(url);
   closeSheet('sheet-export');
   toast((toastPrefix || '✓ Heruntergeladen: ') + filename);
+}
+
+// ─── Cloud-Synchronisierung ────────────────────────────────────────────
+// Zwei-Geräte-Sync über einen 6-stelligen Code. Kein Login, keine externe
+// Bibliothek im Frontend — nur fetch() gegen die eigene Netlify Function
+// (netlify/functions/sync.js). Push ist debounced (3s), Pull läuft beim
+// Öffnen/Fortsetzen der App. Bei einem echten Konflikt (beide Geräte haben
+// unabhängig voneinander geändert) entscheidet der Nutzer per Dialog.
+const SYNC_ENDPOINT = '/.netlify/functions/sync';
+let syncPushTimer = null;
+let syncInFlight = false;
+let syncConflictData = null;
+
+function syncEnabled() { return !!localStorage.getItem('monteur_sync_code'); }
+function syncCode() { return localStorage.getItem('monteur_sync_code') || ''; }
+function syncLastModified() {
+  const v = localStorage.getItem('monteur_sync_last_modified');
+  return v ? parseInt(v, 10) : null;
+}
+function setSyncState(code, lastModified) {
+  localStorage.setItem('monteur_sync_code', code);
+  localStorage.setItem('monteur_sync_last_modified', String(lastModified));
+}
+function clearSyncState() {
+  localStorage.removeItem('monteur_sync_code');
+  localStorage.removeItem('monteur_sync_last_modified');
+}
+function randomSyncCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+function setSyncStatus(text) {
+  const el = document.getElementById('sync-status');
+  if (el) el.textContent = text;
+}
+async function syncFetch(method, code, body) {
+  const url = SYNC_ENDPOINT + '?code=' + encodeURIComponent(code);
+  const res = await fetch(url, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined
+  });
+  let parsed = null;
+  try { parsed = await res.json(); } catch (e) {}
+  return { ok: res.ok, status: res.status, body: parsed };
+}
+
+async function startSync() {
+  setSyncStatus('Code wird erzeugt …');
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = randomSyncCode();
+    const check = await syncFetch('GET', code).catch(() => null);
+    if (!check) { setSyncStatus('⚠ Keine Verbindung — später erneut versuchen'); return; }
+    if (check.status === 404) {
+      const created = await syncFetch('POST', code, { shifts, config, baseLastModified: null }).catch(() => null);
+      if (created && created.ok) {
+        setSyncState(code, created.body.lastModified);
+        renderSettings();
+        toast('✓ Synchronisierung gestartet');
+        return;
+      }
+      setSyncStatus('⚠ Fehler beim Starten — bitte erneut versuchen');
+      return;
+    }
+  }
+  setSyncStatus('⚠ Konnte keinen freien Code finden — bitte erneut versuchen');
+}
+
+async function pairSync(code) {
+  if (!/^\d{6}$/.test(code)) { toast('⚠ Der Code hat 6 Ziffern'); return; }
+  setSyncStatus('Verbinde …');
+  const res = await syncFetch('GET', code).catch(() => null);
+  if (!res) { setSyncStatus('⚠ Keine Verbindung — später erneut versuchen'); return; }
+  if (res.status === 404) { toast('⚠ Code nicht gefunden'); return; }
+  if (!res.ok) { setSyncStatus('⚠ Fehler beim Verbinden'); return; }
+  shifts = res.body.shifts || [];
+  shifts.forEach(migrateShiftLegs);
+  config = Object.assign(config, res.body.config || {});
+  saveDataLocalOnly();
+  saveConfigLocalOnly();
+  setSyncState(code, res.body.lastModified);
+  renderAll();
+  renderSettings();
+  toast('✓ Daten übernommen');
+}
+
+function stopSync() {
+  clearSyncState();
+  renderSettings();
+  toast('Synchronisierung beendet');
+}
+
+function scheduleSyncPush() {
+  if (!syncEnabled()) return;
+  clearTimeout(syncPushTimer);
+  syncPushTimer = setTimeout(pushSync, 3000);
+}
+
+async function pushSync() {
+  if (!syncEnabled() || syncInFlight) return;
+  syncInFlight = true;
+  setSyncStatus('Synchronisiere …');
+  const res = await syncFetch('POST', syncCode(), { shifts, config, baseLastModified: syncLastModified() }).catch(() => null);
+  syncInFlight = false;
+  if (!res) { setSyncStatus('⚠ Nicht synchronisiert (keine Verbindung)'); return; }
+  if (res.status === 409) {
+    syncConflictData = { remote: res.body };
+    openSyncConflict();
+    return;
+  }
+  if (!res.ok) { setSyncStatus('⚠ Synchronisierung fehlgeschlagen'); return; }
+  setSyncState(syncCode(), res.body.lastModified);
+  setSyncStatus('✓ Synchronisiert');
+}
+
+async function pullSync() {
+  if (!syncEnabled() || syncInFlight) return;
+  syncInFlight = true;
+  const res = await syncFetch('GET', syncCode()).catch(() => null);
+  syncInFlight = false;
+  if (!res || !res.ok) { setSyncStatus('⚠ Nicht synchronisiert (keine Verbindung)'); return; }
+  if (res.body.lastModified === syncLastModified()) { setSyncStatus('✓ Synchronisiert'); return; }
+  shifts = res.body.shifts || [];
+  shifts.forEach(migrateShiftLegs);
+  config = Object.assign(config, res.body.config || {});
+  saveDataLocalOnly();
+  saveConfigLocalOnly();
+  setSyncState(syncCode(), res.body.lastModified);
+  renderAll();
+  setSyncStatus('✓ Synchronisiert');
+}
+
+function openSyncConflict() {
+  document.getElementById('confirm-sync-overlay').classList.add('open');
+}
+function resolveSyncConflict(choice) {
+  document.getElementById('confirm-sync-overlay').classList.remove('open');
+  if (!syncConflictData) return;
+  if (choice === 'remote') {
+    shifts = syncConflictData.remote.shifts || [];
+    shifts.forEach(migrateShiftLegs);
+    config = Object.assign(config, syncConflictData.remote.config || {});
+    saveDataLocalOnly();
+    saveConfigLocalOnly();
+    setSyncState(syncCode(), syncConflictData.remote.lastModified);
+    renderAll();
+    setSyncStatus('✓ Synchronisiert');
+    syncConflictData = null;
+  } else {
+    const remoteLastModified = syncConflictData.remote.lastModified;
+    syncConflictData = null;
+    setSyncState(syncCode(), remoteLastModified);
+    pushSync();
+  }
+}
+
+function initSync() {
+  if (!syncEnabled()) return;
+  pullSync();
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') pullSync();
+  });
 }
 
 </script>
