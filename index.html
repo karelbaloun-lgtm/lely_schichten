@@ -2329,6 +2329,7 @@ async function syncFetch(method, code, body) {
   const url = SYNC_ENDPOINT + '?code=' + encodeURIComponent(code);
   const res = await fetch(url, {
     method,
+    cache: 'no-store',
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined
   });

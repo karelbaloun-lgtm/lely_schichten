@@ -34,7 +34,7 @@ export function resolveSyncWrite(existing, incoming) {
 function jsonResponse(body, status) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
   });
 }
 
