@@ -2225,29 +2225,13 @@ function finalizeWeekExport(mondayIso, hotelAddresses) {
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const filename = weekFilename(config.lastName, mondayIso);
   if (exportMode === 'share') {
-    // Web-Share mit Dateianhang funktioniert bei file:// grundsätzlich nicht
-    // (Chrome verweigert das dort mit "permission denied" — Browser-Sicherheits-
-    // grenze, kein Bug). In dem Fall Datei herunterladen UND E-Mail mit
-    // Empfänger/Betreff vorausfüllen (Anhang muss der Monteur selbst wählen).
-    if (location.protocol === 'file:' || typeof navigator.share !== 'function') {
-      downloadAndPrefillEmail(blob, filename, mondayIso);
-      return;
-    }
-    const file = new File([blob], filename, { type: blob.type });
-    const subject = emailSubjectForWeek(mondayIso);
-    if (!navigator.canShare || !navigator.canShare({ files: [file] })) {
-      downloadAndPrefillEmail(blob, filename, mondayIso, '⚠ Teilen mit dieser Datei nicht möglich — heruntergeladen: ');
-      return;
-    }
-    navigator.share({ files: [file], title: subject }).then(function () {
-      closeSheet('sheet-export');
-      toast('✓ Geteilt: ' + filename);
-    }).catch(function (err) {
-      // Nutzer hat den Teilen-Dialog abgebrochen -> nichts weiter tun.
-      // Bei jedem anderen Fehler auf Download+E-Mail-Vorausfüllung zurückfallen.
-      if (err && err.name === 'AbortError') { closeSheet('sheet-export'); return; }
-      downloadAndPrefillEmail(blob, filename, mondayIso, '⚠ Teilen fehlgeschlagen (' + (err && err.message ? err.message : 'Fehler') + ') — heruntergeladen: ');
-    });
+    // Web-Share (navigator.share) kann per Spezifikation NIE einen E-Mail-
+    // Empfänger setzen (nur title/text/url/files) — das ist auf jedem Gerät
+    // und Browser so, kein Bug und kein Berechtigungsproblem. Deshalb hier
+    // direkt die zuverlässige Variante: Datei herunterladen UND E-Mail mit
+    // Empfänger/CC/Betreff vorausfüllen (Anhang muss der Monteur selbst
+    // aus den Downloads auswählen).
+    downloadAndPrefillEmail(blob, filename, mondayIso);
     return;
   }
   downloadBlob(blob, filename);
