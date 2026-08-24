@@ -4,13 +4,15 @@
 // die Function immer same-origin aufruft (sie läuft auf derselben
 // Netlify-Domain wie index.html).
 //
-// Klassisches CommonJS-Handler-Format (statt der neueren ESM
-// "export default"-Variante) — maximal kompatibel, unabhängig davon, welche
-// Functions-Laufzeitversion dieser Netlify-Account standardmäßig verwendet.
-const { getStore } = require('@netlify/blobs');
+// Modernes ESM-"export default"-Format: Netlify Blobs' automatische
+// Zero-Config-Anbindung (getStore(name) ohne manuelle siteID/token) ist an
+// diese Function-Laufzeit gekoppelt — im klassischen CommonJS-Handler-Format
+// (exports.handler) schlug getStore() mit "environment has not been
+// configured to use Netlify Blobs" fehl, obwohl die Function selbst lief.
+import { getStore } from '@netlify/blobs';
 
-// Reine Funktion (kein I/O) -> separat testbar, siehe sync.test.mjs.
-function resolveSyncWrite(existing, incoming) {
+// Reine Funktion (kein I/O) -> separat testbar, siehe tests/sync.test.mjs.
+export function resolveSyncWrite(existing, incoming) {
   if (existing && existing.lastModified !== incoming.baseLastModified) {
     return { conflict: true, existing };
   }
@@ -24,38 +26,40 @@ function resolveSyncWrite(existing, incoming) {
   };
 }
 
-function jsonResult(body, statusCode) {
-  return { statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+function jsonResponse(body, status) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
 
-exports.resolveSyncWrite = resolveSyncWrite;
-
-exports.handler = async function (event) {
-  const code = (event.queryStringParameters && event.queryStringParameters.code) || '';
+export default async (req) => {
+  const url = new URL(req.url);
+  const code = url.searchParams.get('code') || '';
   if (!/^\d{6}$/.test(code)) {
-    return jsonResult({ error: 'invalid code' }, 400);
+    return jsonResponse({ error: 'invalid code' }, 400);
   }
   const store = getStore('syncs');
 
-  if (event.httpMethod === 'GET') {
+  if (req.method === 'GET') {
     const existing = await store.get(code, { type: 'json' });
-    if (!existing) return jsonResult({ error: 'not found' }, 404);
-    return jsonResult(existing, 200);
+    if (!existing) return jsonResponse({ error: 'not found' }, 404);
+    return jsonResponse(existing, 200);
   }
 
-  if (event.httpMethod === 'POST') {
+  if (req.method === 'POST') {
     let incoming;
     try {
-      incoming = JSON.parse(event.body || '{}');
+      incoming = await req.json();
     } catch (e) {
-      return jsonResult({ error: 'invalid body' }, 400);
+      return jsonResponse({ error: 'invalid body' }, 400);
     }
     const existing = await store.get(code, { type: 'json' });
     const result = resolveSyncWrite(existing, incoming);
-    if (result.conflict) return jsonResult(result.existing, 409);
+    if (result.conflict) return jsonResponse(result.existing, 409);
     await store.setJSON(code, result.record);
-    return jsonResult({ lastModified: result.record.lastModified }, 200);
+    return jsonResponse({ lastModified: result.record.lastModified }, 200);
   }
 
-  return jsonResult({ error: 'method not allowed' }, 405);
+  return jsonResponse({ error: 'method not allowed' }, 405);
 };
