@@ -2303,6 +2303,13 @@ const SYNC_ENDPOINT = '/.netlify/functions/sync';
 let syncPushTimer = null;
 let syncInFlight = false;
 let syncConflictData = null;
+// true = lokale Änderung wurde noch nicht erfolgreich hochgeladen (offen seit
+// dem letzten scheduleSyncPush, oder ein Push ist fehlgeschlagen/im Konflikt).
+// Beim Fortsetzen der App wird bei syncDirty=true gepusht statt gepullt, damit
+// ein echter Konflikt (anderes Gerät hat währenddessen auch gespeichert) über
+// den normalen 409-Weg erkannt wird, statt die ungesicherte Änderung durch
+// einen blinden Pull stillschweigend zu verwerfen.
+let syncDirty = false;
 
 function syncEnabled() { return !!localStorage.getItem('monteur_sync_code'); }
 function syncCode() { return localStorage.getItem('monteur_sync_code') || ''; }
@@ -2361,6 +2368,9 @@ async function startSync() {
 
 async function pairSync(code) {
   if (!/^\d{6}$/.test(code)) { toast('⚠ Der Code hat 6 Ziffern'); return; }
+  if (shifts.length > 0 && !confirm('Auf diesem Telefon sind bereits ' + shifts.length + ' Einträge gespeichert. Mit dem Code verbinden ersetzt sie durch die Daten vom anderen Telefon — fortfahren?')) {
+    return;
+  }
   setSyncStatus('Verbinde …');
   const res = await syncFetch('GET', code).catch(() => null);
   if (!res) { setSyncStatus('⚠ Keine Verbindung — später erneut versuchen'); return; }
@@ -2372,6 +2382,7 @@ async function pairSync(code) {
   saveDataLocalOnly();
   saveConfigLocalOnly();
   setSyncState(code, res.body.lastModified);
+  syncDirty = false;
   renderAll();
   renderSettings();
   toast('✓ Daten übernommen');
@@ -2385,6 +2396,7 @@ function stopSync() {
 
 function scheduleSyncPush() {
   if (!syncEnabled()) return;
+  syncDirty = true;
   clearTimeout(syncPushTimer);
   syncPushTimer = setTimeout(pushSync, 3000);
 }
@@ -2403,6 +2415,7 @@ async function pushSync() {
   }
   if (!res.ok) { setSyncStatus('⚠ Synchronisierung fehlgeschlagen'); return; }
   setSyncState(syncCode(), res.body.lastModified);
+  syncDirty = false;
   setSyncStatus('✓ Synchronisiert');
 }
 
@@ -2420,7 +2433,16 @@ async function pullSync() {
   saveConfigLocalOnly();
   setSyncState(syncCode(), res.body.lastModified);
   renderAll();
+  renderSettings();
   setSyncStatus('✓ Synchronisiert');
+}
+
+// Beim App-Start/Fortsetzen aufgerufen: bei ungesicherten lokalen Änderungen
+// wird gepusht (damit ein echter Konflikt korrekt über 409 erkannt wird),
+// sonst normal gepullt. Siehe Kommentar bei syncDirty weiter oben.
+function syncOnResume() {
+  if (!syncEnabled()) return;
+  if (syncDirty) pushSync(); else pullSync();
 }
 
 function openSyncConflict() {
@@ -2436,7 +2458,9 @@ function resolveSyncConflict(choice) {
     saveDataLocalOnly();
     saveConfigLocalOnly();
     setSyncState(syncCode(), syncConflictData.remote.lastModified);
+    syncDirty = false;
     renderAll();
+    renderSettings();
     setSyncStatus('✓ Synchronisiert');
     syncConflictData = null;
   } else {
@@ -2448,11 +2472,15 @@ function resolveSyncConflict(choice) {
 }
 
 function initSync() {
-  if (!syncEnabled()) return;
-  pullSync();
+  // Listener wird immer registriert (auch wenn Sync gerade noch nicht aktiv
+  // ist) — falls Sync erst später in dieser Sitzung gestartet/verbunden
+  // wird, funktioniert Pull-beim-Fortsetzen sonst bis zum nächsten
+  // App-Neustart nicht (syncOnResume/pullSync/pushSync prüfen selbst
+  // syncEnabled() und tun bei inaktivem Sync nichts).
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') pullSync();
+    if (document.visibilityState === 'visible') syncOnResume();
   });
+  syncOnResume();
 }
 
 </script>

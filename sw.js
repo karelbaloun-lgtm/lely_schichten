@@ -1,6 +1,6 @@
 // Service Worker für Lely Schichten — Netzwerk zuerst (aktuelle Version, wenn
 // online), sonst aus dem Cache (funktioniert offline nach dem ersten Besuch).
-const CACHE_VERSION = 'lely-schichten-v2';
+const CACHE_VERSION = 'lely-schichten-v3';
 const CORE_FILES = [
   './',
   './index.html',
@@ -30,6 +30,13 @@ self.addEventListener('activate', function (event) {
 
 self.addEventListener('fetch', function (event) {
   if (event.request.method !== 'GET') return;
+  // Sync-Function niemals cachen/aus dem Cache bedienen: sonst liefert der
+  // Service Worker offline eine veraltete Antwort mit Status 200 zurück, und
+  // die App hält das fälschlich für den aktuellen Serverstand — stille
+  // Datenverluste beim Öffnen der App ohne Internet (ein normaler Zustand
+  // im Feld). Ohne SW-Eingriff schlägt fetch() offline korrekt fehl, und
+  // die App zeigt "Nicht synchronisiert" statt falsche Daten zu übernehmen.
+  if (event.request.url.indexOf('/.netlify/functions/') !== -1) return;
   event.respondWith(
     fetch(event.request).then(function (response) {
       const copy = response.clone();
