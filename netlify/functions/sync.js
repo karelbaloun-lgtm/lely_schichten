@@ -44,7 +44,7 @@ export default async (req) => {
   if (!/^\d{6}$/.test(code)) {
     return jsonResponse({ error: 'invalid code' }, 400);
   }
-  const store = getStore('syncs', { consistency: 'strong' });
+  const store = getStore({ name: 'syncs', consistency: 'strong' });
 
   if (req.method === 'GET') {
     const existing = await store.get(code, { type: 'json' });
