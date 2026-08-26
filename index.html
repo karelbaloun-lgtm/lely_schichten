@@ -54,13 +54,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .lely-badge { flex: 0 0 auto; }
 .topbar-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
 .topbar-title { margin: 0; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 16.8px; font-weight: 800; color: #fff; letter-spacing: .02em; text-transform: uppercase; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topbar-sub { margin: 4px 0 0; font-size: 11.52px; color: rgba(255,255,255,.85); font-family: 'Consolas', monospace; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topbar-stats { display: flex; gap: 12px; align-items: center; flex: 0 0 auto; }
-.ts-item { text-align: right; }
-.ts-val { font-family: var(--mono); font-size: 15px; font-weight: 500; color: #fff; line-height: 1; }
-.ts-val.amber { color: #ffd766; }
-.ts-val.green { color: #6ee7b0; }
-.ts-label { font-size: 9px; color: rgba(255,255,255,.75); margin-top: 1px; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
 .topbar-settings { flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; transition: background 0.15s; touch-action: manipulation; }
 .topbar-settings:active { background: rgba(255,255,255,.28); }
 
@@ -291,11 +284,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       </div>
       <div class="topbar-left">
         <div class="topbar-title">Lely Schichten</div>
-        <div class="topbar-sub" id="topbar-updated">—</div>
-      </div>
-      <div class="topbar-stats">
-        <div class="ts-item"><div class="ts-val amber" id="tb-ueberstunden">—</div><div class="ts-label">ÜS</div></div>
-        <div class="ts-item"><div class="ts-val green" id="tb-auslöse">—</div><div class="ts-label">Ausl.</div></div>
       </div>
       <button class="topbar-settings" onclick="openSettings()">⚙</button>
     </div>
@@ -306,17 +294,17 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   <div class="timeline" id="timeline"></div>
 
   <nav class="bottom-nav">
-    <button class="nav-btn" onclick="openExport('share')"><span class="icon">📤</span>Teilen</button>
+    <button class="nav-btn" onclick="openExport('share')"><span class="icon">📤</span><span data-i18n="nav_teilen">Teilen</span></button>
     <div class="fab">
       <button class="fab-btn" onclick="toggleFab()" id="fab-btn">＋</button>
       <div class="fab-menu" id="fab-menu">
-        <div class="fab-item" onclick="fabAction('sick')"><span class="fi-icon">🤒</span> Krank</div>
-        <div class="fab-item" onclick="fabAction('vacation')"><span class="fi-icon">🌴</span> Urlaub</div>
-        <div class="fab-item" onclick="fabAction('work')"><span class="fi-icon">🔨</span> Schicht</div>
-        <div class="fab-item" onclick="fabAction('buro')"><span class="fi-icon">🗂</span> Büro (1h)</div>
+        <div class="fab-item" onclick="fabAction('buro')"><span class="fi-icon">🗂</span> <span data-i18n="fab_buero">Büro (1h)</span></div>
+        <div class="fab-item" onclick="fabAction('sick')"><span class="fi-icon">🤒</span> <span data-i18n="fab_krank">Krank</span></div>
+        <div class="fab-item" onclick="fabAction('vacation')"><span class="fi-icon">🌴</span> <span data-i18n="fab_urlaub">Urlaub</span></div>
+        <div class="fab-item" onclick="fabAction('work')"><span class="fi-icon">🔨</span> <span data-i18n="fab_schicht">Schicht</span></div>
       </div>
     </div>
-    <button class="nav-btn" id="nav-summary" onclick="openSummary()"><span class="icon">📊</span>Übersicht</button>
+    <button class="nav-btn" id="nav-summary" onclick="openSummary()"><span class="icon">📊</span><span data-i18n="nav_uebersicht">Übersicht</span></button>
   </nav>
 </div>
 
@@ -331,29 +319,29 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   <div class="sheet-body" id="edit-body"></div>
   <div class="sheet-actions">
     <button class="btn-main secondary" id="edit-delete-btn" onclick="deleteCurrentShift()" style="display:none;flex:none;width:52px;padding:0;">🗑</button>
-    <button class="btn-main secondary" onclick="closeSheet('sheet-edit')">Abbrechen</button>
-    <button class="btn-main primary" onclick="saveShift()">Speichern</button>
+    <button class="btn-main secondary" onclick="closeSheet('sheet-edit')" data-i18n="btn_abbrechen">Abbrechen</button>
+    <button class="btn-main primary" onclick="saveShift()" data-i18n="btn_speichern">Speichern</button>
   </div>
 </div>
 
 <div class="sheet" id="sheet-detail">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <div class="sheet-title">Detail</div>
+    <div class="sheet-title" data-i18n="sheet_detail_title">Detail</div>
     <button class="sheet-close" onclick="closeSheet('sheet-detail')">✕</button>
   </div>
   <div class="sheet-body" id="detail-body"></div>
   <div class="sheet-actions">
-    <button class="btn-main danger" onclick="deleteDetailShift()">Löschen</button>
-    <button class="btn-main secondary" onclick="copyDetailShift()">Kopieren</button>
-    <button class="btn-main primary" onclick="editDetailShift()">Bearbeiten</button>
+    <button class="btn-main danger" onclick="deleteDetailShift()" data-i18n="btn_loeschen">Löschen</button>
+    <button class="btn-main secondary" onclick="copyDetailShift()" data-i18n="btn_kopieren">Kopieren</button>
+    <button class="btn-main primary" onclick="editDetailShift()" data-i18n="btn_bearbeiten">Bearbeiten</button>
   </div>
 </div>
 
 <div class="sheet" id="sheet-summary">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <div class="sheet-title">Zusammenfassung</div>
+    <div class="sheet-title" data-i18n="sheet_summary_title">Zusammenfassung</div>
     <button class="sheet-close" onclick="closeSheet('sheet-summary')">✕</button>
   </div>
   <div class="sheet-body" id="summary-body"></div>
@@ -362,7 +350,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 <div class="sheet" id="sheet-settings">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <div class="sheet-title">Einstellungen</div>
+    <div class="sheet-title" data-i18n="sheet_settings_title">Einstellungen</div>
     <button class="sheet-close" onclick="closeSheet('sheet-settings')">✕</button>
   </div>
   <div class="sheet-body" id="settings-body"></div>
@@ -371,7 +359,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 <div class="sheet" id="sheet-export">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <div class="sheet-title">Woche exportieren</div>
+    <div class="sheet-title" data-i18n="sheet_export_title">Woche exportieren</div>
     <button class="sheet-close" onclick="closeSheet('sheet-export')">✕</button>
   </div>
   <div class="sheet-body" id="export-body"></div>
@@ -380,38 +368,38 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 <div class="sheet" id="sheet-hotel">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <div class="sheet-title">Hotel-Adresse</div>
+    <div class="sheet-title" data-i18n="sheet_hotel_title">Hotel-Adresse</div>
     <button class="sheet-close" onclick="closeSheet('sheet-hotel')">✕</button>
   </div>
   <div class="sheet-body" id="hotel-body"></div>
   <div class="sheet-actions">
-    <button class="btn-main secondary" onclick="finishWeekExport(false)">Ohne Adresse</button>
-    <button class="btn-main primary" onclick="finishWeekExport(true)">Exportieren</button>
+    <button class="btn-main secondary" onclick="finishWeekExport(false)" data-i18n="btn_ohne_adresse">Ohne Adresse</button>
+    <button class="btn-main primary" onclick="finishWeekExport(true)" data-i18n="btn_exportieren">Exportieren</button>
   </div>
 </div>
 
 <div class="sheet" id="sheet-help">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <div class="sheet-title">Zum Startbildschirm hinzufügen</div>
+    <div class="sheet-title" data-i18n="sheet_help_title">Zum Startbildschirm hinzufügen</div>
     <button class="sheet-close" onclick="closeSheet('sheet-help')">✕</button>
   </div>
   <div class="sheet-body">
     <div class="help-section">
-      <div class="help-heading">🤖 Android (Google Chrome)</div>
+      <div class="help-heading" data-i18n="help_android_heading">🤖 Android (Google Chrome)</div>
       <ol class="help-list">
-        <li>Oben rechts in Chrome auf <b>⋮</b> (drei Punkte) tippen.</li>
-        <li><b>„Installieren und Verknüpfung erstellen“</b> auswählen (kann je nach Chrome-Version auch „Zum Startbildschirm hinzufügen“ heißen).</li>
-        <li><b>Hinzufügen</b> bestätigen.</li>
+        <li data-i18n="help_android_1">Oben rechts in Chrome auf <b>⋮</b> (drei Punkte) tippen.</li>
+        <li data-i18n="help_android_2"><b>„Installieren und Verknüpfung erstellen“</b> auswählen (kann je nach Chrome-Version auch „Zum Startbildschirm hinzufügen“ heißen).</li>
+        <li data-i18n="help_android_3"><b>Hinzufügen</b> bestätigen.</li>
       </ol>
     </div>
     <div class="help-section">
-      <div class="help-heading">🍎 iPhone (Safari)</div>
+      <div class="help-heading" data-i18n="help_ios_heading">🍎 iPhone (Safari)</div>
       <ol class="help-list">
-        <li>Oben neben der Adressleiste auf <b>•••</b> (drei Punkte) tippen.<br><span class="help-sub">Bei älteren iOS-Versionen direkt auf das Teilen-Symbol (Quadrat mit Pfeil nach oben) tippen.</span></li>
-        <li><b>„Teilen“</b> auswählen.</li>
-        <li>Nach unten scrollen und <b>„Zum Home-Bildschirm“</b> antippen.</li>
-        <li><b>Hinzufügen</b> bestätigen.</li>
+        <li data-i18n="help_ios_1">Oben neben der Adressleiste auf <b>•••</b> (drei Punkte) tippen.<br><span class="help-sub">Bei älteren iOS-Versionen direkt auf das Teilen-Symbol (Quadrat mit Pfeil nach oben) tippen.</span></li>
+        <li data-i18n="help_ios_2"><b>„Teilen“</b> auswählen.</li>
+        <li data-i18n="help_ios_3">Nach unten scrollen und <b>„Zum Home-Bildschirm“</b> antippen.</li>
+        <li data-i18n="help_ios_4"><b>Hinzufügen</b> bestätigen.</li>
       </ol>
     </div>
   </div>
@@ -420,21 +408,21 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 <div class="sheet" id="sheet-welcome">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <div class="sheet-title">Willkommen! 👋</div>
+    <div class="sheet-title" data-i18n="sheet_welcome_title">Willkommen! 👋</div>
   </div>
   <div class="sheet-body">
-    <p style="margin:0 0 20px;color:var(--muted);">Bitte gib deinen Namen ein — er wird für den Export und die Begrüßung verwendet.</p>
+    <p style="margin:0 0 20px;color:var(--muted);" data-i18n="welcome_text">Bitte gib deinen Namen ein — er wird für den Export und die Begrüßung verwendet.</p>
     <div class="field">
-      <label>Vorname</label>
+      <label data-i18n="label_vorname">Vorname</label>
       <input class="note-input" type="text" id="welcome-firstname">
     </div>
     <div class="field">
-      <label>Nachname</label>
+      <label data-i18n="label_nachname">Nachname</label>
       <input class="note-input" type="text" id="welcome-lastname">
     </div>
   </div>
   <div class="sheet-actions">
-    <button class="btn-main primary" style="width:100%;" onclick="saveWelcomeName()">Los geht's</button>
+    <button class="btn-main primary" style="width:100%;" onclick="saveWelcomeName()" data-i18n="btn_los_gehts">Los geht's</button>
   </div>
 </div>
 
@@ -447,7 +435,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
     </div>
     <div class="cal-grid" id="cal-grid"></div>
     <div class="cal-footer">
-      <button class="btn-main secondary" onclick="closeCal()">Abbrechen</button>
+      <button class="btn-main secondary" onclick="closeCal()" data-i18n="btn_abbrechen">Abbrechen</button>
       <button class="btn-main primary" onclick="confirmCal()">OK</button>
     </div>
   </div>
@@ -455,44 +443,44 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 
 <div class="confirm-overlay" id="confirm-overlay">
   <div class="confirm-box">
-    <div class="confirm-title" id="confirm-title">Pause zu kurz?</div>
+    <div class="confirm-title" id="confirm-title" data-i18n="confirm_pause_title">Pause zu kurz?</div>
     <div class="confirm-text" id="confirm-text"></div>
     <div class="confirm-actions">
-      <button class="btn-main secondary" onclick="confirmPauseAction('confirm')">BESTÄTIGEN</button>
-      <button class="btn-main primary" onclick="confirmPauseAction('skip')">ÜBERSPRINGEN</button>
+      <button class="btn-main secondary" onclick="confirmPauseAction('confirm')" data-i18n="btn_bestaetigen">BESTÄTIGEN</button>
+      <button class="btn-main primary" onclick="confirmPauseAction('skip')" data-i18n="btn_ueberspringen">ÜBERSPRINGEN</button>
     </div>
   </div>
 </div>
 
 <div class="confirm-overlay" id="confirm-holiday-overlay">
   <div class="confirm-box">
-    <div class="confirm-title">Achtung: Feiertag!</div>
+    <div class="confirm-title" data-i18n="confirm_holiday_title">Achtung: Feiertag!</div>
     <div class="confirm-text" id="confirm-holiday-text"></div>
     <div class="confirm-actions">
-      <button class="btn-main secondary" onclick="cancelHolidaySave()">ABBRECHEN</button>
-      <button class="btn-main primary" onclick="confirmHolidaySave()">TROTZDEM SPEICHERN</button>
+      <button class="btn-main secondary" onclick="cancelHolidaySave()" data-i18n="btn_holiday_abbrechen">ABBRECHEN</button>
+      <button class="btn-main primary" onclick="confirmHolidaySave()" data-i18n="btn_holiday_trotzdem">TROTZDEM SPEICHERN</button>
     </div>
   </div>
 </div>
 
 <div class="confirm-overlay" id="confirm-buro-overlay">
   <div class="confirm-box">
-    <div class="confirm-title">Büro schon diese Woche?</div>
-    <div class="confirm-text">Für diese Woche ist bereits ein Büro-Eintrag vorhanden. Trotzdem einen weiteren hinzufügen?</div>
+    <div class="confirm-title" data-i18n="confirm_buro_title">Büro schon diese Woche?</div>
+    <div class="confirm-text" data-i18n="confirm_buro_text">Für diese Woche ist bereits ein Büro-Eintrag vorhanden. Trotzdem einen weiteren hinzufügen?</div>
     <div class="confirm-actions">
-      <button class="btn-main secondary" onclick="closeBuroConfirm()">ÜBERSPRINGEN</button>
-      <button class="btn-main primary" onclick="confirmAddBuroAnyway()">TROTZDEM HINZUFÜGEN</button>
+      <button class="btn-main secondary" onclick="closeBuroConfirm()" data-i18n="btn_ueberspringen">ÜBERSPRINGEN</button>
+      <button class="btn-main primary" onclick="confirmAddBuroAnyway()" data-i18n="btn_buro_trotzdem">TROTZDEM HINZUFÜGEN</button>
     </div>
   </div>
 </div>
 
 <div class="confirm-overlay" id="confirm-sync-overlay">
   <div class="confirm-box">
-    <div class="confirm-title">Daten unterscheiden sich</div>
-    <div class="confirm-text">Die Daten auf diesem Telefon unterscheiden sich von denen auf dem anderen Telefon. Welche Version soll gelten?</div>
+    <div class="confirm-title" data-i18n="confirm_sync_title">Daten unterscheiden sich</div>
+    <div class="confirm-text" data-i18n="confirm_sync_text">Die Daten auf diesem Telefon unterscheiden sich von denen auf dem anderen Telefon. Welche Version soll gelten?</div>
     <div class="confirm-actions">
-      <button class="btn-main secondary" onclick="resolveSyncConflict('remote')">ANDERES TELEFON</button>
-      <button class="btn-main primary" onclick="resolveSyncConflict('local')">DIESES TELEFON</button>
+      <button class="btn-main secondary" onclick="resolveSyncConflict('remote')" data-i18n="btn_sync_remote">ANDERES TELEFON</button>
+      <button class="btn-main primary" onclick="resolveSyncConflict('local')" data-i18n="btn_sync_local">DIESES TELEFON</button>
     </div>
   </div>
 </div>
@@ -1040,19 +1028,280 @@ function buildWeekExportXlsx(shifts, mondayIso, person, hotelAddresses) {
   return buildXlsxWorkbook(buildWeekExportModel(shifts, mondayIso, person, hotelAddresses));
 }
 
-// ─── Deutsche Monats-/Wochentagsnamen ──────────────────────────────────
+// ─── Monats-/Wochentagsnamen ────────────────────────────────────────────
+// DE-Varianten bleiben die einzigen, die der Export benutzt (muss immer
+// Deutsch bleiben, unabhängig von der UI-Sprache) — siehe curDAYS()/
+// curMONTHS()/curMONTHS_SHORT() weiter unten für die UI-Anzeige.
 const DAYS_DE = ['So','Mo','Di','Mi','Do','Fr','Sa'];
 const MONTHS_DE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 const MONTHS_SHORT_DE = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const DAYS_CS = ['Ne','Po','Út','St','Čt','Pá','So'];
+const MONTHS_CS = ['leden','únor','březen','duben','květen','červen','červenec','srpen','září','říjen','listopad','prosinec'];
+const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','zář','říj','lis','pro'];
 const LAST_UPDATED = '23.08.2026';
 
+// ─── Sprache (UI) ───────────────────────────────────────────────────────
+// config.language steuert NUR die Anzeige (Buttons, Labels, Meldungen).
+// Der Excel-Export bleibt davon komplett unberührt und immer Deutsch —
+// dort werden ausschließlich die *_DE-Konstanten/Strings direkt verwendet,
+// nie t()/curDAYS()/curMONTHS().
+function curLang() { return config.language === 'cs' ? 'cs' : 'de'; }
+function curDAYS() { return curLang() === 'cs' ? DAYS_CS : DAYS_DE; }
+function curMONTHS() { return curLang() === 'cs' ? MONTHS_CS : MONTHS_DE; }
+function curMONTHS_SHORT() { return curLang() === 'cs' ? MONTHS_SHORT_CS : MONTHS_SHORT_DE; }
+
+const I18N = {
+  de: {
+    nav_teilen: 'Teilen', nav_uebersicht: 'Übersicht',
+    fab_krank: 'Krank', fab_urlaub: 'Urlaub', fab_schicht: 'Schicht', fab_buero: 'Büro (1h)',
+    edit_title_add: 'Schicht hinzufügen', edit_title_edit: 'Eintrag bearbeiten',
+    btn_abbrechen: 'Abbrechen', btn_speichern: 'Speichern',
+    sheet_detail_title: 'Detail',
+    btn_loeschen: 'Löschen', btn_kopieren: 'Kopieren', btn_bearbeiten: 'Bearbeiten',
+    sheet_summary_title: 'Zusammenfassung',
+    sheet_settings_title: 'Einstellungen',
+    sheet_export_title: 'Woche exportieren',
+    btn_ohne_adresse: 'Ohne Adresse', btn_exportieren: 'Exportieren',
+    sheet_hotel_title: 'Hotel-Adresse',
+    sheet_help_title: 'Zum Startbildschirm hinzufügen',
+    help_android_heading: '🤖 Android (Google Chrome)',
+    help_android_1: 'Oben rechts in Chrome auf <b>⋮</b> (drei Punkte) tippen.',
+    help_android_2: '<b>„Installieren und Verknüpfung erstellen“</b> auswählen (kann je nach Chrome-Version auch „Zum Startbildschirm hinzufügen“ heißen).',
+    help_android_3: '<b>Hinzufügen</b> bestätigen.',
+    help_ios_heading: '🍎 iPhone (Safari)',
+    help_ios_1: 'Oben neben der Adressleiste auf <b>•••</b> (drei Punkte) tippen.<br><span class="help-sub">Bei älteren iOS-Versionen direkt auf das Teilen-Symbol (Quadrat mit Pfeil nach oben) tippen.</span>',
+    help_ios_2: '<b>„Teilen“</b> auswählen.',
+    help_ios_3: 'Nach unten scrollen und <b>„Zum Home-Bildschirm“</b> antippen.',
+    help_ios_4: '<b>Hinzufügen</b> bestätigen.',
+    sheet_welcome_title: 'Willkommen! 👋',
+    welcome_text: 'Bitte gib deinen Namen ein — er wird für den Export und die Begrüßung verwendet.',
+    label_vorname: 'Vorname', label_nachname: 'Nachname',
+    btn_los_gehts: "Los geht's",
+    stay_heimfahrt_plain: 'Heimfahrt', stay_hotel_plain: 'Hotel',
+    confirm_pause_title: 'Pause zu kurz?',
+    btn_bestaetigen: 'BESTÄTIGEN', btn_ueberspringen: 'ÜBERSPRINGEN',
+    confirm_holiday_title: 'Achtung: Feiertag!',
+    btn_holiday_abbrechen: 'ABBRECHEN', btn_holiday_trotzdem: 'TROTZDEM SPEICHERN',
+    confirm_buro_title: 'Büro schon diese Woche?',
+    confirm_buro_text: 'Für diese Woche ist bereits ein Büro-Eintrag vorhanden. Trotzdem einen weiteren hinzufügen?',
+    holiday_warning: '{0} ist ein Feiertag ({1}). Trotzdem als Arbeitstag speichern?',
+    pause_warning: 'Bei {0}h Bruttodauer schreibt das ArbZG mindestens {1} Min. Pause vor, eingetragen sind {2} Min. BESTÄTIGEN übernimmt deine Eingabe trotzdem, ÜBERSPRINGEN korrigiert automatisch auf {1} Min.',
+    btn_buro_trotzdem: 'TROTZDEM HINZUFÜGEN',
+    confirm_sync_title: 'Daten unterscheiden sich',
+    confirm_sync_text: 'Die Daten auf diesem Telefon unterscheiden sich von denen auf dem anderen Telefon. Welche Version soll gelten?',
+    btn_sync_remote: 'ANDERES TELEFON', btn_sync_local: 'DIESES TELEFON',
+    empty_keine_eintraege: 'Keine Einträge', empty_fuege_hinzu: 'Füge deine erste Schicht über ＋ hinzu',
+    detail_art: 'Art', detail_typ_arbeit: 'Arbeit', detail_typ_krank: 'Krank', detail_typ_urlaub: 'Urlaub',
+    detail_kunde: 'Kunde', detail_anfahrt: 'Anfahrt', detail_installation: 'Installation',
+    detail_pause: 'Pause', detail_min: 'Min.', detail_notiz: 'Notiz', detail_abfahrt: 'Abfahrt',
+    detail_uebernachtung: 'Übernachtung', detail_hotel: '🏨 Hotel', detail_heimfahrt: '🚗 Heimfahrt',
+    detail_bezahlte_stunden: 'Bezahlte Stunden',
+    field_art: 'Art', seg_arbeit: '🔨 Arbeit', seg_krank: '🤒 Krank', seg_urlaub: '🌴 Urlaub',
+    field_datum: 'Datum', btn_weiteren_kunden: '＋ Weiteren Kunden hinzufügen',
+    segment_abfahrt: 'Abfahrt', daily_limit_label: 'Bezahlte Zeit heute',
+    field_uebernachtung: 'Übernachtung',
+    field_notiz_allgemein: 'Notiz (allgemein)', placeholder_notiz: 'z. B. Besonderheiten …',
+    leg_kunde: 'Kunde', leg_anfahrt: 'Anfahrt', leg_installation: 'Installation',
+    pause_minuten: 'Pause (Minuten)', placeholder_kunde_objekt: 'Kunde / Objekt …',
+    setting_export_sub: 'für den Export',
+    setting_wochennorm: 'Wochennorm', setting_wochennorm_sub: 'Std./Woche, Basis für Überstunden',
+    setting_erscheinungsbild: 'Erscheinungsbild', setting_erscheinungsbild_sub: 'hell / dunkel / System',
+    setting_sprache: 'Sprache', setting_sprache_sub: 'App-Anzeige (Export bleibt immer Deutsch)',
+    setting_sync_label: 'Synchronisierung',
+    sync_active: 'Aktiv — Code: ', sync_inactive: 'Nicht aktiv',
+    btn_sync_beenden: 'Synchronisierung beenden', btn_sync_starten: 'Sync starten',
+    btn_code_eingeben: 'Code eingeben', placeholder_sync_code: '6-stelliger Code', btn_verbinden: 'Verbinden',
+    btn_export_excel: '📤 Exportieren (Excel)', btn_import: '📥 Importieren (XLSX, PDF)',
+    btn_zum_startbildschirm: '📱 Zum Startbildschirm hinzufügen',
+    summary_gesamtstunden: 'Gesamtstunden', summary_ueberstunden: 'Überstunden',
+    summary_auslose_gesamt: 'Auslöse gesamt', summary_krank_urlaub: 'Krank / Urlaub (Tage)',
+    export_keine_daten: 'Keine Daten', export_keine_schichten: 'Es gibt noch keine Schichten zum Exportieren.',
+    hotel_intro: 'Warst du in dieser Woche im Hotel? Du kannst die Adresse für den Export eintragen — optional.',
+    hotel_placeholder: 'Adresse (optional)',
+    t_kopiert: 'Kopiert — Datum bei Bedarf anpassen und speichern',
+    t_eintrag_geloescht: 'Eintrag gelöscht',
+    t_krank_urlaub_existiert: '⚠ Für heute existiert bereits ein Krank/Urlaub-Eintrag',
+    t_buero_hinzugefuegt: '✓ Büro hinzugefügt · ',
+    t_datum_fehlt: '⚠ Datum fehlt',
+    t_mindestens_zeitabschnitt: '⚠ Mindestens einen Zeitabschnitt eintragen',
+    t_ueber_10h: '⚠ Über 10h/Tag (vertragliches Maximum) — trotzdem gespeichert',
+    t_gespeichert_ersetzt: '✓ Gespeichert — bestehender Eintrag für dieses Datum wurde ersetzt',
+    t_gespeichert: '✓ Gespeichert', t_hinzugefuegt: '✓ Hinzugefügt',
+    t_geloescht: 'Gelöscht',
+    t_bitte_namen: '⚠ Bitte Vor- und Nachname eingeben',
+    t_willkommen: '✓ Willkommen, ',
+    t_keine_eintraege_gefunden: '⚠ Keine Einträge gefunden',
+    t_eintraege_importiert_1: '✓ ', t_eintraege_importiert_2: ' Einträge importiert',
+    t_fehler: '⚠ Fehler: ',
+    t_bitte_namen_settings: '⚠ Bitte zuerst Vor- und Nachname in den Einstellungen eintragen',
+    t_sync_gestartet: '✓ Synchronisierung gestartet',
+    t_code_6_ziffern: '⚠ Der Code hat 6 Ziffern',
+    t_code_nicht_gefunden: '⚠ Code nicht gefunden',
+    t_daten_uebernommen: '✓ Daten übernommen',
+    t_sync_beendet: 'Synchronisierung beendet',
+    t_heruntergeladen: '✓ Heruntergeladen: ',
+    sync_status_code_wird_erzeugt: 'Code wird erzeugt …',
+    sync_status_keine_verbindung: '⚠ Keine Verbindung — später erneut versuchen',
+    sync_status_fehler_starten: '⚠ Fehler beim Starten — bitte erneut versuchen',
+    sync_status_kein_freier_code: '⚠ Konnte keinen freien Code finden — bitte erneut versuchen',
+    sync_status_verbinde: 'Verbinde …',
+    sync_status_fehler_verbinden: '⚠ Fehler beim Verbinden',
+    sync_status_synchronisiere: 'Synchronisiere …',
+    sync_status_nicht_synchronisiert: '⚠ Nicht synchronisiert (keine Verbindung)',
+    sync_status_fehlgeschlagen: '⚠ Synchronisierung fehlgeschlagen',
+    sync_status_synchronisiert: '✓ Synchronisiert',
+    pairsync_confirm: ' Einträge gespeichert. Mit dem Code verbinden ersetzt sie durch die Daten vom anderen Telefon — fortfahren?',
+    copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Alle Rechte vorbehalten',
+    letzte_aktualisierung: 'Letzte Aktualisierung: ',
+    week_kw: 'KW'
+  },
+  cs: {
+    nav_teilen: 'Sdílet', nav_uebersicht: 'Přehled',
+    fab_krank: 'Nemoc', fab_urlaub: 'Dovolená', fab_schicht: 'Směna', fab_buero: 'Kancelář (1h)',
+    edit_title_add: 'Přidat směnu', edit_title_edit: 'Upravit záznam',
+    btn_abbrechen: 'Zrušit', btn_speichern: 'Uložit',
+    sheet_detail_title: 'Detail',
+    btn_loeschen: 'Smazat', btn_kopieren: 'Kopírovat', btn_bearbeiten: 'Upravit',
+    sheet_summary_title: 'Souhrn',
+    sheet_settings_title: 'Nastavení',
+    sheet_export_title: 'Exportovat týden',
+    btn_ohne_adresse: 'Bez adresy', btn_exportieren: 'Exportovat',
+    sheet_hotel_title: 'Adresa hotelu',
+    sheet_help_title: 'Přidat na plochu',
+    help_android_heading: '🤖 Android (Google Chrome)',
+    help_android_1: 'Vpravo nahoře v Chrome klepni na <b>⋮</b> (tři tečky).',
+    help_android_2: 'Vyber <b>„Instalovat a vytvořit zástupce“</b> (podle verze Chrome může být i „Přidat na plochu“).',
+    help_android_3: 'Potvrď <b>Přidat</b>.',
+    help_ios_heading: '🍎 iPhone (Safari)',
+    help_ios_1: 'Nahoře vedle adresního řádku klepni na <b>•••</b> (tři tečky).<br><span class="help-sub">Ve starších verzích iOS klepni rovnou na ikonu sdílení (čtverec se šipkou nahoru).</span>',
+    help_ios_2: 'Vyber <b>„Sdílet“</b>.',
+    help_ios_3: 'Sjeď dolů a klepni na <b>„Na plochu“</b>.',
+    help_ios_4: 'Potvrď <b>Přidat</b>.',
+    sheet_welcome_title: 'Vítej! 👋',
+    welcome_text: 'Zadej prosím své jméno — použije se pro export a pozdrav.',
+    label_vorname: 'Jméno', label_nachname: 'Příjmení',
+    btn_los_gehts: 'Jdeme na to',
+    stay_heimfahrt_plain: 'Domů', stay_hotel_plain: 'Hotel',
+    confirm_pause_title: 'Přestávka je krátká?',
+    btn_bestaetigen: 'POTVRDIT', btn_ueberspringen: 'PŘESKOČIT',
+    confirm_holiday_title: 'Pozor: svátek!',
+    btn_holiday_abbrechen: 'ZRUŠIT', btn_holiday_trotzdem: 'PŘESTO ULOŽIT',
+    confirm_buro_title: 'Kancelář už tento týden?',
+    confirm_buro_text: 'Pro tento týden už je záznam Kancelář vyplněný. Přesto přidat další?',
+    holiday_warning: '{0} je svátek ({1}). Přesto uložit jako pracovní den?',
+    pause_warning: 'Při hrubé době {0}h předepisuje zákon minimálně {1} min přestávky, zadáno je {2} min. POTVRDIT ponechá tvůj zápis, PŘESKOČIT automaticky opraví na {1} min.',
+    btn_buro_trotzdem: 'PŘESTO PŘIDAT',
+    confirm_sync_title: 'Data se liší',
+    confirm_sync_text: 'Data na tomto telefonu se liší od dat na druhém telefonu. Která verze má platit?',
+    btn_sync_remote: 'DRUHÝ TELEFON', btn_sync_local: 'TENTO TELEFON',
+    empty_keine_eintraege: 'Žádné záznamy', empty_fuege_hinzu: 'Přidej první směnu přes ＋',
+    detail_art: 'Typ', detail_typ_arbeit: 'Práce', detail_typ_krank: 'Nemoc', detail_typ_urlaub: 'Dovolená',
+    detail_kunde: 'Zákazník', detail_anfahrt: 'Příjezd', detail_installation: 'Instalace',
+    detail_pause: 'Přestávka', detail_min: 'min', detail_notiz: 'Poznámka', detail_abfahrt: 'Odjezd',
+    detail_uebernachtung: 'Nocleh', detail_hotel: '🏨 Hotel', detail_heimfahrt: '🚗 Domů',
+    detail_bezahlte_stunden: 'Placené hodiny',
+    field_art: 'Typ', seg_arbeit: '🔨 Práce', seg_krank: '🤒 Nemoc', seg_urlaub: '🌴 Dovolená',
+    field_datum: 'Datum', btn_weiteren_kunden: '＋ Přidat dalšího zákazníka',
+    segment_abfahrt: 'Odjezd', daily_limit_label: 'Placený čas dnes',
+    field_uebernachtung: 'Nocleh',
+    field_notiz_allgemein: 'Poznámka (obecná)', placeholder_notiz: 'např. zvláštnosti …',
+    leg_kunde: 'Zákazník', leg_anfahrt: 'Příjezd', leg_installation: 'Instalace',
+    pause_minuten: 'Přestávka (minuty)', placeholder_kunde_objekt: 'Zákazník / Objekt …',
+    setting_export_sub: 'pro export',
+    setting_wochennorm: 'Týdenní norma', setting_wochennorm_sub: 'hod./týden, základ pro přesčasy',
+    setting_erscheinungsbild: 'Vzhled', setting_erscheinungsbild_sub: 'světlý / tmavý / systém',
+    setting_sprache: 'Jazyk', setting_sprache_sub: 'zobrazení appky (export zůstává vždy německy)',
+    setting_sync_label: 'Synchronizace',
+    sync_active: 'Aktivní — kód: ', sync_inactive: 'Neaktivní',
+    btn_sync_beenden: 'Ukončit synchronizaci', btn_sync_starten: 'Spustit sync',
+    btn_code_eingeben: 'Zadat kód', placeholder_sync_code: '6místný kód', btn_verbinden: 'Připojit',
+    btn_export_excel: '📤 Exportovat (Excel)', btn_import: '📥 Importovat (XLSX, PDF)',
+    btn_zum_startbildschirm: '📱 Přidat na plochu',
+    summary_gesamtstunden: 'Celkem hodin', summary_ueberstunden: 'Přesčasy',
+    summary_auslose_gesamt: 'Diety celkem', summary_krank_urlaub: 'Nemoc / Dovolená (dny)',
+    export_keine_daten: 'Žádná data', export_keine_schichten: 'Zatím nejsou žádné směny k exportu.',
+    hotel_intro: 'Byl jsi tento týden v hotelu? Adresu pro export můžeš zadat volitelně.',
+    hotel_placeholder: 'Adresa (volitelné)',
+    t_kopiert: 'Zkopírováno — uprav datum, pokud je potřeba, a ulož',
+    t_eintrag_geloescht: 'Záznam smazán',
+    t_krank_urlaub_existiert: '⚠ Pro dnešek už existuje záznam Nemoc/Dovolená',
+    t_buero_hinzugefuegt: '✓ Kancelář přidána · ',
+    t_datum_fehlt: '⚠ Chybí datum',
+    t_mindestens_zeitabschnitt: '⚠ Zadej alespoň jeden časový úsek',
+    t_ueber_10h: '⚠ Přes 10h/den (smluvní maximum) — přesto uloženo',
+    t_gespeichert_ersetzt: '✓ Uloženo — existující záznam pro toto datum byl nahrazen',
+    t_gespeichert: '✓ Uloženo', t_hinzugefuegt: '✓ Přidáno',
+    t_geloescht: 'Smazáno',
+    t_bitte_namen: '⚠ Zadej prosím jméno a příjmení',
+    t_willkommen: '✓ Vítej, ',
+    t_keine_eintraege_gefunden: '⚠ Nenalezeny žádné záznamy',
+    t_eintraege_importiert_1: '✓ Importováno ', t_eintraege_importiert_2: ' záznamů',
+    t_fehler: '⚠ Chyba: ',
+    t_bitte_namen_settings: '⚠ Nejdřív prosím vyplň jméno a příjmení v Nastavení',
+    t_sync_gestartet: '✓ Synchronizace spuštěna',
+    t_code_6_ziffern: '⚠ Kód má 6 číslic',
+    t_code_nicht_gefunden: '⚠ Kód nenalezen',
+    t_daten_uebernommen: '✓ Data převzata',
+    t_sync_beendet: 'Synchronizace ukončena',
+    t_heruntergeladen: '✓ Staženo: ',
+    sync_status_code_wird_erzeugt: 'Vytváří se kód …',
+    sync_status_keine_verbindung: '⚠ Bez připojení — zkus to později znovu',
+    sync_status_fehler_starten: '⚠ Chyba při spuštění — zkus to prosím znovu',
+    sync_status_kein_freier_code: '⚠ Nepodařilo se najít volný kód — zkus to prosím znovu',
+    sync_status_verbinde: 'Připojuje se …',
+    sync_status_fehler_verbinden: '⚠ Chyba při připojování',
+    sync_status_synchronisiere: 'Synchronizuje se …',
+    sync_status_nicht_synchronisiert: '⚠ Nesynchronizováno (bez připojení)',
+    sync_status_fehlgeschlagen: '⚠ Synchronizace se nezdařila',
+    sync_status_synchronisiert: '✓ Synchronizováno',
+    pairsync_confirm: ' záznamů. Připojení kódem je nahradí daty z druhého telefonu — pokračovat?',
+    copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Všechna práva vyhrazena',
+    letzte_aktualisierung: 'Poslední aktualizace: ',
+    week_kw: 'T'
+  }
+};
+function t(key) { const dict = I18N[curLang()]; return (dict && dict[key] !== undefined) ? dict[key] : (I18N.de[key] !== undefined ? I18N.de[key] : key); }
+// Einfache Platzhalter-Ersetzung für Sätze mit eingesetzten Werten, z.B.
+// tf('holiday_warning', datum, name) ersetzt {0} und {1} im übersetzten Text.
+function tf(key, ...args) { let s = t(key); args.forEach(function (a, i) { s = s.split('{' + i + '}').join(a); }); return s; }
+function setLanguage(lang) {
+  config.language = (lang === 'cs') ? 'cs' : 'de';
+  saveConfig();
+  applyI18nStatic();
+  renderAll();
+  renderSettings();
+}
+function applyI18nStatic() {
+  document.querySelectorAll('[data-i18n]').forEach(function (el) { el.innerHTML = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(function (el) { el.placeholder = t(el.getAttribute('data-i18n-ph')); });
+}
+const HOLIDAY_NAME_CS = {
+  'Neujahr': 'Nový rok', 'Heilige Drei Könige': 'Tři králové', 'Karfreitag': 'Velký pátek',
+  'Ostermontag': 'Velikonoční pondělí', 'Tag der Arbeit': 'Svátek práce',
+  'Christi Himmelfahrt': 'Nanebevstoupení Páně', 'Pfingstmontag': 'Svatodušní pondělí',
+  'Fronleichnam': 'Boží tělo', 'Mariä Himmelfahrt': 'Nanebevzetí Panny Marie',
+  'Tag der Deutschen Einheit': 'Den německé jednoty', 'Allerheiligen': 'Svátek všech svatých',
+  '1. Weihnachtsfeiertag': '1. svátek vánoční', '2. Weihnachtsfeiertag': '2. svátek vánoční'
+};
+// Nur für die UI-Anzeige (Tageskarte, Feiertags-Dialog) — der Export nutzt
+// weiterhin holidayName() direkt und bleibt damit immer Deutsch.
+function holidayNameUI(iso) { const de = holidayName(iso); return curLang() === 'cs' ? (HOLIDAY_NAME_CS[de] || de) : de; }
+const GREETING_POOLS_CS = {
+  morning: ['Dobré ráno', 'Krásné ráno', 'Ahoj'],
+  day: ['Dobrý den', 'Ahoj', 'Zdravím'],
+  evening: ['Dobrý večer', 'Ahoj', 'Pěkný večer'],
+  night: ['Dobrou noc', 'Ještě pozdě na cestách']
+};
+
 function monthKey(iso) { return iso.slice(0, 7); }
-function fmtDateDE(iso) { const d = parseISODate(iso); return `${DAYS_DE[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`; }
+function fmtDateDE(iso) { const d = parseISODate(iso); return `${curDAYS()[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()}`; }
 function fmtH(h) { const hh = Math.floor(Math.abs(h)), mm = Math.round((Math.abs(h)-hh)*60); return (h<0?'−':'') + hh + 'h' + (mm?` ${mm}min`:''); }
+// Kurzform als Dezimalzahl mit Komma für Klammerangaben, z.B. 1.5 -> "1,5".
+function fmtHoursShort(h) { return (Math.round(h * 100) / 100).toFixed(2).replace(/0+$/, '').replace(/\.$/, '').replace('.', ','); }
 
 // ─── State ──────────────────────────────────────────────────────────────
 let shifts = [];
-let config = { firstName: '', lastName: '', weeklyNorm: 40 };
+let config = { firstName: '', lastName: '', weeklyNorm: 40, language: 'de' };
 let activeMonth = null;
 
 function getMonths() {
@@ -1118,31 +1367,23 @@ function renderMonthBar() {
   const bar = document.getElementById('month-bar');
   bar.innerHTML = months.map(m => {
     const [, mo] = m.split('-');
-    const lbl = MONTHS_SHORT_DE[parseInt(mo) - 1] + ' ' + m.split('-')[0];
+    const lbl = curMONTHS_SHORT()[parseInt(mo) - 1] + ' ' + m.split('-')[0];
     return `<div class="month-chip${m === activeMonth ? ' active' : ''}" onclick="selectMonth('${m}')">${lbl}</div>`;
   }).join('');
   const active = bar.querySelector('.active');
   if (active) active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
 }
-function selectMonth(m) { activeMonth = m; renderMonthBar(); renderTimeline(); renderTopbar(); }
-
-// ─── Topbar ─────────────────────────────────────────────────────────────
-function renderTopbar() {
-  const s = monthSummary(shifts, activeMonth, config.weeklyNorm);
-  document.getElementById('topbar-updated').textContent = 'Letzte Aktualisierung: ' + LAST_UPDATED;
-  document.getElementById('tb-ueberstunden').textContent = s.overtimeHours > 0 ? fmtH(s.overtimeHours) : '0h';
-  document.getElementById('tb-auslöse').textContent = s.auslöseTotal > 0 ? s.auslöseTotal + ' €' : '—';
-}
+function selectMonth(m) { activeMonth = m; renderMonthBar(); renderTimeline(); }
 
 // ─── Timeline ───────────────────────────────────────────────────────────
 function dayCardHtml(iso, shift) {
   const d = parseISODate(iso);
-  const dw = DAYS_DE[d.getDay()];
+  const dw = curDAYS()[d.getDay()];
   const dd = d.getDate();
   if (!shift && isWorkdayHoliday(iso)) {
     return `<div class="day-card holiday-auto">
       <div class="day-date"><div class="dw">${dw}</div><div class="dd">${dd}</div></div>
-      <div class="day-info"><div class="day-badge badge-holiday">${holidayName(iso)}</div></div>
+      <div class="day-info"><div class="day-badge badge-holiday">${holidayNameUI(iso)}</div></div>
       <div class="day-right"><div class="day-hours">8h</div></div>
     </div>`;
   }
@@ -1160,11 +1401,11 @@ function dayCardHtml(iso, shift) {
     timeStr = parts.join(' · ');
     const legNotes = (shift.legs || []).map(l => l.note).filter(Boolean);
     if (legNotes.length) displayNote = legNotes.join(', ');
-    if (shift.stay === 'hotel') badges += `<span class="day-badge badge-hotel">🏨 Hotel</span>`;
+    if (shift.stay === 'hotel') badges += `<span class="day-badge badge-hotel">${t('detail_hotel')}</span>`;
   } else if (shift.type === 'sick') {
-    badges += `<span class="day-badge badge-sick">Krank</span>`;
+    badges += `<span class="day-badge badge-sick">${t('detail_typ_krank')}</span>`;
   } else if (shift.type === 'vacation') {
-    badges += `<span class="day-badge badge-vacation">Urlaub</span>`;
+    badges += `<span class="day-badge badge-vacation">${t('detail_typ_urlaub')}</span>`;
   }
   return `<div class="day-card ${shift.type}" onclick="openDetail('${shift.id}')">
     <div class="day-date"><div class="dw">${dw}</div><div class="dd">${dd}</div></div>
@@ -1193,7 +1434,7 @@ function renderTimeline() {
 
   const tl = document.getElementById('timeline');
   if (!hasAnyContent) {
-    tl.innerHTML = `<div class="empty-state"><span class="big">Keine Einträge</span>Füge deine erste Schicht über ＋ hinzu</div>`;
+    tl.innerHTML = `<div class="empty-state"><span class="big">${t('empty_keine_eintraege')}</span>${t('empty_fuege_hinzu')}</div>`;
     return;
   }
 
@@ -1225,7 +1466,7 @@ function renderTimeline() {
   }).filter(h => h).join('');
 }
 
-function renderAll() { renderMonthBar(); renderTopbar(); renderTimeline(); renderCustomerHistory(); }
+function renderAll() { renderMonthBar(); renderTimeline(); renderCustomerHistory(); }
 
 // ─── Kunden-Verlauf (Autocomplete aus bisher eingetragenen Kunden) ─────────
 function customerHistoryOptions() {
@@ -1254,27 +1495,27 @@ function openDetail(id) {
   detailId = id;
   const d = parseISODate(s.date);
   const hours = paidHoursForDay(s);
-  const typeLabel = { work: 'Arbeit', sick: 'Krank', vacation: 'Urlaub' }[s.type];
-  let rows = `<div class="detail-row"><span class="detail-key">Art</span><span class="detail-v">${typeLabel}</span></div>`;
+  const typeLabel = { work: t('detail_typ_arbeit'), sick: t('detail_typ_krank'), vacation: t('detail_typ_urlaub') }[s.type];
+  let rows = `<div class="detail-row"><span class="detail-key">${t('detail_art')}</span><span class="detail-v">${typeLabel}</span></div>`;
   if (s.type === 'work') {
     const legs = s.legs || [];
     legs.forEach((leg, i) => {
-      const label = legs.length > 1 ? `Kunde ${i + 1}` : 'Kunde';
-      if (leg.arrivalStart) rows += `<div class="detail-row"><span class="detail-key">${label}: Anfahrt</span><span class="detail-v">${leg.arrivalStart}–${leg.arrivalEnd}</span></div>`;
-      if (leg.installStart) rows += `<div class="detail-row"><span class="detail-key">${label}: Installation</span><span class="detail-v">${leg.installStart}–${leg.installEnd}</span></div>`;
-      rows += `<div class="detail-row"><span class="detail-key">${label}: Pause</span><span class="detail-v">${leg.pause || 0} Min.</span></div>`;
-      if (leg.note) rows += `<div class="detail-row"><span class="detail-key">${label}: Notiz</span><span class="detail-v">${leg.note}</span></div>`;
+      const label = legs.length > 1 ? `${t('detail_kunde')} ${i + 1}` : t('detail_kunde');
+      if (leg.arrivalStart) rows += `<div class="detail-row"><span class="detail-key">${label}: ${t('detail_anfahrt')}</span><span class="detail-v">${leg.arrivalStart}–${leg.arrivalEnd} (${fmtHoursShort(segmentHours(leg.arrivalStart, leg.arrivalEnd))})</span></div>`;
+      if (leg.installStart) rows += `<div class="detail-row"><span class="detail-key">${label}: ${t('detail_installation')}</span><span class="detail-v">${leg.installStart}–${leg.installEnd} (${fmtHoursShort(Math.max(0, segmentHours(leg.installStart, leg.installEnd) - (leg.pause || 0) / 60))})</span></div>`;
+      rows += `<div class="detail-row"><span class="detail-key">${label}: ${t('detail_pause')}</span><span class="detail-v">${leg.pause || 0} ${t('detail_min')}</span></div>`;
+      if (leg.note) rows += `<div class="detail-row"><span class="detail-key">${label}: ${t('detail_notiz')}</span><span class="detail-v">${leg.note}</span></div>`;
     });
-    if (s.departureStart) rows += `<div class="detail-row"><span class="detail-key">Abfahrt</span><span class="detail-v">${s.departureStart}–${s.departureEnd}</span></div>`;
-    rows += `<div class="detail-row"><span class="detail-key">Übernachtung</span><span class="detail-v">${s.stay === 'hotel' ? '🏨 Hotel' : '🚗 Heimfahrt'}</span></div>`;
+    if (s.departureStart) rows += `<div class="detail-row"><span class="detail-key">${t('detail_abfahrt')}</span><span class="detail-v">${s.departureStart}–${s.departureEnd} (${fmtHoursShort(segmentHours(s.departureStart, s.departureEnd))})</span></div>`;
+    rows += `<div class="detail-row"><span class="detail-key">${t('detail_uebernachtung')}</span><span class="detail-v">${s.stay === 'hotel' ? t('detail_hotel') : t('detail_heimfahrt')}</span></div>`;
   }
-  rows += `<div class="detail-row"><span class="detail-key">Bezahlte Stunden</span><span class="detail-v" style="color:var(--brand)">${fmtH(hours)}</span></div>`;
-  if (s.note) rows += `<div class="detail-row"><span class="detail-key">Notiz</span><span class="detail-v">${s.note}</span></div>`;
+  rows += `<div class="detail-row"><span class="detail-key">${t('detail_bezahlte_stunden')}</span><span class="detail-v" style="color:var(--brand)">${fmtH(hours)}</span></div>`;
+  if (s.note) rows += `<div class="detail-row"><span class="detail-key">${t('detail_notiz')}</span><span class="detail-v">${s.note}</span></div>`;
 
   document.getElementById('detail-body').innerHTML = `
     <div class="detail-header">
       <div class="detail-date-big">${d.getDate()}</div>
-      <div class="detail-date-info"><div class="detail-dow">${DAYS_DE[d.getDay()]}</div><div class="detail-mon">${MONTHS_DE[d.getMonth()]} ${d.getFullYear()}</div></div>
+      <div class="detail-date-info"><div class="detail-dow">${curDAYS()[d.getDay()]}</div><div class="detail-mon">${curMONTHS()[d.getMonth()]} ${d.getFullYear()}</div></div>
     </div>
     <div style="padding:20px 24px 0;">${rows}</div>`;
   openSheet('sheet-detail');
@@ -1300,14 +1541,14 @@ function copyDetailShift() {
   const suggestedDate = getSuggestedDate(getLastDate());
   document.getElementById('f-date').value = suggestedDate;
   document.getElementById('date-tile-val').textContent = fmtDateDE(suggestedDate);
-  toast('Kopiert — Datum bei Bedarf anpassen und speichern');
+  toast(t('t_kopiert'));
 }
 
 function deleteDetailShift() {
   if (!confirm('Diesen Eintrag löschen?')) return;
   shifts = shifts.filter(s => s.id !== detailId);
   saveData(); renderAll(); closeSheet('sheet-detail');
-  toast('Eintrag gelöscht');
+  toast(t('t_eintrag_geloescht'));
 }
 
 // ─── Sheets ─────────────────────────────────────────────────────────────
@@ -1356,7 +1597,7 @@ function createBuroEntry(dateIso) {
   if (existingIdx >= 0 && shifts[existingIdx].type === 'work') {
     shifts[existingIdx].legs = (shifts[existingIdx].legs || []).concat([buroLeg]);
   } else if (existingIdx >= 0) {
-    toast('⚠ Für heute existiert bereits ein Krank/Urlaub-Eintrag');
+    toast(t('t_krank_urlaub_existiert'));
     return;
   } else {
     shifts.push({
@@ -1367,7 +1608,7 @@ function createBuroEntry(dateIso) {
   saveLastDate(dateIso);
   saveData();
   renderAll();
-  toast('✓ Büro hinzugefügt · ' + fmtDateDE(dateIso));
+  toast(t('t_buero_hinzugefuegt') + fmtDateDE(dateIso));
 }
 
 // Komfort: Ende der Anfahrt füllt automatisch den Start der Installation
@@ -1458,15 +1699,15 @@ let currentLegs = [];
 function editBodyHtml() {
   return `
     <div class="field">
-      <label>Art</label>
+      <label>${t('field_art')}</label>
       <div class="seg-control">
-        <button class="seg-btn" data-type="work" onclick="setType('work')">🔨 Arbeit</button>
-        <button class="seg-btn" data-type="sick" onclick="setType('sick')">🤒 Krank</button>
-        <button class="seg-btn" data-type="vacation" onclick="setType('vacation')">🌴 Urlaub</button>
+        <button class="seg-btn" data-type="work" onclick="setType('work')">${t('seg_arbeit')}</button>
+        <button class="seg-btn" data-type="sick" onclick="setType('sick')">${t('seg_krank')}</button>
+        <button class="seg-btn" data-type="vacation" onclick="setType('vacation')">${t('seg_urlaub')}</button>
       </div>
     </div>
     <div class="field">
-      <label>Datum</label>
+      <label>${t('field_datum')}</label>
       <input type="date" id="f-date" style="display:none">
       <div class="date-tile" onclick="openCal()">
         <span class="date-tile-icon">📅</span>
@@ -1475,29 +1716,29 @@ function editBodyHtml() {
     </div>
     <div id="work-fields">
       <div id="legs-container"></div>
-      <button type="button" class="add-leg-btn" onclick="addLeg()">＋ Weiteren Kunden hinzufügen</button>
+      <button type="button" class="add-leg-btn" onclick="addLeg()">${t('btn_weiteren_kunden')}</button>
       <div class="segment-group">
-        <div class="segment-group-label">Abfahrt</div>
+        <div class="segment-group-label">${t('segment_abfahrt')}</div>
         <div class="time-row"><input type="time" class="time-input" id="f-departure-start"><input type="time" class="time-input" id="f-departure-end"></div>
       </div>
       <div class="daily-limit">
         <div class="daily-limit-row">
-          <span class="daily-limit-label">Bezahlte Zeit heute</span>
+          <span class="daily-limit-label">${t('daily_limit_label')}</span>
           <span class="daily-limit-val" id="daily-limit-val">0h / 10h</span>
         </div>
         <div class="daily-bar-bg"><div class="daily-bar-fill" id="daily-limit-bar"></div></div>
       </div>
       <div class="field">
-        <label>Übernachtung</label>
+        <label>${t('field_uebernachtung')}</label>
         <button class="hotel-toggle" id="stay-btn" onclick="toggleStay()">
           <span class="ht-icon" id="stay-icon">🚗</span>
-          <div class="ht-text"><div id="stay-label">Heimfahrt</div></div>
+          <div class="ht-text"><div id="stay-label">${t('stay_heimfahrt_plain')}</div></div>
         </button>
       </div>
     </div>
     <div class="field">
-      <label>Notiz (allgemein)</label>
-      <input class="note-input" type="text" id="f-note" placeholder="z. B. Besonderheiten …">
+      <label>${t('field_notiz_allgemein')}</label>
+      <input class="note-input" type="text" id="f-note" placeholder="${t('placeholder_notiz')}">
     </div>`;
 }
 
@@ -1505,15 +1746,15 @@ function legHtml(leg, idx, total) {
   return `
     <div class="segment-group leg-group" data-leg-idx="${idx}">
       <div class="leg-header">
-        <span class="leg-header-title">Kunde ${idx + 1}</span>
+        <span class="leg-header-title">${t('leg_kunde')} ${idx + 1}</span>
         ${total > 1 ? `<button type="button" class="leg-remove" onclick="removeLeg(${idx})">🗑</button>` : ''}
       </div>
-      <div class="leg-sublabel">Anfahrt</div>
+      <div class="leg-sublabel">${t('leg_anfahrt')}</div>
       <div class="time-row"><input type="time" class="time-input leg-arrival-start" value="${leg.arrivalStart || ''}"><input type="time" class="time-input leg-arrival-end" value="${leg.arrivalEnd || ''}"></div>
-      <div class="leg-sublabel">Installation</div>
+      <div class="leg-sublabel">${t('leg_installation')}</div>
       <div class="time-row"><input type="time" class="time-input leg-install-start" value="${leg.installStart || '08:30'}"><input type="time" class="time-input leg-install-end" value="${leg.installEnd || '16:00'}"></div>
-      <div class="pause-row"><span class="pause-label">Pause (Minuten)</span><input type="number" class="pause-input leg-pause" data-pause-auto="${leg.pauseAuto === false ? '0' : '1'}" value="${typeof leg.pause === 'number' ? leg.pause : 45}" step="5" min="0"></div>
-      <input class="note-input leg-note" style="margin-top:10px;" type="text" placeholder="Kunde / Objekt …" value="${(leg.note || '').replace(/"/g, '&quot;')}" list="customer-history" autocomplete="off">
+      <div class="pause-row"><span class="pause-label">${t('pause_minuten')}</span><input type="number" class="pause-input leg-pause" data-pause-auto="${leg.pauseAuto === false ? '0' : '1'}" value="${typeof leg.pause === 'number' ? leg.pause : 45}" step="5" min="0"></div>
+      <input class="note-input leg-note" style="margin-top:10px;" type="text" placeholder="${t('placeholder_kunde_objekt')}" value="${(leg.note || '').replace(/"/g, '&quot;')}" list="customer-history" autocomplete="off">
     </div>`;
 }
 
@@ -1550,7 +1791,7 @@ function removeLeg(idx) {
 function openEdit(id, presetType) {
   editId = id;
   document.getElementById('edit-body').innerHTML = editBodyHtml();
-  document.getElementById('edit-title').textContent = id ? 'Eintrag bearbeiten' : 'Schicht hinzufügen';
+  document.getElementById('edit-title').textContent = id ? t('edit_title_edit') : t('edit_title_add');
   document.getElementById('edit-delete-btn').style.display = id ? '' : 'none';
 
   let type = presetType || 'work', date = new Date().toISOString().slice(0, 10);
@@ -1594,7 +1835,7 @@ function updateStayBtn() {
   const btn = document.getElementById('stay-btn');
   btn.classList.toggle('active', currentStay === 'hotel');
   document.getElementById('stay-icon').textContent = currentStay === 'hotel' ? '🏨' : '🚗';
-  document.getElementById('stay-label').textContent = currentStay === 'hotel' ? 'Hotel' : 'Heimfahrt';
+  document.getElementById('stay-label').textContent = currentStay === 'hotel' ? t('stay_hotel_plain') : t('stay_heimfahrt_plain');
 }
 
 function readShiftFromForm() {
@@ -1614,15 +1855,15 @@ let pendingShift = null;
 
 function saveShift() {
   const candidate = readShiftFromForm();
-  if (!candidate.date) { toast('⚠ Datum fehlt'); return; }
+  if (!candidate.date) { toast(t('t_datum_fehlt')); return; }
 
   if (candidate.type === 'work') {
     const gross = grossShiftHours(candidate);
-    if (gross === 0) { toast('⚠ Mindestens einen Zeitabschnitt eintragen'); return; }
+    if (gross === 0) { toast(t('t_mindestens_zeitabschnitt')); return; }
     if (isWorkdayHoliday(candidate.date)) {
       pendingHolidayShift = candidate;
       document.getElementById('confirm-holiday-text').textContent =
-        `${fmtDateDE(candidate.date)} ist ein Feiertag (${holidayName(candidate.date)}). Trotzdem als Arbeitstag speichern?`;
+        tf('holiday_warning', fmtDateDE(candidate.date), holidayNameUI(candidate.date));
       document.getElementById('confirm-holiday-overlay').classList.add('open');
       return;
     }
@@ -1646,9 +1887,9 @@ function continueSaveAfterHolidayCheck(candidate) {
     const check = breakCheck(candidate);
     if (!check.ok) {
       pendingShift = candidate;
-      document.getElementById('confirm-title').textContent = 'Pause zu kurz?';
+      document.getElementById('confirm-title').textContent = t('confirm_pause_title');
       document.getElementById('confirm-text').textContent =
-        `Bei ${gross.toFixed(2)}h Bruttodauer schreibt das ArbZG mindestens ${check.required} Min. Pause vor, eingetragen sind ${check.entered} Min. BESTÄTIGEN übernimmt deine Eingabe trotzdem, ÜBERSPRINGEN korrigiert automatisch auf ${check.required} Min.`;
+        tf('pause_warning', gross.toFixed(2), check.required, check.entered);
       document.getElementById('confirm-overlay').classList.add('open');
       return;
     }
@@ -1683,11 +1924,11 @@ function finishSaveShift(candidate) {
   renderAll();
   closeSheet('sheet-edit');
   if (candidate.type === 'work' && exceedsMaxDailyHours(candidate)) {
-    toast('⚠ Über 10h/Tag (vertragliches Maximum) — trotzdem gespeichert');
+    toast(t('t_ueber_10h'));
   } else if (replacedExisting) {
-    toast('✓ Gespeichert — bestehender Eintrag für dieses Datum wurde ersetzt');
+    toast(t('t_gespeichert_ersetzt'));
   } else {
-    toast(editId ? '✓ Gespeichert' : '✓ Hinzugefügt');
+    toast(editId ? t('t_gespeichert') : t('t_hinzugefuegt'));
   }
 }
 
@@ -1696,7 +1937,7 @@ function deleteCurrentShift() {
   if (!confirm('Wirklich löschen?')) return;
   shifts = shifts.filter(s => s.id !== editId);
   saveData(); renderAll(); closeSheet('sheet-edit');
-  toast('Gelöscht');
+  toast(t('t_geloescht'));
 }
 
 // ─── Kalender ───────────────────────────────────────────────────────────
@@ -1719,7 +1960,7 @@ function confirmCal() {
 function calMove(dir) { calMonth += dir; if (calMonth > 11) { calMonth = 0; calYear++; } if (calMonth < 0) { calMonth = 11; calYear--; } renderCal(); }
 function calSelectDay(iso) { calSelected = iso; renderCal(); }
 function renderCal() {
-  document.getElementById('cal-label').textContent = MONTHS_DE[calMonth] + ' ' + calYear;
+  document.getElementById('cal-label').textContent = curMONTHS()[calMonth] + ' ' + calYear;
   const today = new Date().toISOString().slice(0, 10);
   const shiftDates = new Set(shifts.map(s => s.date));
   const first = new Date(calYear, calMonth, 1);
@@ -1762,9 +2003,9 @@ function importFile(input) {
     else merge(imported);
     if (--pending === 0) {
       saveData(); renderAll();
-      const msg = total ? ('✓ ' + total + ' Einträge importiert') : '';
+      const msg = total ? (t('t_eintraege_importiert_1') + total + t('t_eintraege_importiert_2')) : '';
       const err = errors.length ? ('⚠ ' + errors.join('; ')) : '';
-      toast((msg + (msg && err ? ' | ' : '') + err) || '⚠ Keine Einträge gefunden');
+      toast((msg + (msg && err ? ' | ' : '') + err) || t('t_keine_eintraege_gefunden'));
     }
   }
   files.forEach(file => {
@@ -2031,6 +2272,7 @@ function buildPDFShift(iso,segs,idx){
 applyTheme(localStorage.getItem('monteur_theme') || 'auto');
 loadData();
 if (!activeMonth) activeMonth = getMonths()[getMonths().length - 1];
+applyI18nStatic();
 renderAll();
 initSync();
 
@@ -2057,22 +2299,23 @@ const GREETING_POOLS = {
 };
 function timeBasedGreeting() {
   const h = new Date().getHours();
+  const pools = curLang() === 'cs' ? GREETING_POOLS_CS : GREETING_POOLS;
   let pool;
-  if (h >= 5 && h < 11) pool = GREETING_POOLS.morning;
-  else if (h >= 11 && h < 18) pool = GREETING_POOLS.day;
-  else if (h >= 18 && h < 23) pool = GREETING_POOLS.evening;
-  else pool = GREETING_POOLS.night;
+  if (h >= 5 && h < 11) pool = pools.morning;
+  else if (h >= 11 && h < 18) pool = pools.day;
+  else if (h >= 18 && h < 23) pool = pools.evening;
+  else pool = pools.night;
   return pool[Math.floor(Math.random() * pool.length)];
 }
 function saveWelcomeName() {
   const fn = document.getElementById('welcome-firstname').value.trim();
   const ln = document.getElementById('welcome-lastname').value.trim();
-  if (!fn || !ln) { toast('⚠ Bitte Vor- und Nachname eingeben'); return; }
+  if (!fn || !ln) { toast(t('t_bitte_namen')); return; }
   config.firstName = fn;
   config.lastName = ln;
   saveConfig();
   closeSheet('sheet-welcome');
-  toast('✓ Willkommen, ' + fn + '!');
+  toast(t('t_willkommen') + fn + '!');
 }
 if (!config.firstName || !config.lastName) {
   openSheet('sheet-welcome');
@@ -2087,13 +2330,13 @@ function openSummary() {
   document.getElementById('summary-body').innerHTML = `
     <div class="summary-hero">
       <div class="summary-amount">${fmtH(s.totalHours)}</div>
-      <div class="summary-period">${MONTHS_DE[parseInt(mo) - 1]} ${y}</div>
+      <div class="summary-period">${curMONTHS()[parseInt(mo) - 1]} ${y}</div>
     </div>
     <div class="sum-grid">
-      <div class="sum-tile"><div class="sum-tile-val brand">${fmtH(s.totalHours)}</div><div class="sum-tile-label">Gesamtstunden</div></div>
-      <div class="sum-tile"><div class="sum-tile-val amber">${fmtH(s.overtimeHours)}</div><div class="sum-tile-label">Überstunden</div></div>
-      <div class="sum-tile"><div class="sum-tile-val green">${s.auslöseTotal} €</div><div class="sum-tile-label">Auslöse gesamt</div></div>
-      <div class="sum-tile"><div class="sum-tile-val">${s.sickDays} / ${s.vacationDays}</div><div class="sum-tile-label">Krank / Urlaub (Tage)</div></div>
+      <div class="sum-tile"><div class="sum-tile-val brand">${fmtH(s.totalHours)}</div><div class="sum-tile-label">${t('summary_gesamtstunden')}</div></div>
+      <div class="sum-tile"><div class="sum-tile-val amber">${fmtH(s.overtimeHours)}</div><div class="sum-tile-label">${t('summary_ueberstunden')}</div></div>
+      <div class="sum-tile"><div class="sum-tile-val green">${s.auslöseTotal} €</div><div class="sum-tile-label">${t('summary_auslose_gesamt')}</div></div>
+      <div class="sum-tile"><div class="sum-tile-val">${s.sickDays} / ${s.vacationDays}</div><div class="sum-tile-label">${t('summary_krank_urlaub')}</div></div>
     </div>`;
   openSheet('sheet-summary');
 }
@@ -2101,21 +2344,29 @@ function openSummary() {
 // ─── Einstellungen ──────────────────────────────────────────────────────────
 function renderSettings() {
   const theme = localStorage.getItem('monteur_theme') || 'auto';
+  const lang = curLang();
   document.getElementById('settings-body').innerHTML = `
     <div class="setting-row">
-      <div><div class="setting-label">Vorname</div><div class="setting-sub">für den Export</div></div>
+      <div><div class="setting-label">${t('setting_sprache')}</div><div class="setting-sub">${t('setting_sprache_sub')}</div></div>
+      <div class="theme-seg">
+        <button class="theme-btn${lang==='cs'?' active':''}" onclick="setLanguage('cs')">🇨🇿</button>
+        <button class="theme-btn${lang==='de'?' active':''}" onclick="setLanguage('de')">🇩🇪</button>
+      </div>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">${t('label_vorname')}</div><div class="setting-sub">${t('setting_export_sub')}</div></div>
       <input class="name-input" type="text" id="cfg-firstname" value="${config.firstName || ''}" onchange="updateConfigField('firstName', this.value)">
     </div>
     <div class="setting-row">
-      <div><div class="setting-label">Nachname</div><div class="setting-sub">für den Export</div></div>
+      <div><div class="setting-label">${t('label_nachname')}</div><div class="setting-sub">${t('setting_export_sub')}</div></div>
       <input class="name-input" type="text" id="cfg-lastname" value="${config.lastName || ''}" onchange="updateConfigField('lastName', this.value)">
     </div>
     <div class="setting-row">
-      <div><div class="setting-label">Wochennorm</div><div class="setting-sub">Std./Woche, Basis für Überstunden</div></div>
+      <div><div class="setting-label">${t('setting_wochennorm')}</div><div class="setting-sub">${t('setting_wochennorm_sub')}</div></div>
       <input class="setting-input" type="number" id="cfg-norm" value="${config.weeklyNorm}" step="1" min="1" onchange="updateConfigField('weeklyNorm', parseFloat(this.value)||40)">
     </div>
     <div class="setting-row">
-      <div><div class="setting-label">Erscheinungsbild</div><div class="setting-sub">hell / dunkel / System</div></div>
+      <div><div class="setting-label">${t('setting_erscheinungsbild')}</div><div class="setting-sub">${t('setting_erscheinungsbild_sub')}</div></div>
       <div class="theme-seg">
         <button class="theme-btn${theme==='light'?' active':''}" data-theme="light" onclick="setTheme('light')">☀️</button>
         <button class="theme-btn${theme==='dark'?' active':''}" data-theme="dark" onclick="setTheme('dark')">🌙</button>
@@ -2124,40 +2375,41 @@ function renderSettings() {
     </div>
     ${renderSyncSection()}
     <div style="margin-top:20px;">
-      <button class="btn-main secondary" style="width:100%;" onclick="openExport('download')">📤 Exportieren (Excel)</button>
+      <button class="btn-main secondary" style="width:100%;" onclick="openExport('download')">${t('btn_export_excel')}</button>
     </div>
     <div style="margin-top:10px;">
-      <button class="btn-main secondary" style="width:100%;" onclick="document.getElementById('monteur-import-input').click()">📥 Importieren (XLSX, PDF)</button>
+      <button class="btn-main secondary" style="width:100%;" onclick="document.getElementById('monteur-import-input').click()">${t('btn_import')}</button>
       <input type="file" id="monteur-import-input" accept=".xlsx,.pdf,.json" multiple style="display:none" onchange="importFile(this)">
     </div>
     <div style="margin-top:10px;">
-      <button class="btn-main secondary" style="width:100%;" onclick="openSheet('sheet-help')">📱 Zum Startbildschirm hinzufügen</button>
+      <button class="btn-main secondary" style="width:100%;" onclick="openSheet('sheet-help')">${t('btn_zum_startbildschirm')}</button>
     </div>
-    <div style="margin-top:24px;text-align:center;font-size:11px;color:var(--muted);">© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Alle Rechte vorbehalten</div>`;
+    <div style="margin-top:20px;text-align:center;font-size:11px;color:var(--muted);">${t('letzte_aktualisierung')}${LAST_UPDATED}</div>
+    <div style="margin-top:8px;text-align:center;font-size:11px;color:var(--muted);">${t('copyright')}</div>`;
 }
 function renderSyncSection() {
   if (syncEnabled()) {
     return `
     <div class="setting-row" style="margin-top:20px;">
-      <div><div class="setting-label">Synchronisierung</div><div class="setting-sub" id="sync-status">Aktiv — Code: ${syncCode()}</div></div>
+      <div><div class="setting-label">${t('setting_sync_label')}</div><div class="setting-sub" id="sync-status">${t('sync_active')}${syncCode()}</div></div>
     </div>
     <div style="margin-top:10px;">
-      <button class="btn-main secondary" style="width:100%;" onclick="stopSync()">Synchronisierung beenden</button>
+      <button class="btn-main secondary" style="width:100%;" onclick="stopSync()">${t('btn_sync_beenden')}</button>
     </div>`;
   }
   return `
     <div class="setting-row" style="margin-top:20px;">
-      <div><div class="setting-label">Synchronisierung</div><div class="setting-sub" id="sync-status">Nicht aktiv</div></div>
+      <div><div class="setting-label">${t('setting_sync_label')}</div><div class="setting-sub" id="sync-status">${t('sync_inactive')}</div></div>
     </div>
     <div style="margin-top:10px;display:flex;gap:8px;">
-      <button class="btn-main secondary" style="flex:1;" onclick="startSync()">Sync starten</button>
-      <button class="btn-main secondary" style="flex:1;" onclick="toggleSyncCodeInput()">Code eingeben</button>
+      <button class="btn-main secondary" style="flex:1;" onclick="startSync()">${t('btn_sync_starten')}</button>
+      <button class="btn-main secondary" style="flex:1;" onclick="toggleSyncCodeInput()">${t('btn_code_eingeben')}</button>
     </div>
     <div id="sync-code-input-row" style="display:none;margin-top:10px;">
       <div class="field">
-        <input class="note-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="sync-code-field" placeholder="6-stelliger Code">
+        <input class="note-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="sync-code-field" placeholder="${t('placeholder_sync_code')}">
       </div>
-      <button class="btn-main primary" style="width:100%;margin-top:8px;" onclick="pairSync(document.getElementById('sync-code-field').value.trim())">Verbinden</button>
+      <button class="btn-main primary" style="width:100%;margin-top:8px;" onclick="pairSync(document.getElementById('sync-code-field').value.trim())">${t('btn_verbinden')}</button>
     </div>`;
 }
 function toggleSyncCodeInput() {
@@ -2173,16 +2425,16 @@ function importFromJson(input) {
     try {
       const data = JSON.parse(e.target.result);
       const imported = Array.isArray(data) ? data : (data.shifts || []);
-      if (!imported.length) { toast('⚠ Keine Einträge gefunden'); return; }
+      if (!imported.length) { toast(t('t_keine_eintraege_gefunden')); return; }
       // Merge: importierte Daten überschreiben vorhandene Einträge für dasselbe Datum
       const existing = shifts.filter(s => !imported.find(i => i.date === s.date));
       shifts = [...existing, ...imported].sort((a,b) => a.date.localeCompare(b.date));
       shifts.forEach(migrateShiftLegs);
       saveData();
       renderAll();
-      toast('✓ ' + imported.length + ' Einträge importiert');
+      toast(t('t_eintraege_importiert_1') + imported.length + t('t_eintraege_importiert_2'));
     } catch(err) {
-      toast('⚠ Fehler: ' + err.message);
+      toast(t('t_fehler') + err.message);
     }
     input.value = '';
   };
@@ -2201,11 +2453,11 @@ function openExport(mode) {
   const weeks = exportableWeeks();
   const body = document.getElementById('export-body');
   if (!weeks.length) {
-    body.innerHTML = `<div class="empty-state"><span class="big">Keine Daten</span>Es gibt noch keine Schichten zum Exportieren.</div>`;
+    body.innerHTML = `<div class="empty-state"><span class="big">${t('export_keine_daten')}</span>${t('export_keine_schichten')}</div>`;
   } else {
     body.innerHTML = weeks.map(function (mon) {
       return `<button class="week-export-row" onclick="downloadWeekExport('${mon}')">
-        <div><div class="week-export-kw">KW${isoWeekNumber(mon)}</div><div class="week-export-range">${weekRangeLabel(mon)}</div></div>
+        <div><div class="week-export-kw">${t('week_kw')}${isoWeekNumber(mon)}</div><div class="week-export-range">${weekRangeLabel(mon)}</div></div>
         <span>📥</span>
       </button>`;
     }).join('');
@@ -2215,7 +2467,7 @@ function openExport(mode) {
 let pendingExportMonday = null;
 function downloadWeekExport(mondayIso) {
   if (!config.firstName || !config.lastName) {
-    toast('⚠ Bitte zuerst Vor- und Nachname in den Einstellungen eintragen');
+    toast(t('t_bitte_namen_settings'));
     return;
   }
   const ranges = hotelStayRanges(shifts, mondayIso);
@@ -2228,12 +2480,12 @@ function downloadWeekExport(mondayIso) {
 function openHotelAddressSheet(mondayIso, ranges) {
   pendingExportMonday = mondayIso;
   document.getElementById('hotel-body').innerHTML =
-    `<p style="margin:0 0 16px;color:var(--muted);">Warst du in dieser Woche im Hotel? Du kannst die Adresse für den Export eintragen — optional.</p>` +
+    `<p style="margin:0 0 16px;color:var(--muted);">${t('hotel_intro')}</p>` +
     ranges.map(function (r, i) {
       const label = r.start === r.end ? fmtDayMonth(r.start) : (fmtDayMonthShort(r.start) + '-' + fmtDayMonth(r.end));
       return `<div class="field">
         <label>Hotel ${label}</label>
-        <input class="note-input" type="text" id="hotel-addr-${i}" data-start="${r.start}" placeholder="Adresse (optional)">
+        <input class="note-input" type="text" id="hotel-addr-${i}" data-start="${r.start}" placeholder="${t('hotel_placeholder')}">
       </div>`;
     }).join('');
   openSheet('sheet-hotel');
@@ -2290,7 +2542,7 @@ function downloadBlob(blob, filename, toastPrefix) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   closeSheet('sheet-export');
-  toast((toastPrefix || '✓ Heruntergeladen: ') + filename);
+  toast((toastPrefix || t('t_heruntergeladen')) + filename);
 }
 
 // ─── Cloud-Synchronisierung ────────────────────────────────────────────
@@ -2346,36 +2598,36 @@ async function syncFetch(method, code, body) {
 }
 
 async function startSync() {
-  setSyncStatus('Code wird erzeugt …');
+  setSyncStatus(t('sync_status_code_wird_erzeugt'));
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = randomSyncCode();
     const check = await syncFetch('GET', code).catch(() => null);
-    if (!check) { setSyncStatus('⚠ Keine Verbindung — später erneut versuchen'); return; }
+    if (!check) { setSyncStatus(t('sync_status_keine_verbindung')); return; }
     if (check.status === 404) {
       const created = await syncFetch('POST', code, { shifts, config, baseLastModified: null }).catch(() => null);
       if (created && created.ok) {
         setSyncState(code, created.body.lastModified);
         renderSettings();
-        toast('✓ Synchronisierung gestartet');
+        toast(t('t_sync_gestartet'));
         return;
       }
-      setSyncStatus('⚠ Fehler beim Starten — bitte erneut versuchen');
+      setSyncStatus(t('sync_status_fehler_starten'));
       return;
     }
   }
-  setSyncStatus('⚠ Konnte keinen freien Code finden — bitte erneut versuchen');
+  setSyncStatus(t('sync_status_kein_freier_code'));
 }
 
 async function pairSync(code) {
-  if (!/^\d{6}$/.test(code)) { toast('⚠ Der Code hat 6 Ziffern'); return; }
-  if (shifts.length > 0 && !confirm('Auf diesem Telefon sind bereits ' + shifts.length + ' Einträge gespeichert. Mit dem Code verbinden ersetzt sie durch die Daten vom anderen Telefon — fortfahren?')) {
+  if (!/^\d{6}$/.test(code)) { toast(t('t_code_6_ziffern')); return; }
+  if (shifts.length > 0 && !confirm(shifts.length + t('pairsync_confirm'))) {
     return;
   }
-  setSyncStatus('Verbinde …');
+  setSyncStatus(t('sync_status_verbinde'));
   const res = await syncFetch('GET', code).catch(() => null);
-  if (!res) { setSyncStatus('⚠ Keine Verbindung — später erneut versuchen'); return; }
-  if (res.status === 404) { toast('⚠ Code nicht gefunden'); return; }
-  if (!res.ok) { setSyncStatus('⚠ Fehler beim Verbinden'); return; }
+  if (!res) { setSyncStatus(t('sync_status_keine_verbindung')); return; }
+  if (res.status === 404) { toast(t('t_code_nicht_gefunden')); return; }
+  if (!res.ok) { setSyncStatus(t('sync_status_fehler_verbinden')); return; }
   shifts = res.body.shifts || [];
   shifts.forEach(migrateShiftLegs);
   config = Object.assign(config, res.body.config || {});
@@ -2385,13 +2637,13 @@ async function pairSync(code) {
   syncDirty = false;
   renderAll();
   renderSettings();
-  toast('✓ Daten übernommen');
+  toast(t('t_daten_uebernommen'));
 }
 
 function stopSync() {
   clearSyncState();
   renderSettings();
-  toast('Synchronisierung beendet');
+  toast(t('t_sync_beendet'));
 }
 
 function scheduleSyncPush() {
@@ -2404,19 +2656,19 @@ function scheduleSyncPush() {
 async function pushSync() {
   if (!syncEnabled() || syncInFlight) return;
   syncInFlight = true;
-  setSyncStatus('Synchronisiere …');
+  setSyncStatus(t('sync_status_synchronisiere'));
   const res = await syncFetch('POST', syncCode(), { shifts, config, baseLastModified: syncLastModified() }).catch(() => null);
   syncInFlight = false;
-  if (!res) { setSyncStatus('⚠ Nicht synchronisiert (keine Verbindung)'); return; }
+  if (!res) { setSyncStatus(t('sync_status_nicht_synchronisiert')); return; }
   if (res.status === 409) {
     syncConflictData = { remote: res.body };
     openSyncConflict();
     return;
   }
-  if (!res.ok) { setSyncStatus('⚠ Synchronisierung fehlgeschlagen'); return; }
+  if (!res.ok) { setSyncStatus(t('sync_status_fehlgeschlagen')); return; }
   setSyncState(syncCode(), res.body.lastModified);
   syncDirty = false;
-  setSyncStatus('✓ Synchronisiert');
+  setSyncStatus(t('sync_status_synchronisiert'));
 }
 
 async function pullSync() {
@@ -2424,8 +2676,8 @@ async function pullSync() {
   syncInFlight = true;
   const res = await syncFetch('GET', syncCode()).catch(() => null);
   syncInFlight = false;
-  if (!res || !res.ok) { setSyncStatus('⚠ Nicht synchronisiert (keine Verbindung)'); return; }
-  if (res.body.lastModified === syncLastModified()) { setSyncStatus('✓ Synchronisiert'); return; }
+  if (!res || !res.ok) { setSyncStatus(t('sync_status_nicht_synchronisiert')); return; }
+  if (res.body.lastModified === syncLastModified()) { setSyncStatus(t('sync_status_synchronisiert')); return; }
   shifts = res.body.shifts || [];
   shifts.forEach(migrateShiftLegs);
   config = Object.assign(config, res.body.config || {});
@@ -2434,7 +2686,7 @@ async function pullSync() {
   setSyncState(syncCode(), res.body.lastModified);
   renderAll();
   renderSettings();
-  setSyncStatus('✓ Synchronisiert');
+  setSyncStatus(t('sync_status_synchronisiert'));
 }
 
 // Beim App-Start/Fortsetzen aufgerufen: bei ungesicherten lokalen Änderungen
@@ -2461,7 +2713,7 @@ function resolveSyncConflict(choice) {
     syncDirty = false;
     renderAll();
     renderSettings();
-    setSyncStatus('✓ Synchronisiert');
+    setSyncStatus(t('sync_status_synchronisiert'));
     syncConflictData = null;
   } else {
     const remoteLastModified = syncConflictData.remote.lastModified;
