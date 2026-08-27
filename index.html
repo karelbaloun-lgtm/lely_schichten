@@ -303,6 +303,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       <div class="topbar-left">
         <div class="topbar-title">Lely Schichten</div>
       </div>
+      <button class="topbar-settings" onclick="manualSyncTap()" aria-label="Sync">🔄</button>
       <button class="topbar-settings" onclick="openSettings()">⚙<span class="sync-indicator" id="sync-indicator"></span></button>
     </div>
   </header>
@@ -1165,6 +1166,7 @@ const I18N = {
     t_code_nicht_gefunden: '⚠ Code nicht gefunden',
     t_daten_uebernommen: '✓ Daten übernommen',
     t_sync_beendet: 'Synchronisierung beendet',
+    t_sync_nicht_aktiv: '⚠ Synchronisierung ist nicht aktiv — siehe Einstellungen',
     t_heruntergeladen: '✓ Heruntergeladen: ',
     sync_status_code_wird_erzeugt: 'Code wird erzeugt …',
     sync_status_keine_verbindung: '⚠ Keine Verbindung — später erneut versuchen',
@@ -1270,6 +1272,7 @@ const I18N = {
     t_code_nicht_gefunden: '⚠ Kód nenalezen',
     t_daten_uebernommen: '✓ Data převzata',
     t_sync_beendet: 'Synchronizace ukončena',
+    t_sync_nicht_aktiv: '⚠ Synchronizace není aktivní — viz Nastavení',
     t_heruntergeladen: '✓ Staženo: ',
     sync_status_code_wird_erzeugt: 'Vytváří se kód …',
     sync_status_keine_verbindung: '⚠ Bez připojení — zkus to později znovu',
@@ -2628,6 +2631,13 @@ function setSyncStatus(text) {
 function setSyncIndicator(active) {
   const el = document.getElementById('sync-indicator');
   if (el) el.classList.toggle('active', !!active);
+}
+// Zuverlässiger, geräteunabhängiger Ersatz/Ergänzung zum Pull-to-Refresh-
+// Wisch (der auf manchen echten Handys/Browsern nicht anspringt): einfacher
+// Tap auf das Symbol neben dem Zahnrad.
+function manualSyncTap() {
+  if (!syncEnabled()) { toast(t('t_sync_nicht_aktiv')); return; }
+  syncOnResume();
 }
 async function syncFetch(method, code, body) {
   const url = SYNC_ENDPOINT + '?code=' + encodeURIComponent(code);
