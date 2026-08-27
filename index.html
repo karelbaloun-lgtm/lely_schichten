@@ -1157,6 +1157,7 @@ const I18N = {
     sync_status_fehlgeschlagen: '⚠ Synchronisierung fehlgeschlagen',
     sync_status_synchronisiert: '✓ Synchronisiert',
     pairsync_confirm: ' Einträge gespeichert. Mit dem Code verbinden ersetzt sie durch die Daten vom anderen Telefon — fortfahren?',
+    confirm_delete_entry: 'Diesen Eintrag löschen?', confirm_delete_really: 'Wirklich löschen?',
     copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Alle Rechte vorbehalten',
     letzte_aktualisierung: 'Letzte Aktualisierung: ',
     week_kw: 'KW'
@@ -1261,6 +1262,7 @@ const I18N = {
     sync_status_fehlgeschlagen: '⚠ Synchronizace se nezdařila',
     sync_status_synchronisiert: '✓ Synchronizováno',
     pairsync_confirm: ' záznamů. Připojení kódem je nahradí daty z druhého telefonu — pokračovat?',
+    confirm_delete_entry: 'Smazat tento záznam?', confirm_delete_really: 'Opravdu smazat?',
     copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Všechna práva vyhrazena',
     letzte_aktualisierung: 'Poslední aktualizace: ',
     week_kw: 'T'
@@ -1551,7 +1553,7 @@ function copyDetailShift() {
 }
 
 function deleteDetailShift() {
-  if (!confirm('Diesen Eintrag löschen?')) return;
+  if (!confirm(t('confirm_delete_entry'))) return;
   shifts = shifts.filter(s => s.id !== detailId);
   saveData(); renderAll(); closeSheet('sheet-detail');
   toast(t('t_eintrag_geloescht'));
@@ -1940,7 +1942,7 @@ function finishSaveShift(candidate) {
 
 function deleteCurrentShift() {
   if (!editId) return;
-  if (!confirm('Wirklich löschen?')) return;
+  if (!confirm(t('confirm_delete_really'))) return;
   shifts = shifts.filter(s => s.id !== editId);
   saveData(); renderAll(); closeSheet('sheet-edit');
   toast(t('t_geloescht'));
