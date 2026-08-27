@@ -69,6 +69,18 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .month-chip.active { background: var(--brand-dim); border-color: var(--brand); color: var(--brand); font-weight: 500; }
 
 .timeline { overflow-y: auto; overflow-x: hidden; padding: 16px 20px 24px; scrollbar-width: thin; scrollbar-color: var(--s3) transparent; }
+/* Pull-to-refresh: erstes Kind von .timeline, normal height:0 (unsichtbar,
+   nimmt keinen Platz weg). Beim Ziehen (nur wenn ganz oben gescrollt UND
+   Sync aktiv, siehe JS) wächst die Höhe live mit dem Zugweg mit — der
+   Ring füllt sich synchron. Loslassen über der Schwelle löst syncOnResume()
+   aus und der Ring dreht sich, bis die Antwort da ist. */
+.pull-refresh { height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.pull-refresh-svg { width: 28px; height: 28px; transform: rotate(-90deg); }
+.pull-refresh-track { fill: none; stroke: var(--border2); stroke-width: 3; }
+.pull-refresh-fill { fill: none; stroke: var(--brand); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 94.2; stroke-dashoffset: 94.2; }
+.pull-refresh.loading .pull-refresh-svg { animation: pull-refresh-rotate 0.8s linear infinite; }
+.pull-refresh.loading .pull-refresh-fill { stroke-dashoffset: 66; }
+@keyframes pull-refresh-rotate { to { transform: rotate(270deg); } }
 .timeline::-webkit-scrollbar { width: 4px; }
 .timeline::-webkit-scrollbar-thumb { background: var(--s3); border-radius: 2px; }
 
@@ -297,7 +309,15 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 
   <div class="month-bar" id="month-bar"></div>
 
-  <div class="timeline" id="timeline"></div>
+  <div class="timeline" id="timeline">
+    <div class="pull-refresh" id="pull-refresh">
+      <svg viewBox="0 0 36 36" class="pull-refresh-svg">
+        <circle class="pull-refresh-track" cx="18" cy="18" r="15"></circle>
+        <circle class="pull-refresh-fill" id="pull-refresh-fill" cx="18" cy="18" r="15"></circle>
+      </svg>
+    </div>
+    <div id="timeline-content"></div>
+  </div>
 
   <nav class="bottom-nav">
     <button class="nav-btn" onclick="openExport('share')"><span class="icon">📤</span><span data-i18n="nav_teilen">Teilen</span></button>
@@ -1440,7 +1460,7 @@ function renderTimeline() {
   }
   mondays.sort().reverse();
 
-  const tl = document.getElementById('timeline');
+  const tl = document.getElementById('timeline-content');
   if (!hasAnyContent) {
     tl.innerHTML = `<div class="empty-state"><span class="big">${t('empty_keine_eintraege')}</span>${t('empty_fuege_hinzu')}</div>`;
     return;
@@ -2292,6 +2312,7 @@ if (!activeMonth) activeMonth = getMonths()[getMonths().length - 1];
 applyI18nStatic();
 renderAll();
 initSync();
+initPullToRefresh();
 
 // Service Worker nur registrieren, wenn unterstützt und nicht bei file://
 // (dort schlägt die Registrierung ohnehin fehl — kein Fehler, einfach übersprungen).
@@ -2737,8 +2758,8 @@ async function pullSync() {
 // wird gepusht (damit ein echter Konflikt korrekt über 409 erkannt wird),
 // sonst normal gepullt. Siehe Kommentar bei syncDirty weiter oben.
 function syncOnResume() {
-  if (!syncEnabled()) return;
-  if (syncDirty) pushSync(); else pullSync();
+  if (!syncEnabled()) return Promise.resolve();
+  return syncDirty ? pushSync() : pullSync();
 }
 
 function openSyncConflict() {
@@ -2777,6 +2798,78 @@ function initSync() {
     if (document.visibilityState === 'visible') syncOnResume();
   });
   syncOnResume();
+}
+
+// ─── Pull-to-Refresh ────────────────────────────────────────────────────
+// Am oberen Rand der Timeline (nur wenn schon ganz nach oben gescrollt)
+// nach unten ziehen löst eine manuelle Synchronisierung aus — bleibt
+// wirkungslos, solange Sync nicht aktiv ist (normales Scrollen/Bounce
+// bleibt dann unverändert).
+const PULL_THRESHOLD = 70;
+const PULL_MAX = 90;
+const PULL_CIRC = 94.2; // 2 * π * 15 (Radius des Rings im SVG)
+let pullStartY = null;
+let pulling = false;
+let pullDist = 0;
+let pullRefreshing = false;
+
+function setPullDist(dist) {
+  pullDist = dist;
+  const el = document.getElementById('pull-refresh');
+  if (el) el.style.height = dist + 'px';
+  const fill = document.getElementById('pull-refresh-fill');
+  if (fill) fill.style.strokeDashoffset = String(PULL_CIRC * (1 - Math.min(1, dist / PULL_THRESHOLD)));
+}
+function resetPull() {
+  const el = document.getElementById('pull-refresh');
+  if (el) { el.style.height = ''; el.classList.remove('loading'); }
+  const fill = document.getElementById('pull-refresh-fill');
+  if (fill) fill.style.strokeDashoffset = String(PULL_CIRC);
+  pullDist = 0;
+}
+async function triggerPullRefresh() {
+  pullRefreshing = true;
+  const el = document.getElementById('pull-refresh');
+  if (el) { el.style.height = '44px'; el.classList.add('loading'); }
+  try {
+    await syncOnResume();
+  } finally {
+    pullRefreshing = false;
+    resetPull();
+  }
+}
+function pullTouchStart(e) {
+  if (pullRefreshing || !syncEnabled()) { pullStartY = null; pulling = false; return; }
+  if (document.getElementById('timeline').scrollTop <= 0) {
+    pullStartY = e.touches[0].clientY;
+    pulling = true;
+  } else {
+    pullStartY = null; pulling = false;
+  }
+}
+function pullTouchMove(e) {
+  if (!pulling || pullStartY === null || pullRefreshing) return;
+  if (document.getElementById('timeline').scrollTop > 0) { pulling = false; resetPull(); return; }
+  const dy = e.touches[0].clientY - pullStartY;
+  if (dy <= 0) { setPullDist(0); return; }
+  e.preventDefault();
+  setPullDist(Math.min(dy * 0.5, PULL_MAX));
+}
+function pullTouchEnd() {
+  if (!pulling) return;
+  pulling = false;
+  if (pullDist >= PULL_THRESHOLD && !pullRefreshing) {
+    triggerPullRefresh();
+  } else {
+    resetPull();
+  }
+}
+function initPullToRefresh() {
+  const tl = document.getElementById('timeline');
+  tl.addEventListener('touchstart', pullTouchStart, { passive: true });
+  tl.addEventListener('touchmove', pullTouchMove, { passive: false });
+  tl.addEventListener('touchend', pullTouchEnd, { passive: true });
+  tl.addEventListener('touchcancel', pullTouchEnd, { passive: true });
 }
 
 </script>
