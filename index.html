@@ -68,7 +68,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .month-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-family: var(--mono); cursor: pointer; border: 1px solid var(--border); color: var(--muted); transition: all 0.15s; touch-action: manipulation; white-space: nowrap; }
 .month-chip.active { background: var(--brand-dim); border-color: var(--brand); color: var(--brand); font-weight: 500; }
 
-.timeline { overflow-y: auto; overflow-x: hidden; padding: 16px 20px 24px; scrollbar-width: thin; scrollbar-color: var(--s3) transparent; }
+.timeline { overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; padding: 16px 20px 24px; scrollbar-width: thin; scrollbar-color: var(--s3) transparent; }
 /* Pull-to-refresh: erstes Kind von .timeline, normal height:0 (unsichtbar,
    nimmt keinen Platz weg). Beim Ziehen (nur wenn ganz oben gescrollt UND
    Sync aktiv, siehe JS) wächst die Höhe live mit dem Zugweg mit — der
