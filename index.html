@@ -1581,23 +1581,32 @@ function fabAction(type) {
 document.addEventListener('click', e => { if (fabOpen && !e.target.closest('.fab')) closeFab(); });
 
 // ─── Büro (1-Klick-Kurzeintrag, max. 1× pro Woche ohne Nachfrage) ──────────
+// Ziel ist bewusst NICHT das heutige Kalenderdatum, sondern der nächste
+// Werktag nach dem zuletzt erfassten Eintrag (wie beim "Kopieren") — sonst
+// landet der Büro-Eintrag am realen "heute", und falls dafür schon eine
+// Schicht existiert (z.B. weil sie abends nachträglich eingetragen wird),
+// wird er fälschlich als zusätzlicher Kunde an diese Schicht angehängt.
 function addBuro() {
-  const today = new Date().toISOString().slice(0, 10);
-  const monday = mondayOf(today);
+  const targetDate = getSuggestedDate(getLastDate());
+  const monday = mondayOf(targetDate);
   const weekDays = weekDates(monday);
   const hasBuroThisWeek = shifts.some(function (s) {
     return weekDays.includes(s.date) && (s.legs || []).some(function (leg) { return leg.note === 'Büro'; });
   });
   if (hasBuroThisWeek) {
+    pendingBuroDate = targetDate;
     document.getElementById('confirm-buro-overlay').classList.add('open');
     return;
   }
-  createBuroEntry(today);
+  createBuroEntry(targetDate);
 }
-function closeBuroConfirm() { document.getElementById('confirm-buro-overlay').classList.remove('open'); }
+let pendingBuroDate = null;
+function closeBuroConfirm() { document.getElementById('confirm-buro-overlay').classList.remove('open'); pendingBuroDate = null; }
 function confirmAddBuroAnyway() {
   document.getElementById('confirm-buro-overlay').classList.remove('open');
-  createBuroEntry(new Date().toISOString().slice(0, 10));
+  const targetDate = pendingBuroDate || getSuggestedDate(getLastDate());
+  pendingBuroDate = null;
+  createBuroEntry(targetDate);
 }
 function createBuroEntry(dateIso) {
   const buroLeg = { arrivalStart: '', arrivalEnd: '', installStart: '07:00', installEnd: '08:00', pause: 0, note: 'Büro', pauseAuto: false };
