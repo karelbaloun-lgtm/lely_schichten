@@ -303,7 +303,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       <div class="topbar-left">
         <div class="topbar-title">Lely Schichten</div>
       </div>
-      <button class="topbar-settings" onclick="manualSyncTap()" aria-label="Sync">🔄</button>
+      <button class="topbar-settings" id="manual-sync-btn" onclick="manualSyncTap()" aria-label="Sync" style="display:none;">🔄</button>
       <button class="topbar-settings" onclick="openSettings()">⚙<span class="sync-indicator" id="sync-indicator"></span></button>
     </div>
   </header>
@@ -2314,6 +2314,7 @@ loadData();
 if (!activeMonth) activeMonth = getMonths()[getMonths().length - 1];
 applyI18nStatic();
 renderAll();
+updateManualSyncBtn();
 initSync();
 initPullToRefresh();
 
@@ -2639,6 +2640,12 @@ function manualSyncTap() {
   if (!syncEnabled()) { toast(t('t_sync_nicht_aktiv')); return; }
   syncOnResume();
 }
+// Der Button ist nur sichtbar, wenn Sync tatsächlich aktiv ist — sonst gäbe
+// es nichts zu synchronisieren und der Button wäre nur verwirrender Ballast.
+function updateManualSyncBtn() {
+  const el = document.getElementById('manual-sync-btn');
+  if (el) el.style.display = syncEnabled() ? 'flex' : 'none';
+}
 async function syncFetch(method, code, body) {
   const url = SYNC_ENDPOINT + '?code=' + encodeURIComponent(code);
   const res = await fetch(url, {
@@ -2675,6 +2682,7 @@ async function startSync() {
     setSyncStatus(t('sync_status_kein_freier_code'));
   } finally {
     setSyncIndicator(false);
+    updateManualSyncBtn();
   }
 }
 
@@ -2702,12 +2710,14 @@ async function pairSync(code) {
     toast(t('t_daten_uebernommen'));
   } finally {
     setSyncIndicator(false);
+    updateManualSyncBtn();
   }
 }
 
 function stopSync() {
   clearSyncState();
   renderSettings();
+  updateManualSyncBtn();
   toast(t('t_sync_beendet'));
 }
 
