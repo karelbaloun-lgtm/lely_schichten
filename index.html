@@ -269,12 +269,20 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 /* Farbiges Sync-Status-Banner: gelb = läuft gerade, rot = Fehler,
    grün = erfolgreich. Bleibt bei "syncing" stehen, bis der Vorgang endet;
    bei "error"/"success" blendet es sich nach ein paar Sekunden von selbst
-   wieder aus (siehe showSyncBanner()). */
-.sync-banner { position: fixed; top: 68px; left: 50%; transform: translateX(-50%) translateY(-14px); width: calc(100% - 40px); max-width: 460px; padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 250; opacity: 0; pointer-events: none; transition: all 0.25s cubic-bezier(.4,0,.2,1); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-.sync-banner.open { opacity: 1; transform: translateX(-50%) translateY(0); }
+   wieder aus (siehe showSyncBanner()).
+   Bewusst über display:none/block + @keyframes-Animation statt einer
+   opacity-transition umgesetzt: eine transition braucht einen bereits
+   gerenderten Vorher-Zustand, um überhaupt zu starten (z.B. bricht ab, wenn
+   der Tab kurz im Hintergrund war/nicht gerendert hat) — die Animation
+   spielt dagegen garantiert bei jedem Öffnen von vorne ab, und display:block
+   macht den Banner so oder so sofort sichtbar, auch falls die Animation aus
+   irgendeinem Grund nicht laufen sollte. */
+.sync-banner { display: none; position: fixed; top: 68px; left: 50%; width: calc(100% - 40px); max-width: 460px; padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 260; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.sync-banner.open { display: block; animation: sync-banner-in 0.25s ease-out forwards; }
 .sync-banner.syncing { background: var(--amber-dim); border: 1px solid var(--amber); color: var(--amber); }
 .sync-banner.error { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
 .sync-banner.success { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
+@keyframes sync-banner-in { from { opacity: 0; transform: translateX(-50%) translateY(-14px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
 :root[data-theme="light"] {
   --bg: #f2f2f7; --s1: #ffffff; --s2: #ebebf0; --s3: #e0e0e8;
