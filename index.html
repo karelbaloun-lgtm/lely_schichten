@@ -266,6 +266,15 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 
 .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--s2); border: 1px solid var(--border2); border-left: 3px solid var(--brand); border-radius: 12px; padding: 12px 20px; font-size: 14px; color: var(--text); z-index: 300; opacity: 0; pointer-events: none; white-space: nowrap; transition: all 0.25s cubic-bezier(.4,0,.2,1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* Farbiges Sync-Status-Banner: gelb = läuft gerade, rot = Fehler,
+   grün = erfolgreich. Bleibt bei "syncing" stehen, bis der Vorgang endet;
+   bei "error"/"success" blendet es sich nach ein paar Sekunden von selbst
+   wieder aus (siehe showSyncBanner()). */
+.sync-banner { position: fixed; top: 68px; left: 50%; transform: translateX(-50%) translateY(-14px); width: calc(100% - 40px); max-width: 460px; padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 250; opacity: 0; pointer-events: none; transition: all 0.25s cubic-bezier(.4,0,.2,1); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.sync-banner.open { opacity: 1; transform: translateX(-50%) translateY(0); }
+.sync-banner.syncing { background: var(--amber-dim); border: 1px solid var(--amber); color: var(--amber); }
+.sync-banner.error { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
+.sync-banner.success { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
 
 :root[data-theme="light"] {
   --bg: #f2f2f7; --s1: #ffffff; --s2: #ebebf0; --s3: #e0e0e8;
@@ -515,6 +524,8 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 <datalist id="customer-history"></datalist>
 
 <div class="toast" id="toast"></div>
+
+<div class="sync-banner" id="sync-banner"></div>
 
 <script>
 // ─── calc.js (eingebettet, siehe dev/calc.js — dort mit Node.js getestet) ──
@@ -2622,9 +2633,23 @@ function clearSyncState() {
 function randomSyncCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
-function setSyncStatus(text) {
+// state: 'syncing' (gelb) | 'error' (rot) | 'success' (grün) | weggelassen
+// (nur der Text in den Einstellungen wird aktualisiert, kein Banner).
+function setSyncStatus(text, state) {
   const el = document.getElementById('sync-status');
   if (el) el.textContent = text;
+  if (state) showSyncBanner(text, state);
+}
+let syncBannerTimer = null;
+function showSyncBanner(text, state) {
+  const banner = document.getElementById('sync-banner');
+  if (!banner) return;
+  banner.textContent = text;
+  banner.className = 'sync-banner open ' + state;
+  clearTimeout(syncBannerTimer);
+  if (state !== 'syncing') {
+    syncBannerTimer = setTimeout(function () { banner.classList.remove('open'); }, 3500);
+  }
 }
 // Immer sichtbares Zeichen (Punkt am Zahnrad-Symbol), dass gerade ein
 // Sync-Request läuft — im Unterschied zu setSyncStatus() ist das auch dann
@@ -2662,24 +2687,25 @@ async function syncFetch(method, code, body) {
 async function startSync() {
   setSyncIndicator(true);
   try {
-    setSyncStatus(t('sync_status_code_wird_erzeugt'));
+    setSyncStatus(t('sync_status_code_wird_erzeugt'), 'syncing');
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = randomSyncCode();
       const check = await syncFetch('GET', code).catch(() => null);
-      if (!check) { setSyncStatus(t('sync_status_keine_verbindung')); return; }
+      if (!check) { setSyncStatus(t('sync_status_keine_verbindung'), 'error'); return; }
       if (check.status === 404) {
         const created = await syncFetch('POST', code, { shifts, config, baseLastModified: null }).catch(() => null);
         if (created && created.ok) {
           setSyncState(code, created.body.lastModified);
           renderSettings();
           toast(t('t_sync_gestartet'));
+          showSyncBanner(t('sync_status_synchronisiert'), 'success');
           return;
         }
-        setSyncStatus(t('sync_status_fehler_starten'));
+        setSyncStatus(t('sync_status_fehler_starten'), 'error');
         return;
       }
     }
-    setSyncStatus(t('sync_status_kein_freier_code'));
+    setSyncStatus(t('sync_status_kein_freier_code'), 'error');
   } finally {
     setSyncIndicator(false);
     updateManualSyncBtn();
@@ -2693,11 +2719,11 @@ async function pairSync(code) {
   }
   setSyncIndicator(true);
   try {
-    setSyncStatus(t('sync_status_verbinde'));
+    setSyncStatus(t('sync_status_verbinde'), 'syncing');
     const res = await syncFetch('GET', code).catch(() => null);
-    if (!res) { setSyncStatus(t('sync_status_keine_verbindung')); return; }
-    if (res.status === 404) { toast(t('t_code_nicht_gefunden')); return; }
-    if (!res.ok) { setSyncStatus(t('sync_status_fehler_verbinden')); return; }
+    if (!res) { setSyncStatus(t('sync_status_keine_verbindung'), 'error'); return; }
+    if (res.status === 404) { toast(t('t_code_nicht_gefunden')); showSyncBanner(t('t_code_nicht_gefunden'), 'error'); return; }
+    if (!res.ok) { setSyncStatus(t('sync_status_fehler_verbinden'), 'error'); return; }
     shifts = res.body.shifts || [];
     shifts.forEach(migrateShiftLegs);
     config = Object.assign(config, res.body.config || {});
@@ -2708,6 +2734,7 @@ async function pairSync(code) {
     renderAll();
     renderSettings();
     toast(t('t_daten_uebernommen'));
+    showSyncBanner(t('sync_status_synchronisiert'), 'success');
   } finally {
     setSyncIndicator(false);
     updateManualSyncBtn();
@@ -2733,18 +2760,18 @@ async function pushSync() {
   syncInFlight = true;
   setSyncIndicator(true);
   try {
-    setSyncStatus(t('sync_status_synchronisiere'));
+    setSyncStatus(t('sync_status_synchronisiere'), 'syncing');
     const res = await syncFetch('POST', syncCode(), { shifts, config, baseLastModified: syncLastModified() }).catch(() => null);
-    if (!res) { setSyncStatus(t('sync_status_nicht_synchronisiert')); return; }
+    if (!res) { setSyncStatus(t('sync_status_nicht_synchronisiert'), 'error'); return; }
     if (res.status === 409) {
       syncConflictData = { remote: res.body };
       openSyncConflict();
       return;
     }
-    if (!res.ok) { setSyncStatus(t('sync_status_fehlgeschlagen')); return; }
+    if (!res.ok) { setSyncStatus(t('sync_status_fehlgeschlagen'), 'error'); return; }
     setSyncState(syncCode(), res.body.lastModified);
     syncDirty = false;
-    setSyncStatus(t('sync_status_synchronisiert'));
+    setSyncStatus(t('sync_status_synchronisiert'), 'success');
   } finally {
     syncInFlight = false;
     setSyncIndicator(false);
@@ -2756,9 +2783,10 @@ async function pullSync() {
   syncInFlight = true;
   setSyncIndicator(true);
   try {
+    setSyncStatus(t('sync_status_synchronisiere'), 'syncing');
     const res = await syncFetch('GET', syncCode()).catch(() => null);
-    if (!res || !res.ok) { setSyncStatus(t('sync_status_nicht_synchronisiert')); return; }
-    if (res.body.lastModified === syncLastModified()) { setSyncStatus(t('sync_status_synchronisiert')); return; }
+    if (!res || !res.ok) { setSyncStatus(t('sync_status_nicht_synchronisiert'), 'error'); return; }
+    if (res.body.lastModified === syncLastModified()) { setSyncStatus(t('sync_status_synchronisiert'), 'success'); return; }
     shifts = res.body.shifts || [];
     shifts.forEach(migrateShiftLegs);
     config = Object.assign(config, res.body.config || {});
@@ -2767,7 +2795,7 @@ async function pullSync() {
     setSyncState(syncCode(), res.body.lastModified);
     renderAll();
     renderSettings();
-    setSyncStatus(t('sync_status_synchronisiert'));
+    setSyncStatus(t('sync_status_synchronisiert'), 'success');
   } finally {
     syncInFlight = false;
     setSyncIndicator(false);
@@ -2798,7 +2826,7 @@ function resolveSyncConflict(choice) {
     syncDirty = false;
     renderAll();
     renderSettings();
-    setSyncStatus(t('sync_status_synchronisiert'));
+    setSyncStatus(t('sync_status_synchronisiert'), 'success');
     syncConflictData = null;
   } else {
     const remoteLastModified = syncConflictData.remote.lastModified;
