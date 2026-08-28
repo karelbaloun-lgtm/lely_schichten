@@ -2722,6 +2722,23 @@ function initManualSyncBtn() {
   const el = document.getElementById('manual-sync-btn');
   if (el) el.addEventListener('click', manualSyncTap);
 }
+// TEMPORÄRE DIAGNOSE (wird wieder entfernt) — zeigt per Toast, ob ein
+// touchstart überhaupt am Button ankommt, um herauszufinden ob ein Touch
+// verloren geht, bevor er den Button erreicht, oder danach.
+function debugWireTouch(id, label) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('touchstart', function () { toast('🩺 touchstart: ' + label); }, { passive: true });
+  el.addEventListener('pointerdown', function () { toast('🩺 pointerdown: ' + label); }, { passive: true });
+}
+setTimeout(function () {
+  debugWireTouch('manual-sync-btn', 'sync');
+  const teilenBtn = document.querySelector('.bottom-nav .nav-btn');
+  if (teilenBtn) {
+    teilenBtn.addEventListener('touchstart', function () { toast('🩺 touchstart: teilen'); }, { passive: true });
+    teilenBtn.addEventListener('pointerdown', function () { toast('🩺 pointerdown: teilen'); }, { passive: true });
+  }
+}, 0);
 // Timeout ist wichtig: ohne ihn kann ein fetch() bei einer wackligen Mobil-
 // funkverbindung unbegrenzt hängen bleiben (weder Erfolg noch Fehler) — dann
 // bleibt syncInFlight für den Rest der Sitzung auf "true" stehen und JEDER
