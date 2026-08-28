@@ -1,6 +1,6 @@
 // Service Worker für Lely Schichten — Netzwerk zuerst (aktuelle Version, wenn
 // online), sonst aus dem Cache (funktioniert offline nach dem ersten Besuch).
-const CACHE_VERSION = 'lely-schichten-v3';
+const CACHE_VERSION = 'lely-schichten-v5';
 const CORE_FILES = [
   './',
   './index.html',
@@ -14,8 +14,18 @@ self.addEventListener('install', function (event) {
   event.waitUntil(
     caches.open(CACHE_VERSION)
       .then(function (cache) { return cache.addAll(CORE_FILES); })
-      .then(function () { return self.skipWaiting(); })
+    // Kein automatisches skipWaiting() mehr: die neue Version soll erst
+    // aktiv werden, wenn die App das per Update-Banner vom Nutzer bestätigt
+    // hat (siehe 'message'-Listener unten) — sonst wird eine offene Eingabe
+    // mitten in der Nutzung durch den Reload unter dem Nutzer weggerissen.
+    // Ohne dieses Banner blieb die App nach jedem Deploy auf altem
+    // gecachtem JS hängen, bis der Nutzer manuell den App-Speicher löschte
+    // (und dabei seine lokalen Daten verlor) — das soll ab jetzt nicht mehr
+    // passieren.
   );
+});
+self.addEventListener('message', function (event) {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', function (event) {
