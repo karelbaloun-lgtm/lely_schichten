@@ -320,7 +320,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       <div class="topbar-left">
         <div class="topbar-title">Lely Schichten</div>
       </div>
-      <button class="topbar-settings" id="manual-sync-btn" onclick="manualSyncTap()" aria-label="Sync" style="display:none;">🔄</button>
+      <button class="topbar-settings" id="manual-sync-btn" aria-label="Sync" style="display:none;">🔄</button>
       <button class="topbar-settings" onclick="openSettings()">⚙<span class="sync-indicator" id="sync-indicator"></span></button>
     </div>
   </header>
@@ -2334,6 +2334,7 @@ if (!activeMonth) activeMonth = getMonths()[getMonths().length - 1];
 applyI18nStatic();
 renderAll();
 updateManualSyncBtn();
+initManualSyncBtn();
 initSync();
 initPullToRefresh();
 
@@ -2678,6 +2679,13 @@ function manualSyncTap() {
 function updateManualSyncBtn() {
   const el = document.getElementById('manual-sync-btn');
   if (el) el.style.display = syncEnabled() ? 'flex' : 'none';
+}
+// addEventListener statt inline onclick="" — auf einem iPhone reagierte der
+// Button gar nicht auf Antippen (auf Android zumindest optisch schon), das
+// ist robuster. Einmalig verdrahtet, statt bei jedem updateManualSyncBtn().
+function initManualSyncBtn() {
+  const el = document.getElementById('manual-sync-btn');
+  if (el) el.addEventListener('click', manualSyncTap);
 }
 // Timeout ist wichtig: ohne ihn kann ein fetch() bei einer wackligen Mobil-
 // funkverbindung unbegrenzt hängen bleiben (weder Erfolg noch Fehler) — dann
