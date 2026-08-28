@@ -2583,16 +2583,51 @@ function finalizeWeekExport(mondayIso, hotelAddresses) {
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const filename = weekFilename(config.lastName, mondayIso);
   if (exportMode === 'share') {
-    // Web-Share (navigator.share) kann per Spezifikation NIE einen E-Mail-
-    // Empfänger setzen (nur title/text/url/files) — das ist auf jedem Gerät
-    // und Browser so, kein Bug und kein Berechtigungsproblem. Deshalb hier
-    // direkt die zuverlässige Variante: Datei herunterladen UND E-Mail mit
-    // Empfänger/CC/Betreff vorausfüllen (Anhang muss der Monteur selbst
-    // aus den Downloads auswählen).
-    downloadAndPrefillEmail(blob, filename, mondayIso);
+    shareOrPrefillEmail(blob, filename, mondayIso);
     return;
   }
   downloadBlob(blob, filename);
+}
+// Teilen: zwei Wege, je nachdem was das Gerät kann.
+// 1) Unterstützt das Gerät Datei-Sharing per Web-Share-API (die meisten
+//    aktuellen Android-/iOS-Geräte): natives Share-Sheet öffnen — wählt der
+//    Monteur dort Mail/Gmail, wird der Anhang automatisch mitgegeben. Web-
+//    Share kann laut Spezifikation NIE einen E-Mail-Empfänger setzen (nur
+//    title/text/url/files) — deshalb steht der Empfänger stattdessen im
+//    "text"-Feld, das die meisten Mail-Apps in Betreff/Body übernehmen.
+// 2) Fallback (Desktop-Browser, ältere Geräte, oder wenn das Teilen selbst
+//    fehlschlägt): Datei herunterladen UND E-Mail mit vorausgefülltem
+//    Empfänger/CC/Betreff öffnen (funktioniert auch bei file://, im
+//    Gegensatz zu Web-Share) — Anhang muss der Monteur dann manuell aus den
+//    Downloads auswählen.
+async function shareOrPrefillEmail(blob, filename, mondayIso) {
+  const subject = emailSubjectForWeek(mondayIso);
+  let shareData = null;
+  try {
+    const file = new File([blob], filename, { type: blob.type });
+    shareData = {
+      files: [file],
+      title: subject,
+      text: subject + ' – ' + HR_EMAIL + (HR_CC_EMAIL ? (' (CC: ' + HR_CC_EMAIL + ')') : '')
+    };
+  } catch (e) {
+    shareData = null; // z.B. sehr alter Browser ohne File-Konstruktor
+  }
+  if (shareData && navigator.canShare && navigator.share && navigator.canShare(shareData)) {
+    try {
+      await navigator.share(shareData);
+      closeSheet('sheet-export');
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') {
+        // Nutzer hat das Share-Sheet selbst abgebrochen — kein Fallback, nichts weiter tun.
+        closeSheet('sheet-export');
+        return;
+      }
+      // Echter Fehler beim Teilen (z.B. App-Fehler) -> auf E-Mail-Fallback zurückfallen.
+    }
+  }
+  downloadAndPrefillEmail(blob, filename, mondayIso);
 }
 function downloadBlob(blob, filename, toastPrefix) {
   const url = URL.createObjectURL(blob);
