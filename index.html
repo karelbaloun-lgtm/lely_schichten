@@ -559,6 +559,27 @@ function weekdayOf(iso) { return parseISODate(iso).getDay(); }
 function isHoliday(iso) { return Object.prototype.hasOwnProperty.call(HOLIDAYS_BY, iso); }
 function holidayName(iso) { return HOLIDAYS_BY[iso] || ''; }
 function isWorkdayHoliday(iso) { const dow = weekdayOf(iso); return isHoliday(iso) && dow !== 0 && dow !== 6; }
+// Für die Zeitraum-Eingabe (Urlaub/Krank): liefert jeden Tag im Bereich
+// [startIso, endIso], der weder Wochenende noch Feiertag ist, plus wie
+// viele Tage aus welchem Grund übersprungen wurden (für die Toast-
+// Zusammenfassung). Nutzt Date-Arithmetik statt String-Inkrement, damit
+// Monats-/Jahresgrenzen korrekt behandelt werden (gleiches Muster wie
+// calMove()).
+function businessDaysInRange(startIso, endIso) {
+  const included = [];
+  let skippedWeekend = 0, skippedHoliday = 0;
+  let d = parseISODate(startIso);
+  const end = parseISODate(endIso);
+  while (d <= end) {
+    const iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) { skippedWeekend++; }
+    else if (isHoliday(iso)) { skippedHoliday++; }
+    else { included.push(iso); }
+    d.setDate(d.getDate() + 1);
+  }
+  return { included, skippedWeekend, skippedHoliday };
+}
 function timeToMinutes(hhmm) { if (!hhmm) return null; const p = hhmm.split(':').map(Number); return p[0]*60+p[1]; }
 function segmentHours(start, end) { if (!start || !end) return 0; let mins = timeToMinutes(end)-timeToMinutes(start); if (mins<0) mins+=24*60; return mins/60; }
 function mondayOf(iso) { const d = parseISODate(iso); const dow = (d.getDay()+6)%7; d.setDate(d.getDate()-dow); return d.toISOString().slice(0,10); }
@@ -1143,7 +1164,8 @@ const I18N = {
     detail_uebernachtung: 'Übernachtung', detail_hotel: '🏨 Hotel', detail_heimfahrt: '🚗 Heimfahrt',
     detail_bezahlte_stunden: 'Bezahlte Stunden',
     field_art: 'Art', seg_arbeit: '🔨 Arbeit', seg_krank: '🤒 Krank', seg_urlaub: '🌴 Urlaub',
-    field_datum: 'Datum', btn_weiteren_kunden: '＋ Weiteren Kunden hinzufügen',
+    field_datum: 'Datum', field_zeitraum: 'Zeitraum', field_bis: 'bis',
+    btn_weiteren_kunden: '＋ Weiteren Kunden hinzufügen',
     segment_abfahrt: 'Abfahrt', daily_limit_label: 'Bezahlte Zeit heute',
     field_uebernachtung: 'Übernachtung',
     field_notiz_allgemein: 'Notiz (allgemein)', placeholder_notiz: 'z. B. Besonderheiten …',
@@ -1169,6 +1191,11 @@ const I18N = {
     t_krank_urlaub_existiert: '⚠ Für heute existiert bereits ein Krank/Urlaub-Eintrag',
     t_buero_hinzugefuegt: '✓ Büro hinzugefügt · ',
     t_datum_fehlt: '⚠ Datum fehlt',
+    t_bis_vor_von: '⚠ „bis" muss nach dem Startdatum liegen',
+    range_saved_1: '✓ ', range_saved_2: ' Tage gespeichert',
+    range_weekends_skipped: ' Wochenenden übersprungen',
+    range_holidays_skipped: ' Feiertage übersprungen',
+    range_overwritten: ' Tage überschrieben',
     t_mindestens_zeitabschnitt: '⚠ Mindestens einen Zeitabschnitt eintragen',
     t_ueber_10h: '⚠ Über 10h/Tag (vertragliches Maximum) — trotzdem gespeichert',
     t_gespeichert_ersetzt: '✓ Gespeichert — bestehender Eintrag für dieses Datum wurde ersetzt',
@@ -1249,7 +1276,8 @@ const I18N = {
     detail_uebernachtung: 'Nocleh', detail_hotel: '🏨 Hotel', detail_heimfahrt: '🚗 Domů',
     detail_bezahlte_stunden: 'Placené hodiny',
     field_art: 'Typ', seg_arbeit: '🔨 Práce', seg_krank: '🤒 Nemoc', seg_urlaub: '🌴 Dovolená',
-    field_datum: 'Datum', btn_weiteren_kunden: '＋ Přidat dalšího zákazníka',
+    field_datum: 'Datum', field_zeitraum: 'Rozsah', field_bis: 'do',
+    btn_weiteren_kunden: '＋ Přidat dalšího zákazníka',
     segment_abfahrt: 'Odjezd', daily_limit_label: 'Placený čas dnes',
     field_uebernachtung: 'Nocleh',
     field_notiz_allgemein: 'Poznámka (obecná)', placeholder_notiz: 'např. zvláštnosti …',
@@ -1275,6 +1303,11 @@ const I18N = {
     t_krank_urlaub_existiert: '⚠ Pro dnešek už existuje záznam Nemoc/Dovolená',
     t_buero_hinzugefuegt: '✓ Kancelář přidána · ',
     t_datum_fehlt: '⚠ Chybí datum',
+    t_bis_vor_von: '⚠ Datum „do" musí být po datu „od"',
+    range_saved_1: '✓ Uloženo ', range_saved_2: ' dní',
+    range_weekends_skipped: ' víkendů přeskočeno',
+    range_holidays_skipped: ' svátků přeskočeno',
+    range_overwritten: ' dní přepsáno',
     t_mindestens_zeitabschnitt: '⚠ Zadej alespoň jeden časový úsek',
     t_ueber_10h: '⚠ Přes 10h/den (smluvní maximum) — přesto uloženo',
     t_gespeichert_ersetzt: '✓ Uloženo — existující záznam pro toto datum byl nahrazen',
@@ -1773,6 +1806,20 @@ function editBodyHtml() {
         <span class="date-tile-val" id="date-tile-val">—</span>
       </div>
     </div>
+    <div class="field" id="range-toggle-field" style="display:none">
+      <button type="button" class="hotel-toggle" id="range-toggle-btn" onclick="toggleRangeMode()">
+        <span class="ht-icon">📆</span>
+        <div class="ht-text"><div>${t('field_zeitraum')}</div></div>
+      </button>
+    </div>
+    <div class="field" id="range-end-field" style="display:none">
+      <label>${t('field_bis')}</label>
+      <input type="date" id="f-date-end" style="display:none">
+      <div class="date-tile" onclick="openCal('end')">
+        <span class="date-tile-icon">📅</span>
+        <span class="date-tile-val" id="date-tile-end-val">—</span>
+      </div>
+    </div>
     <div id="work-fields">
       <div id="legs-container"></div>
       <button type="button" class="add-leg-btn" onclick="addLeg()">${t('btn_weiteren_kunden')}</button>
@@ -1882,10 +1929,38 @@ function openEdit(id, presetType) {
   openSheet('sheet-edit');
 }
 
+// Zeitraum-Umschalter für Urlaub/Krank (siehe saveShiftRange() in einem
+// späteren Task). Beim Einschalten wird "bis" bequem auf das Startdatum
+// vorbelegt (Ein-Tage-Zeitraum als Default) — der Monteur muss dann nur
+// noch das Enddatum anpassen.
+function toggleRangeMode() {
+  const btn = document.getElementById('range-toggle-btn');
+  const on = !btn.classList.contains('active');
+  btn.classList.toggle('active', on);
+  document.getElementById('range-end-field').style.display = on ? '' : 'none';
+  if (on) {
+    const startVal = document.getElementById('f-date').value;
+    document.getElementById('f-date-end').value = startVal;
+    document.getElementById('date-tile-end-val').textContent = fmtDateDE(startVal);
+  }
+}
+
 function setType(type) {
   currentType = type;
   document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
   document.getElementById('work-fields').style.display = type === 'work' ? '' : 'none';
+  const rangeField = document.getElementById('range-toggle-field');
+  if (rangeField) {
+    const showRange = type !== 'work' && !editId;
+    rangeField.style.display = showRange ? '' : 'none';
+    if (!showRange) {
+      const btn = document.getElementById('range-toggle-btn');
+      if (btn && btn.classList.contains('active')) {
+        btn.classList.remove('active');
+        document.getElementById('range-end-field').style.display = 'none';
+      }
+    }
+  }
   updateDailyLimitIndicator();
 }
 
@@ -1916,6 +1991,15 @@ function saveShift() {
   const candidate = readShiftFromForm();
   if (!candidate.date) { toast(t('t_datum_fehlt')); return; }
 
+  const rangeBtn = document.getElementById('range-toggle-btn');
+  if (rangeBtn && rangeBtn.classList.contains('active') && candidate.type !== 'work') {
+    const endIso = document.getElementById('f-date-end').value;
+    if (!endIso) { toast(t('t_datum_fehlt')); return; }
+    if (endIso < candidate.date) { toast(t('t_bis_vor_von')); return; }
+    saveShiftRange(candidate, endIso);
+    return;
+  }
+
   if (candidate.type === 'work') {
     const gross = grossShiftHours(candidate);
     if (gross === 0) { toast(t('t_mindestens_zeitabschnitt')); return; }
@@ -1928,6 +2012,43 @@ function saveShift() {
     }
   }
   continueSaveAfterHolidayCheck(candidate);
+}
+function buildRangeSummaryToast(saved, weekends, holidays, overwritten) {
+  let msg = t('range_saved_1') + saved + t('range_saved_2');
+  const extras = [];
+  if (weekends > 0) extras.push(weekends + t('range_weekends_skipped'));
+  if (holidays > 0) extras.push(holidays + t('range_holidays_skipped'));
+  if (overwritten > 0) extras.push(overwritten + t('range_overwritten'));
+  if (extras.length) msg += ' (' + extras.join(', ') + ')';
+  return msg;
+}
+// Erzeugt für jeden Werktag in [candidate.date, endIso] einen eigenen
+// Eintrag (siehe businessDaysInRange()) — Wochenenden/Feiertage werden
+// automatisch übersprungen. Ein bereits vorhandener Eintrag an einem
+// betroffenen Tag wird ohne Rückfrage ersetzt. Jeder erzeugte Tag
+// bekommt eine eigene, garantiert eindeutige id (Date.now() allein
+// würde bei mehreren Tagen in derselben Millisekunde kollidieren).
+function saveShiftRange(candidate, endIso) {
+  const range = businessDaysInRange(candidate.date, endIso);
+  let overwritten = 0;
+  range.included.forEach(function (iso, i) {
+    const existingIdx = shifts.findIndex(function (s) { return s.date === iso; });
+    if (existingIdx >= 0) { shifts.splice(existingIdx, 1); overwritten++; }
+    shifts.push({
+      id: Date.now().toString() + '_' + i,
+      type: candidate.type,
+      date: iso,
+      legs: [],
+      departureStart: '',
+      departureEnd: '',
+      stay: 'home',
+      note: candidate.note
+    });
+  });
+  saveData();
+  renderAll();
+  closeSheet('sheet-edit');
+  toast(buildRangeSummaryToast(range.included.length, range.skippedWeekend, range.skippedHoliday, overwritten));
 }
 let pendingHolidayShift = null;
 function cancelHolidaySave() {
@@ -2000,9 +2121,14 @@ function deleteCurrentShift() {
 }
 
 // ─── Kalender ───────────────────────────────────────────────────────────
-let calYear, calMonth, calSelected;
-function openCal() {
-  const cur = document.getElementById('f-date').value || new Date().toISOString().slice(0, 10);
+let calYear, calMonth, calSelected, calTarget;
+// target: 'end' öffnet den Kalender für das "bis"-Feld der Zeitraum-
+// Eingabe (siehe späterer Task); alles andere (auch kein Argument)
+// verhält sich exakt wie bisher und bearbeitet das normale f-date-Feld.
+function openCal(target) {
+  calTarget = target === 'end' ? 'end' : 'start';
+  const fieldId = calTarget === 'end' ? 'f-date-end' : 'f-date';
+  const cur = document.getElementById(fieldId).value || new Date().toISOString().slice(0, 10);
   const d = parseISODate(cur);
   calYear = d.getFullYear(); calMonth = d.getMonth(); calSelected = cur;
   renderCal();
@@ -2011,8 +2137,10 @@ function openCal() {
 function closeCal() { document.getElementById('cal-overlay').classList.remove('open'); }
 function confirmCal() {
   if (calSelected) {
-    document.getElementById('f-date').value = calSelected;
-    document.getElementById('date-tile-val').textContent = fmtDateDE(calSelected);
+    const fieldId = calTarget === 'end' ? 'f-date-end' : 'f-date';
+    const labelId = calTarget === 'end' ? 'date-tile-end-val' : 'date-tile-val';
+    document.getElementById(fieldId).value = calSelected;
+    document.getElementById(labelId).textContent = fmtDateDE(calSelected);
   }
   closeCal();
 }
