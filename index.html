@@ -2679,14 +2679,28 @@ function updateManualSyncBtn() {
   const el = document.getElementById('manual-sync-btn');
   if (el) el.style.display = syncEnabled() ? 'flex' : 'none';
 }
+// Timeout ist wichtig: ohne ihn kann ein fetch() bei einer wackligen Mobil-
+// funkverbindung unbegrenzt hängen bleiben (weder Erfolg noch Fehler) — dann
+// bleibt syncInFlight für den Rest der Sitzung auf "true" stehen und JEDER
+// weitere Sync-Versuch (auch ein manueller Tap auf 🔄) wird von pushSync()/
+// pullSync() stillschweigend übersprungen, ohne jede Rückmeldung.
+const SYNC_TIMEOUT_MS = 12000;
 async function syncFetch(method, code, body) {
   const url = SYNC_ENDPOINT + '?code=' + encodeURIComponent(code);
-  const res = await fetch(url, {
-    method,
-    cache: 'no-store',
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(function () { controller.abort(); }, SYNC_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      cache: 'no-store',
+      signal: controller.signal,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   let parsed = null;
   try { parsed = await res.json(); } catch (e) {}
   return { ok: res.ok, status: res.status, body: parsed };
