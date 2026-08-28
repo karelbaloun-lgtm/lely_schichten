@@ -283,12 +283,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .sync-banner.error { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
 .sync-banner.success { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
 @keyframes sync-banner-in { from { opacity: 0; transform: translateX(-50%) translateY(-14px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
-/* Bleibt (anders als der Sync-Banner) sichtbar, bis der Monteur draufklickt
-   — kein Auto-Dismiss, da ein Update sonst leicht übersehen wird. Unten
-   positioniert (über der Bottom-Nav), damit es sich nicht mit dem
-   Sync-Banner (oben) überschneiden kann. */
-.update-banner { display: none; position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; width: calc(100% - 40px); max-width: 460px; padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 270; box-shadow: 0 8px 24px rgba(0,0,0,0.3); background: var(--brand); color: #fff; cursor: pointer; }
-.update-banner.open { display: block; animation: sync-banner-in 0.25s ease-out forwards; }
 
 :root[data-theme="light"] {
   --bg: #f2f2f7; --s1: #ffffff; --s2: #ebebf0; --s3: #e0e0e8;
@@ -540,8 +534,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 <div class="toast" id="toast"></div>
 
 <div class="sync-banner" id="sync-banner"></div>
-
-<div class="update-banner" id="update-banner" onclick="applyPendingUpdate()"><span data-i18n="update_banner_text">🔄 Neue Version verfügbar – zum Aktualisieren tippen</span></div>
 
 <script>
 // ─── calc.js (eingebettet, siehe dev/calc.js — dort mit Node.js getestet) ──
@@ -1107,7 +1099,6 @@ function curMONTHS_SHORT() { return curLang() === 'cs' ? MONTHS_SHORT_CS : MONTH
 const I18N = {
   de: {
     nav_teilen: 'Teilen', nav_uebersicht: 'Übersicht',
-    update_banner_text: '🔄 Neue Version verfügbar – zum Aktualisieren tippen',
     fab_krank: 'Krank', fab_urlaub: 'Urlaub', fab_schicht: 'Schicht', fab_buero: 'Büro (1h)',
     edit_title_add: 'Schicht hinzufügen', edit_title_edit: 'Eintrag bearbeiten',
     btn_abbrechen: 'Abbrechen', btn_speichern: 'Speichern',
@@ -1214,7 +1205,6 @@ const I18N = {
   },
   cs: {
     nav_teilen: 'Sdílet', nav_uebersicht: 'Přehled',
-    update_banner_text: '🔄 K dispozici nová verze – klepnutím aktualizuješ',
     fab_krank: 'Nemoc', fab_urlaub: 'Dovolená', fab_schicht: 'Směna', fab_buero: 'Kancelář (1h)',
     edit_title_add: 'Přidat směnu', edit_title_edit: 'Upravit záznam',
     btn_abbrechen: 'Zrušit', btn_speichern: 'Uložit',
@@ -2350,45 +2340,8 @@ initPullToRefresh();
 
 // Service Worker nur registrieren, wenn unterstützt und nicht bei file://
 // (dort schlägt die Registrierung ohnehin fehl — kein Fehler, einfach übersprungen).
-// Update-Erkennung: sobald eine neue sw.js/App-Version fertig heruntergeladen
-// ist (aber wegen fehlendem skipWaiting() noch nicht aktiv), zeigt die App
-// ein Banner ("Neue Version verfügbar"). Erst ein Tippen darauf schickt der
-// wartenden Version das Signal loszulegen — kein Reload mitten in der
-// Nutzung ohne Zutun des Monteurs (z.B. während einer offenen Eingabe).
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-  navigator.serviceWorker.register('sw.js').then(function (reg) {
-    function watchInstalling() {
-      const nw = reg.installing;
-      if (!nw) return;
-      nw.addEventListener('statechange', function () {
-        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-          showUpdateBanner(reg);
-        }
-      });
-    }
-    if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg);
-    watchInstalling();
-    reg.addEventListener('updatefound', watchInstalling);
-  }).catch(function () {});
-  let swReloadTriggered = false;
-  navigator.serviceWorker.addEventListener('controllerchange', function () {
-    if (swReloadTriggered) return;
-    swReloadTriggered = true;
-    window.location.reload();
-  });
-}
-let pendingUpdateReg = null;
-function showUpdateBanner(reg) {
-  pendingUpdateReg = reg;
-  const el = document.getElementById('update-banner');
-  if (el) el.classList.add('open');
-}
-function applyPendingUpdate() {
-  if (pendingUpdateReg && pendingUpdateReg.waiting) {
-    pendingUpdateReg.waiting.postMessage('SKIP_WAITING');
-  }
-  const el = document.getElementById('update-banner');
-  if (el) el.classList.remove('open');
+  navigator.serviceWorker.register('sw.js').catch(function () {});
 }
 
 // Hinweis: Die "echte" Ein-Klick-Installation (beforeinstallprompt/WebAPK)
@@ -2630,51 +2583,16 @@ function finalizeWeekExport(mondayIso, hotelAddresses) {
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const filename = weekFilename(config.lastName, mondayIso);
   if (exportMode === 'share') {
-    shareOrPrefillEmail(blob, filename, mondayIso);
+    // Web-Share (navigator.share) kann per Spezifikation NIE einen E-Mail-
+    // Empfänger setzen (nur title/text/url/files) — das ist auf jedem Gerät
+    // und Browser so, kein Bug und kein Berechtigungsproblem. Deshalb hier
+    // direkt die zuverlässige Variante: Datei herunterladen UND E-Mail mit
+    // Empfänger/CC/Betreff vorausfüllen (Anhang muss der Monteur selbst
+    // aus den Downloads auswählen).
+    downloadAndPrefillEmail(blob, filename, mondayIso);
     return;
   }
   downloadBlob(blob, filename);
-}
-// Teilen: zwei Wege, je nachdem was das Gerät kann.
-// 1) Unterstützt das Gerät Datei-Sharing per Web-Share-API (die meisten
-//    aktuellen Android-/iOS-Geräte): natives Share-Sheet öffnen — wählt der
-//    Monteur dort Mail/Gmail, wird der Anhang automatisch mitgegeben. Web-
-//    Share kann laut Spezifikation NIE einen E-Mail-Empfänger setzen (nur
-//    title/text/url/files) — deshalb steht der Empfänger stattdessen im
-//    "text"-Feld, das die meisten Mail-Apps in Betreff/Body übernehmen.
-// 2) Fallback (Desktop-Browser, ältere Geräte, oder wenn das Teilen selbst
-//    fehlschlägt): Datei herunterladen UND E-Mail mit vorausgefülltem
-//    Empfänger/CC/Betreff öffnen (funktioniert auch bei file://, im
-//    Gegensatz zu Web-Share) — Anhang muss der Monteur dann manuell aus den
-//    Downloads auswählen.
-async function shareOrPrefillEmail(blob, filename, mondayIso) {
-  const subject = emailSubjectForWeek(mondayIso);
-  let shareData = null;
-  try {
-    const file = new File([blob], filename, { type: blob.type });
-    shareData = {
-      files: [file],
-      title: subject,
-      text: subject + ' – ' + HR_EMAIL + (HR_CC_EMAIL ? (' (CC: ' + HR_CC_EMAIL + ')') : '')
-    };
-  } catch (e) {
-    shareData = null; // z.B. sehr alter Browser ohne File-Konstruktor
-  }
-  if (shareData && navigator.canShare && navigator.share && navigator.canShare(shareData)) {
-    try {
-      await navigator.share(shareData);
-      closeSheet('sheet-export');
-      return;
-    } catch (e) {
-      if (e && e.name === 'AbortError') {
-        // Nutzer hat das Share-Sheet selbst abgebrochen — kein Fallback, nichts weiter tun.
-        closeSheet('sheet-export');
-        return;
-      }
-      // Echter Fehler beim Teilen (z.B. App-Fehler) -> auf E-Mail-Fallback zurückfallen.
-    }
-  }
-  downloadAndPrefillEmail(blob, filename, mondayIso);
 }
 function downloadBlob(blob, filename, toastPrefix) {
   const url = URL.createObjectURL(blob);
