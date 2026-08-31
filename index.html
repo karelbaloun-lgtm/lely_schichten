@@ -494,6 +494,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 </div>
 
 <datalist id="customer-history"></datalist>
+<datalist id="hotel-address-history"></datalist>
 
 <div class="toast" id="toast"></div>
 
@@ -2654,15 +2655,39 @@ function hotelStayRangesForWeeks(mondayList) {
   mondayList.forEach(function (mon) { all.push.apply(all, hotelStayRanges(shifts, mon)); });
   return all;
 }
+// Adress-Historie fürs Hotel-Feld: anders als beim Kunden-Feld gibt es
+// keine bereits gespeicherten Daten, aus denen sich das ableiten ließe
+// (Hotel-Adressen werden nie in shifts gespeichert, nur einmalig für den
+// jeweiligen Export gesammelt) — deshalb wird hier explizit in config
+// mitgeführt (config wird ohnehin komplett gesichert/wiederhergestellt,
+// siehe Backup-Funktionen, also ist das automatisch mit dabei).
+function recordHotelAddress(address, dateIso) {
+  if (!config.hotelAddressHistory) config.hotelAddressHistory = {};
+  if (!config.hotelAddressHistory[address] || dateIso > config.hotelAddressHistory[address]) {
+    config.hotelAddressHistory[address] = dateIso;
+  }
+}
+function hotelAddressHistoryOptions() {
+  const hist = config.hotelAddressHistory || {};
+  return Object.keys(hist).sort(function (a, b) { return hist[b].localeCompare(hist[a]); });
+}
+function renderHotelAddressHistory() {
+  const dl = document.getElementById('hotel-address-history');
+  if (!dl) return;
+  dl.innerHTML = hotelAddressHistoryOptions().map(function (a) {
+    return '<option value="' + a.replace(/"/g, '&quot;') + '"></option>';
+  }).join('');
+}
 function openHotelAddressSheet(mondayList, ranges) {
   pendingExportMondays = mondayList;
+  renderHotelAddressHistory();
   document.getElementById('hotel-body').innerHTML =
     `<p style="margin:0 0 16px;color:var(--muted);">${t('hotel_intro')}</p>` +
     ranges.map(function (r, i) {
       const label = r.start === r.end ? fmtDayMonth(r.start) : (fmtDayMonthShort(r.start) + '-' + fmtDayMonth(r.end));
       return `<div class="field">
         <label>Hotel ${label}</label>
-        <input class="note-input" type="text" id="hotel-addr-${i}" data-start="${r.start}" placeholder="${t('hotel_placeholder')}">
+        <input class="note-input" type="text" id="hotel-addr-${i}" data-start="${r.start}" placeholder="${t('hotel_placeholder')}" list="hotel-address-history" autocomplete="off">
       </div>`;
     }).join('');
   openSheet('sheet-hotel');
@@ -2672,8 +2697,9 @@ function finishWeekExport(useAddresses) {
   if (useAddresses) {
     document.querySelectorAll('#hotel-body input[id^="hotel-addr-"]').forEach(function (inp) {
       const v = inp.value.trim();
-      if (v) addresses[inp.dataset.start] = v;
+      if (v) { addresses[inp.dataset.start] = v; recordHotelAddress(v, inp.dataset.start); }
     });
+    saveConfig();
   }
   closeSheet('sheet-hotel');
   finalizeMultiWeekExport(pendingExportMondays, addresses);
