@@ -200,6 +200,8 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 
 .week-export-row { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--s2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; touch-action: manipulation; font-family: var(--sans); text-align: left; color: var(--text); }
 .week-export-row:active { background: var(--brand-dim); border-color: var(--brand); }
+.week-export-check { width: 20px; height: 20px; flex-shrink: 0; margin-right: 12px; accent-color: var(--brand); }
+.week-export-row.selected { background: var(--brand-dim); border-color: var(--brand); }
 .week-export-kw { font-family: var(--mono); font-weight: 600; color: var(--brand); }
 .week-export-range { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
@@ -377,6 +379,9 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
     <button class="sheet-close" onclick="closeSheet('sheet-export')">✕</button>
   </div>
   <div class="sheet-body" id="export-body"></div>
+  <div class="sheet-actions" id="export-actions" style="display:none;">
+    <button class="btn-main primary" style="width:100%;" id="export-confirm-btn" onclick="confirmExportSelectedWeeks()">Exportieren (0)</button>
+  </div>
 </div>
 
 <div class="sheet" id="sheet-hotel">
@@ -1161,6 +1166,9 @@ const I18N = {
     t_fehler: '⚠ Fehler: ',
     t_bitte_namen_settings: '⚠ Bitte zuerst Vor- und Nachname in den Einstellungen eintragen',
     t_heruntergeladen: '✓ Heruntergeladen: ',
+    btn_export_selected: 'Exportieren ({0})',
+    t_keine_woche_gewaehlt: '⚠ Bitte mindestens eine Woche auswählen',
+    t_dateien_heruntergeladen_1: '✓ ', t_dateien_heruntergeladen_2: ' Dateien heruntergeladen',
     confirm_delete_entry: 'Diesen Eintrag löschen?', confirm_delete_really: 'Wirklich löschen?',
     copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Alle Rechte vorbehalten',
     letzte_aktualisierung: 'Letzte Aktualisierung: ',
@@ -1250,6 +1258,9 @@ const I18N = {
     t_fehler: '⚠ Chyba: ',
     t_bitte_namen_settings: '⚠ Nejdřív prosím vyplň jméno a příjmení v Nastavení',
     t_heruntergeladen: '✓ Staženo: ',
+    btn_export_selected: 'Exportovat ({0})',
+    t_keine_woche_gewaehlt: '⚠ Vyber prosím alespoň jeden týden',
+    t_dateien_heruntergeladen_1: '✓ Staženo ', t_dateien_heruntergeladen_2: ' souborů',
     confirm_delete_entry: 'Smazat tento záznam?', confirm_delete_really: 'Opravdu smazat?',
     copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Všechna práva vyhrazena',
     letzte_aktualisierung: 'Poslední aktualizace: ',
@@ -2558,33 +2569,51 @@ function openExport(mode) {
   exportMode = mode || 'download';
   const weeks = exportableWeeks();
   const body = document.getElementById('export-body');
+  const actions = document.getElementById('export-actions');
   if (!weeks.length) {
     body.innerHTML = `<div class="empty-state"><span class="big">${t('export_keine_daten')}</span>${t('export_keine_schichten')}</div>`;
+    actions.style.display = 'none';
   } else {
     body.innerHTML = weeks.map(function (mon) {
-      return `<button class="week-export-row" onclick="downloadWeekExport('${mon}')">
+      return `<label class="week-export-row">
+        <input type="checkbox" class="week-export-check" value="${mon}" onchange="updateExportButtonCount(); this.closest('.week-export-row').classList.toggle('selected', this.checked);">
         <div><div class="week-export-kw">${t('week_kw')}${isoWeekNumber(mon)}</div><div class="week-export-range">${weekRangeLabel(mon)}</div></div>
-        <span>📥</span>
-      </button>`;
+      </label>`;
     }).join('');
+    actions.style.display = '';
   }
+  updateExportButtonCount();
   openSheet('sheet-export');
 }
-let pendingExportMonday = null;
-function downloadWeekExport(mondayIso) {
+function updateExportButtonCount() {
+  const count = document.querySelectorAll('.week-export-check:checked').length;
+  const btn = document.getElementById('export-confirm-btn');
+  if (btn) btn.textContent = tf('btn_export_selected', count);
+}
+let pendingExportMondays = [];
+function confirmExportSelectedWeeks() {
+  const checked = Array.from(document.querySelectorAll('.week-export-check:checked'))
+    .map(function (el) { return el.value; })
+    .sort();
+  if (!checked.length) { toast(t('t_keine_woche_gewaehlt')); return; }
   if (!config.firstName || !config.lastName) {
     toast(t('t_bitte_namen_settings'));
     return;
   }
-  const ranges = hotelStayRanges(shifts, mondayIso);
+  const ranges = hotelStayRangesForWeeks(checked);
   if (ranges.length) {
-    openHotelAddressSheet(mondayIso, ranges);
+    openHotelAddressSheet(checked, ranges);
   } else {
-    finalizeWeekExport(mondayIso, {});
+    finalizeMultiWeekExport(checked, {});
   }
 }
-function openHotelAddressSheet(mondayIso, ranges) {
-  pendingExportMonday = mondayIso;
+function hotelStayRangesForWeeks(mondayList) {
+  const all = [];
+  mondayList.forEach(function (mon) { all.push.apply(all, hotelStayRanges(shifts, mon)); });
+  return all;
+}
+function openHotelAddressSheet(mondayList, ranges) {
+  pendingExportMondays = mondayList;
   document.getElementById('hotel-body').innerHTML =
     `<p style="margin:0 0 16px;color:var(--muted);">${t('hotel_intro')}</p>` +
     ranges.map(function (r, i) {
@@ -2605,40 +2634,14 @@ function finishWeekExport(useAddresses) {
     });
   }
   closeSheet('sheet-hotel');
-  finalizeWeekExport(pendingExportMonday, addresses);
+  finalizeMultiWeekExport(pendingExportMondays, addresses);
 }
 const HR_EMAIL = 'lelycenter.kd.admin@eder-gmbh.de';
 const HR_CC_EMAIL = 'r.bindl@eder-gmbh.de';
-function emailSubjectForWeek(mondayIso) {
-  return config.lastName + ' KW ' + isoWeekNumber(mondayIso);
+function emailSubjectForWeeks(mondayList) {
+  return config.lastName + ' ' + mondayList.map(function (mon) { return 'KW ' + isoWeekNumber(mon); }).join(', ');
 }
-// Lädt die Datei herunter UND öffnet direkt danach den E-Mail-Client mit
-// vorausgefülltem Empfänger/CC/Betreff (funktioniert auch bei file:// — im
-// Gegensatz zu Web-Share kann mailto: dort ganz normal verwendet werden).
-// Der Anhang muss der Monteur einmal manuell aus den Downloads dazuwählen.
-function downloadAndPrefillEmail(blob, filename, mondayIso, toastPrefix) {
-  downloadBlob(blob, filename, toastPrefix);
-  const subject = emailSubjectForWeek(mondayIso);
-  const mailto = 'mailto:' + HR_EMAIL + '?cc=' + encodeURIComponent(HR_CC_EMAIL) + '&subject=' + encodeURIComponent(subject);
-  setTimeout(function () { window.location.href = mailto; }, 300);
-}
-function finalizeWeekExport(mondayIso, hotelAddresses) {
-  const buf = buildWeekExportXlsx(shifts, mondayIso, { firstName: config.firstName, lastName: config.lastName }, hotelAddresses);
-  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const filename = weekFilename(config.lastName, mondayIso);
-  if (exportMode === 'share') {
-    // Web-Share (navigator.share) kann per Spezifikation NIE einen E-Mail-
-    // Empfänger setzen (nur title/text/url/files) — das ist auf jedem Gerät
-    // und Browser so, kein Bug und kein Berechtigungsproblem. Deshalb hier
-    // direkt die zuverlässige Variante: Datei herunterladen UND E-Mail mit
-    // Empfänger/CC/Betreff vorausfüllen (Anhang muss der Monteur selbst
-    // aus den Downloads auswählen).
-    downloadAndPrefillEmail(blob, filename, mondayIso);
-    return;
-  }
-  downloadBlob(blob, filename);
-}
-function downloadBlob(blob, filename, toastPrefix) {
+function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -2647,8 +2650,32 @@ function downloadBlob(blob, filename, toastPrefix) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  closeSheet('sheet-export');
-  toast((toastPrefix || t('t_heruntergeladen')) + filename);
+}
+// Baut und lädt für jede ausgewählte Woche ihre eigene, unveränderte
+// .xlsx (zeitversetzt um 400ms pro Datei — mehrere Downloads ohne Pause
+// werden von manchen Browsern blockiert/mit einer Warnung versehen).
+// Nach dem letzten Download: Sheet schließen, EIN zusammenfassender
+// Toast, und im Teilen-Modus EIN gemeinsames E-Mail-Fenster mit allen
+// Kalenderwochen im Betreff (300ms nach dem letzten Download — exakt das
+// bisherige Timing zwischen Download und mailto-Öffnen).
+function finalizeMultiWeekExport(mondayList, hotelAddresses) {
+  mondayList.forEach(function (mondayIso, i) {
+    setTimeout(function () {
+      const buf = buildWeekExportXlsx(shifts, mondayIso, { firstName: config.firstName, lastName: config.lastName }, hotelAddresses);
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const filename = weekFilename(config.lastName, mondayIso);
+      triggerDownload(blob, filename);
+      if (i === mondayList.length - 1) {
+        closeSheet('sheet-export');
+        toast(t('t_dateien_heruntergeladen_1') + mondayList.length + t('t_dateien_heruntergeladen_2'));
+        if (exportMode === 'share') {
+          const subject = emailSubjectForWeeks(mondayList);
+          const mailto = 'mailto:' + HR_EMAIL + '?cc=' + encodeURIComponent(HR_CC_EMAIL) + '&subject=' + encodeURIComponent(subject);
+          setTimeout(function () { window.location.href = mailto; }, 300);
+        }
+      }
+    }, i * 400);
+  });
 }
 
 </script>
