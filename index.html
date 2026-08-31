@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Lely Schichten</title>
 <meta name="theme-color" content="#E2001A">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1138,6 +1138,7 @@ const I18N = {
     setting_erscheinungsbild: 'Erscheinungsbild', setting_erscheinungsbild_sub: 'hell / dunkel / System',
     setting_sprache: 'Sprache', setting_sprache_sub: 'App-Anzeige (Export bleibt immer Deutsch)',
     btn_export_excel: '📤 Exportieren (Excel)', btn_import: '📥 Importieren (XLSX, PDF)',
+    btn_backup_speichern: '💾 Backup speichern', btn_backup_laden: '📥 Backup laden',
     btn_zum_startbildschirm: '📱 Zum Startbildschirm hinzufügen',
     summary_gesamtstunden: 'Gesamtstunden', summary_ueberstunden: 'Überstunden',
     summary_auslose_gesamt: 'Auslöse gesamt', summary_krank_urlaub: 'Krank / Urlaub (Tage)',
@@ -1164,6 +1165,10 @@ const I18N = {
     t_keine_eintraege_gefunden: '⚠ Keine Einträge gefunden',
     t_eintraege_importiert_1: '✓ ', t_eintraege_importiert_2: ' Einträge importiert',
     t_fehler: '⚠ Fehler: ',
+    t_backup_gespeichert: '✓ Backup gespeichert: ',
+    t_backup_ungueltig: '⚠ Ungültige Backup-Datei',
+    t_backup_geladen_1: '✓ Backup geladen: ', t_backup_geladen_2: ' Einträge',
+    confirm_backup_restore: ' Einträge gespeichert. Ein Backup wiederherstellen ersetzt ALLE aktuellen Daten — fortfahren?',
     t_bitte_namen_settings: '⚠ Bitte zuerst Vor- und Nachname in den Einstellungen eintragen',
     t_heruntergeladen: '✓ Heruntergeladen: ',
     btn_export_selected: 'Exportieren ({0})',
@@ -1230,6 +1235,7 @@ const I18N = {
     setting_erscheinungsbild: 'Vzhled', setting_erscheinungsbild_sub: 'světlý / tmavý / systém',
     setting_sprache: 'Jazyk', setting_sprache_sub: 'zobrazení appky (export zůstává vždy německy)',
     btn_export_excel: '📤 Exportovat (Excel)', btn_import: '📥 Importovat (XLSX, PDF)',
+    btn_backup_speichern: '💾 Uložit zálohu', btn_backup_laden: '📥 Načíst zálohu',
     btn_zum_startbildschirm: '📱 Přidat na plochu',
     summary_gesamtstunden: 'Celkem hodin', summary_ueberstunden: 'Přesčasy',
     summary_auslose_gesamt: 'Diety celkem', summary_krank_urlaub: 'Nemoc / Dovolená (dny)',
@@ -1256,6 +1262,10 @@ const I18N = {
     t_keine_eintraege_gefunden: '⚠ Nenalezeny žádné záznamy',
     t_eintraege_importiert_1: '✓ Importováno ', t_eintraege_importiert_2: ' záznamů',
     t_fehler: '⚠ Chyba: ',
+    t_backup_gespeichert: '✓ Záloha uložena: ',
+    t_backup_ungueltig: '⚠ Neplatný soubor zálohy',
+    t_backup_geladen_1: '✓ Záloha načtena: ', t_backup_geladen_2: ' záznamů',
+    confirm_backup_restore: ' záznamů. Obnovení zálohy nahradí VŠECHNA aktuální data — pokračovat?',
     t_bitte_namen_settings: '⚠ Nejdřív prosím vyplň jméno a příjmení v Nastavení',
     t_heruntergeladen: '✓ Staženo: ',
     btn_export_selected: 'Exportovat ({0})',
@@ -2527,6 +2537,13 @@ function renderSettings() {
       <button class="btn-main secondary" style="width:100%;" onclick="document.getElementById('monteur-import-input').click()">${t('btn_import')}</button>
       <input type="file" id="monteur-import-input" accept=".xlsx,.pdf,.json" multiple style="display:none" onchange="importFile(this)">
     </div>
+    <div style="margin-top:20px;">
+      <button class="btn-main secondary" style="width:100%;" onclick="exportBackup()">${t('btn_backup_speichern')}</button>
+    </div>
+    <div style="margin-top:10px;">
+      <button class="btn-main secondary" style="width:100%;" onclick="document.getElementById('monteur-backup-input').click()">${t('btn_backup_laden')}</button>
+      <input type="file" id="monteur-backup-input" accept=".txt,.json" style="display:none" onchange="importBackup(this)">
+    </div>
     <div style="margin-top:10px;">
       <button class="btn-main secondary" style="width:100%;" onclick="openSheet('sheet-help')">${t('btn_zum_startbildschirm')}</button>
     </div>
@@ -2534,23 +2551,37 @@ function renderSettings() {
     <div style="margin-top:8px;text-align:center;font-size:11px;color:var(--muted);">${t('copyright')}</div>`;
 }
 function updateConfigField(key, value) { config[key] = value; saveConfig(); renderAll(); }
-function importFromJson(input) {
+// ─── Backup/Restore ──────────────────────────────────────────────────────
+// Vollständige Sicherung (im Gegensatz zum wochenweisen Import/Export):
+// enthält shifts UND config in einer .txt-Datei (reiner JSON-Text, damit sie
+// sich auf jedem Gerät öffnen/prüfen lässt). Wiederherstellen ERSETZT alle
+// Daten komplett (kein Merge wie beim normalen Datei-Import) — das ist der
+// Zweck einer Sicherung: den exakten Zustand von damals wiederherstellen.
+function exportBackup() {
+  const data = { shifts, config, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'text/plain' });
+  const filename = 'Lely_Schichten_Backup_' + new Date().toISOString().slice(0, 10) + '.txt';
+  triggerDownload(blob, filename);
+  toast(t('t_backup_gespeichert') + filename);
+}
+function importBackup(input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     try {
       const data = JSON.parse(e.target.result);
-      const imported = Array.isArray(data) ? data : (data.shifts || []);
-      if (!imported.length) { toast(t('t_keine_eintraege_gefunden')); return; }
-      // Merge: importierte Daten überschreiben vorhandene Einträge für dasselbe Datum
-      const existing = shifts.filter(s => !imported.find(i => i.date === s.date));
-      shifts = [...existing, ...imported].sort((a,b) => a.date.localeCompare(b.date));
+      if (!data || !Array.isArray(data.shifts)) { toast(t('t_backup_ungueltig')); input.value = ''; return; }
+      if (shifts.length > 0 && !confirm(shifts.length + t('confirm_backup_restore'))) { input.value = ''; return; }
+      shifts = data.shifts;
       shifts.forEach(migrateShiftLegs);
+      if (data.config) config = Object.assign(config, data.config);
       saveData();
+      saveConfig();
       renderAll();
-      toast(t('t_eintraege_importiert_1') + imported.length + t('t_eintraege_importiert_2'));
-    } catch(err) {
+      renderSettings();
+      toast(t('t_backup_geladen_1') + shifts.length + t('t_backup_geladen_2'));
+    } catch (err) {
       toast(t('t_fehler') + err.message);
     }
     input.value = '';
