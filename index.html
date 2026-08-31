@@ -1493,16 +1493,20 @@ function renderTimeline() {
 function renderAll() { renderMonthBar(); renderTimeline(); renderCustomerHistory(); }
 
 // ─── Kunden-Verlauf (Autocomplete aus bisher eingetragenen Kunden) ─────────
+// Reihenfolge = zuletzt benutzt zuerst (nicht "zuerst je eingegeben zuerst")
+// — der native <datalist>-Vorschlag oben soll der Kunde/das Objekt sein,
+// mit dem der Monteur zuletzt gearbeitet hat, nicht der älteste Eintrag.
+// Keine Obergrenze (bewusst so gewählt) — die volle Historie bleibt
+// durchsuchbar, auch nach Jahren.
 function customerHistoryOptions() {
-  const seen = new Set();
-  const result = [];
+  const lastSeen = {};
   shifts.forEach(function (s) {
     (s.legs || []).forEach(function (leg) {
       const note = (leg.note || '').trim();
-      if (note && !seen.has(note)) { seen.add(note); result.push(note); }
+      if (note && (!lastSeen[note] || s.date > lastSeen[note])) lastSeen[note] = s.date;
     });
   });
-  return result;
+  return Object.keys(lastSeen).sort(function (a, b) { return lastSeen[b].localeCompare(lastSeen[a]); });
 }
 function renderCustomerHistory() {
   const dl = document.getElementById('customer-history');
