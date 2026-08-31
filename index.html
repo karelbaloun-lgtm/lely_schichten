@@ -1401,7 +1401,11 @@ function dayCardHtml(iso, shift) {
   const dw = curDAYS()[d.getDay()];
   const dd = d.getDate();
   if (!shift && isWorkdayHoliday(iso)) {
-    return `<div class="day-card holiday-auto">
+    // Klickbar, obwohl kein Eintrag existiert: falls doch gearbeitet wurde
+    // (Feiertag ≠ garantiert frei), öffnet das direkt "Schicht hinzufügen"
+    // mit diesem Datum vorausgefüllt — die bestehende Feiertags-Warnung in
+    // saveShift()/isWorkdayHoliday() greift dann ganz normal beim Speichern.
+    return `<div class="day-card holiday-auto" onclick="openEdit(null, 'work', '${iso}')">
       <div class="day-date"><div class="dw">${dw}</div><div class="dd">${dd}</div></div>
       <div class="day-info"><div class="day-badge badge-holiday">${holidayNameUI(iso)}</div></div>
       <div class="day-right"><div class="day-hours">8h</div></div>
@@ -1831,13 +1835,13 @@ function removeLeg(idx) {
   updateDailyLimitIndicator();
 }
 
-function openEdit(id, presetType) {
+function openEdit(id, presetType, presetDate) {
   editId = id;
   document.getElementById('edit-body').innerHTML = editBodyHtml();
   document.getElementById('edit-title').textContent = id ? t('edit_title_edit') : t('edit_title_add');
   document.getElementById('edit-delete-btn').style.display = id ? '' : 'none';
 
-  let type = presetType || 'work', date = new Date().toISOString().slice(0, 10);
+  let type = presetType || 'work', date = presetDate || new Date().toISOString().slice(0, 10);
   let departureStart = '', departureEnd = '', stay = 'home', note = '';
   let legs = [{ arrivalStart: '', arrivalEnd: '', installStart: '08:30', installEnd: '16:00', pause: 45, note: '', pauseAuto: true }];
 
