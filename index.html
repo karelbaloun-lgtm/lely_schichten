@@ -55,12 +55,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .topbar-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
 .topbar-title { margin: 0; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 16.8px; font-weight: 800; color: #fff; letter-spacing: .02em; text-transform: uppercase; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-settings { position: relative; flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; transition: background 0.15s; touch-action: manipulation; }
-/* Sichtbar, solange ein Sync-Request läuft — sonst wirkt die App beim
-   erneuten Öffnen (meist Cold-Start der Netlify Function, ~4s) so, als würde
-   sie einfrieren, ohne dass irgendetwas sichtbar passiert. */
-.sync-indicator { display: none; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #ffd766; box-shadow: 0 0 0 2px var(--brand); animation: sync-pulse 1s ease-in-out infinite; }
-.sync-indicator.active { display: block; }
-@keyframes sync-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(0.8); } }
 .topbar-settings:active { background: rgba(255,255,255,.28); }
 
 .month-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg); overflow-x: auto; scrollbar-width: none; }
@@ -69,18 +63,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .month-chip.active { background: var(--brand-dim); border-color: var(--brand); color: var(--brand); font-weight: 500; }
 
 .timeline { overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; padding: 16px 20px 24px; scrollbar-width: thin; scrollbar-color: var(--s3) transparent; }
-/* Pull-to-refresh: erstes Kind von .timeline, normal height:0 (unsichtbar,
-   nimmt keinen Platz weg). Beim Ziehen (nur wenn ganz oben gescrollt UND
-   Sync aktiv, siehe JS) wächst die Höhe live mit dem Zugweg mit — der
-   Ring füllt sich synchron. Loslassen über der Schwelle löst syncOnResume()
-   aus und der Ring dreht sich, bis die Antwort da ist. */
-.pull-refresh { height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-.pull-refresh-svg { width: 28px; height: 28px; transform: rotate(-90deg); }
-.pull-refresh-track { fill: none; stroke: var(--border2); stroke-width: 3; }
-.pull-refresh-fill { fill: none; stroke: var(--brand); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 94.2; stroke-dashoffset: 94.2; }
-.pull-refresh.loading .pull-refresh-svg { animation: pull-refresh-rotate 0.8s linear infinite; }
-.pull-refresh.loading .pull-refresh-fill { stroke-dashoffset: 66; }
-@keyframes pull-refresh-rotate { to { transform: rotate(270deg); } }
 .timeline::-webkit-scrollbar { width: 4px; }
 .timeline::-webkit-scrollbar-thumb { background: var(--s3); border-radius: 2px; }
 
@@ -266,29 +248,18 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 
 .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--s2); border: 1px solid var(--border2); border-left: 3px solid var(--brand); border-radius: 12px; padding: 12px 20px; font-size: 14px; color: var(--text); z-index: 300; opacity: 0; pointer-events: none; white-space: nowrap; transition: all 0.25s cubic-bezier(.4,0,.2,1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-/* Farbiges Sync-Status-Banner: gelb = läuft gerade, rot = Fehler,
-   grün = erfolgreich. Bleibt bei "syncing" stehen, bis der Vorgang endet;
-   bei "error"/"success" blendet es sich nach ein paar Sekunden von selbst
-   wieder aus (siehe showSyncBanner()).
-   Bewusst über display:none/block + @keyframes-Animation statt einer
+/* Bewusst über display:none/block + @keyframes-Animation statt einer
    opacity-transition umgesetzt: eine transition braucht einen bereits
    gerenderten Vorher-Zustand, um überhaupt zu starten (z.B. bricht ab, wenn
    der Tab kurz im Hintergrund war/nicht gerendert hat) — die Animation
    spielt dagegen garantiert bei jedem Öffnen von vorne ab, und display:block
    macht den Banner so oder so sofort sichtbar, auch falls die Animation aus
-   irgendeinem Grund nicht laufen sollte. */
-.sync-banner { display: none; position: fixed; top: 68px; left: 50%; width: calc(100% - 40px); max-width: 460px; padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 260; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-.sync-banner.open { display: block; animation: sync-banner-in 0.25s ease-out forwards; }
-.sync-banner.syncing { background: var(--amber-dim); border: 1px solid var(--amber); color: var(--amber); }
-.sync-banner.error { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
-.sync-banner.success { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
-@keyframes sync-banner-in { from { opacity: 0; transform: translateX(-50%) translateY(-14px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
-/* Bleibt (anders als der Sync-Banner) sichtbar, bis der Monteur draufklickt
-   — kein Auto-Dismiss, da ein Update sonst leicht übersehen wird. Unten
-   positioniert (über der Bottom-Nav), damit es sich nicht mit dem
-   Sync-Banner (oben) überschneiden kann. */
+   irgendeinem Grund nicht laufen sollte. Bleibt sichtbar, bis der Monteur
+   draufklickt — kein Auto-Dismiss, da ein Update sonst leicht übersehen
+   wird. */
 .update-banner { display: none; position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; width: calc(100% - 40px); max-width: 460px; padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 270; box-shadow: 0 8px 24px rgba(0,0,0,0.3); background: var(--brand); color: #fff; cursor: pointer; }
 .update-banner.open { display: block; animation: sync-banner-in 0.25s ease-out forwards; }
+@keyframes sync-banner-in { from { opacity: 0; transform: translateX(-50%) translateY(-14px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
 :root[data-theme="light"] {
   --bg: #f2f2f7; --s1: #ffffff; --s2: #ebebf0; --s3: #e0e0e8;
@@ -326,20 +297,13 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       <div class="topbar-left">
         <div class="topbar-title">Lely Schichten</div>
       </div>
-      <button class="topbar-settings" id="manual-sync-btn" aria-label="Sync" style="display:none;">🔄</button>
-      <button class="topbar-settings" onclick="openSettings()">⚙<span class="sync-indicator" id="sync-indicator"></span></button>
+      <button class="topbar-settings" onclick="openSettings()">⚙</button>
     </div>
   </header>
 
   <div class="month-bar" id="month-bar"></div>
 
   <div class="timeline" id="timeline">
-    <div class="pull-refresh" id="pull-refresh">
-      <svg viewBox="0 0 36 36" class="pull-refresh-svg">
-        <circle class="pull-refresh-track" cx="18" cy="18" r="15"></circle>
-        <circle class="pull-refresh-fill" id="pull-refresh-fill" cx="18" cy="18" r="15"></circle>
-      </svg>
-    </div>
     <div id="timeline-content"></div>
   </div>
 
@@ -524,22 +488,9 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
 </div>
 
-<div class="confirm-overlay" id="confirm-sync-overlay">
-  <div class="confirm-box">
-    <div class="confirm-title" data-i18n="confirm_sync_title">Daten unterscheiden sich</div>
-    <div class="confirm-text" data-i18n="confirm_sync_text">Die Daten auf diesem Telefon unterscheiden sich von denen auf dem anderen Telefon. Welche Version soll gelten?</div>
-    <div class="confirm-actions">
-      <button class="btn-main secondary" onclick="resolveSyncConflict('remote')" data-i18n="btn_sync_remote">ANDERES TELEFON</button>
-      <button class="btn-main primary" onclick="resolveSyncConflict('local')" data-i18n="btn_sync_local">DIESES TELEFON</button>
-    </div>
-  </div>
-</div>
-
 <datalist id="customer-history"></datalist>
 
 <div class="toast" id="toast"></div>
-
-<div class="sync-banner" id="sync-banner"></div>
 
 <div class="update-banner" id="update-banner" onclick="applyPendingUpdate()"><span data-i18n="update_banner_text">🔄 Neue Version verfügbar – zum Aktualisieren tippen</span></div>
 
@@ -1163,9 +1114,6 @@ const I18N = {
     holiday_warning: '{0} ist ein Feiertag ({1}). Trotzdem als Arbeitstag speichern?',
     pause_warning: 'Bei {0}h Bruttodauer schreibt das ArbZG mindestens {1} Min. Pause vor, eingetragen sind {2} Min. BESTÄTIGEN übernimmt deine Eingabe trotzdem, ÜBERSPRINGEN korrigiert automatisch auf {1} Min.',
     btn_buro_trotzdem: 'TROTZDEM HINZUFÜGEN',
-    confirm_sync_title: 'Daten unterscheiden sich',
-    confirm_sync_text: 'Die Daten auf diesem Telefon unterscheiden sich von denen auf dem anderen Telefon. Welche Version soll gelten?',
-    btn_sync_remote: 'ANDERES TELEFON', btn_sync_local: 'DIESES TELEFON',
     empty_keine_eintraege: 'Keine Einträge', empty_fuege_hinzu: 'Füge deine erste Schicht über ＋ hinzu',
     detail_art: 'Art', detail_typ_arbeit: 'Arbeit', detail_typ_krank: 'Krank', detail_typ_urlaub: 'Urlaub',
     detail_kunde: 'Kunde', detail_anfahrt: 'Anfahrt', detail_installation: 'Installation',
@@ -1184,10 +1132,6 @@ const I18N = {
     setting_wochennorm: 'Wochennorm', setting_wochennorm_sub: 'Std./Woche, Basis für Überstunden',
     setting_erscheinungsbild: 'Erscheinungsbild', setting_erscheinungsbild_sub: 'hell / dunkel / System',
     setting_sprache: 'Sprache', setting_sprache_sub: 'App-Anzeige (Export bleibt immer Deutsch)',
-    setting_sync_label: 'Synchronisierung',
-    sync_active: 'Aktiv — Code: ', sync_inactive: 'Nicht aktiv',
-    btn_sync_beenden: 'Synchronisierung beenden', btn_sync_starten: 'Sync starten',
-    btn_code_eingeben: 'Code eingeben', placeholder_sync_code: '6-stelliger Code', btn_verbinden: 'Verbinden',
     btn_export_excel: '📤 Exportieren (Excel)', btn_import: '📥 Importieren (XLSX, PDF)',
     btn_zum_startbildschirm: '📱 Zum Startbildschirm hinzufügen',
     summary_gesamtstunden: 'Gesamtstunden', summary_ueberstunden: 'Überstunden',
@@ -1216,24 +1160,7 @@ const I18N = {
     t_eintraege_importiert_1: '✓ ', t_eintraege_importiert_2: ' Einträge importiert',
     t_fehler: '⚠ Fehler: ',
     t_bitte_namen_settings: '⚠ Bitte zuerst Vor- und Nachname in den Einstellungen eintragen',
-    t_sync_gestartet: '✓ Synchronisierung gestartet',
-    t_code_6_ziffern: '⚠ Der Code hat 6 Ziffern',
-    t_code_nicht_gefunden: '⚠ Code nicht gefunden',
-    t_daten_uebernommen: '✓ Daten übernommen',
-    t_sync_beendet: 'Synchronisierung beendet',
-    t_sync_nicht_aktiv: '⚠ Synchronisierung ist nicht aktiv — siehe Einstellungen',
     t_heruntergeladen: '✓ Heruntergeladen: ',
-    sync_status_code_wird_erzeugt: 'Code wird erzeugt …',
-    sync_status_keine_verbindung: '⚠ Keine Verbindung — später erneut versuchen',
-    sync_status_fehler_starten: '⚠ Fehler beim Starten — bitte erneut versuchen',
-    sync_status_kein_freier_code: '⚠ Konnte keinen freien Code finden — bitte erneut versuchen',
-    sync_status_verbinde: 'Verbinde …',
-    sync_status_fehler_verbinden: '⚠ Fehler beim Verbinden',
-    sync_status_synchronisiere: 'Synchronisiere …',
-    sync_status_nicht_synchronisiert: '⚠ Nicht synchronisiert (keine Verbindung)',
-    sync_status_fehlgeschlagen: '⚠ Synchronisierung fehlgeschlagen',
-    sync_status_synchronisiert: '✓ Synchronisiert',
-    pairsync_confirm: ' Einträge gespeichert. Mit dem Code verbinden ersetzt sie durch die Daten vom anderen Telefon — fortfahren?',
     confirm_delete_entry: 'Diesen Eintrag löschen?', confirm_delete_really: 'Wirklich löschen?',
     copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Alle Rechte vorbehalten',
     letzte_aktualisierung: 'Letzte Aktualisierung: ',
@@ -1276,9 +1203,6 @@ const I18N = {
     holiday_warning: '{0} je svátek ({1}). Přesto uložit jako pracovní den?',
     pause_warning: 'Při hrubé době {0}h předepisuje zákon minimálně {1} min přestávky, zadáno je {2} min. POTVRDIT ponechá tvůj zápis, PŘESKOČIT automaticky opraví na {1} min.',
     btn_buro_trotzdem: 'PŘESTO PŘIDAT',
-    confirm_sync_title: 'Data se liší',
-    confirm_sync_text: 'Data na tomto telefonu se liší od dat na druhém telefonu. Která verze má platit?',
-    btn_sync_remote: 'DRUHÝ TELEFON', btn_sync_local: 'TENTO TELEFON',
     empty_keine_eintraege: 'Žádné záznamy', empty_fuege_hinzu: 'Přidej první směnu přes ＋',
     detail_art: 'Typ', detail_typ_arbeit: 'Práce', detail_typ_krank: 'Nemoc', detail_typ_urlaub: 'Dovolená',
     detail_kunde: 'Zákazník', detail_anfahrt: 'Příjezd', detail_installation: 'Instalace',
@@ -1297,10 +1221,6 @@ const I18N = {
     setting_wochennorm: 'Týdenní norma', setting_wochennorm_sub: 'hod./týden, základ pro přesčasy',
     setting_erscheinungsbild: 'Vzhled', setting_erscheinungsbild_sub: 'světlý / tmavý / systém',
     setting_sprache: 'Jazyk', setting_sprache_sub: 'zobrazení appky (export zůstává vždy německy)',
-    setting_sync_label: 'Synchronizace',
-    sync_active: 'Aktivní — kód: ', sync_inactive: 'Neaktivní',
-    btn_sync_beenden: 'Ukončit synchronizaci', btn_sync_starten: 'Spustit sync',
-    btn_code_eingeben: 'Zadat kód', placeholder_sync_code: '6místný kód', btn_verbinden: 'Připojit',
     btn_export_excel: '📤 Exportovat (Excel)', btn_import: '📥 Importovat (XLSX, PDF)',
     btn_zum_startbildschirm: '📱 Přidat na plochu',
     summary_gesamtstunden: 'Celkem hodin', summary_ueberstunden: 'Přesčasy',
@@ -1329,24 +1249,7 @@ const I18N = {
     t_eintraege_importiert_1: '✓ Importováno ', t_eintraege_importiert_2: ' záznamů',
     t_fehler: '⚠ Chyba: ',
     t_bitte_namen_settings: '⚠ Nejdřív prosím vyplň jméno a příjmení v Nastavení',
-    t_sync_gestartet: '✓ Synchronizace spuštěna',
-    t_code_6_ziffern: '⚠ Kód má 6 číslic',
-    t_code_nicht_gefunden: '⚠ Kód nenalezen',
-    t_daten_uebernommen: '✓ Data převzata',
-    t_sync_beendet: 'Synchronizace ukončena',
-    t_sync_nicht_aktiv: '⚠ Synchronizace není aktivní — viz Nastavení',
     t_heruntergeladen: '✓ Staženo: ',
-    sync_status_code_wird_erzeugt: 'Vytváří se kód …',
-    sync_status_keine_verbindung: '⚠ Bez připojení — zkus to později znovu',
-    sync_status_fehler_starten: '⚠ Chyba při spuštění — zkus to prosím znovu',
-    sync_status_kein_freier_code: '⚠ Nepodařilo se najít volný kód — zkus to prosím znovu',
-    sync_status_verbinde: 'Připojuje se …',
-    sync_status_fehler_verbinden: '⚠ Chyba při připojování',
-    sync_status_synchronisiere: 'Synchronizuje se …',
-    sync_status_nicht_synchronisiert: '⚠ Nesynchronizováno (bez připojení)',
-    sync_status_fehlgeschlagen: '⚠ Synchronizace se nezdařila',
-    sync_status_synchronisiert: '✓ Synchronizováno',
-    pairsync_confirm: ' záznamů. Připojení kódem je nahradí daty z druhého telefonu — pokračovat?',
     confirm_delete_entry: 'Smazat tento záznam?', confirm_delete_really: 'Opravdu smazat?',
     copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Všechna práva vyhrazena',
     letzte_aktualisierung: 'Poslední aktualizace: ',
@@ -1436,8 +1339,8 @@ function loadData() {
 }
 function saveDataLocalOnly() { localStorage.setItem('monteur_shifts', JSON.stringify(shifts)); }
 function saveConfigLocalOnly() { localStorage.setItem('monteur_config', JSON.stringify(config)); }
-function saveData() { saveDataLocalOnly(); scheduleSyncPush(); }
-function saveConfig() { saveConfigLocalOnly(); scheduleSyncPush(); }
+function saveData() { saveDataLocalOnly(); }
+function saveConfig() { saveConfigLocalOnly(); }
 
 // ─── Theme ──────────────────────────────────────────────────────────────
 function applyTheme(mode) {
@@ -2471,10 +2374,6 @@ loadData();
 if (!activeMonth) activeMonth = getMonths()[getMonths().length - 1];
 applyI18nStatic();
 renderAll();
-updateManualSyncBtn();
-initManualSyncBtn();
-initSync();
-initPullToRefresh();
 
 // Service Worker nur registrieren, wenn unterstützt und nicht bei file://
 // (dort schlägt die Registrierung ohnehin fehl — kein Fehler, einfach übersprungen).
@@ -2610,7 +2509,6 @@ function renderSettings() {
         <button class="theme-btn${theme==='auto'?' active':''}" data-theme="auto" onclick="setTheme('auto')">🌗</button>
       </div>
     </div>
-    ${renderSyncSection()}
     <div style="margin-top:20px;">
       <button class="btn-main secondary" style="width:100%;" onclick="openExport('download')">${t('btn_export_excel')}</button>
     </div>
@@ -2623,35 +2521,6 @@ function renderSettings() {
     </div>
     <div style="margin-top:20px;text-align:center;font-size:11px;color:var(--muted);">${t('letzte_aktualisierung')}${LAST_UPDATED}</div>
     <div style="margin-top:8px;text-align:center;font-size:11px;color:var(--muted);">${t('copyright')}</div>`;
-}
-function renderSyncSection() {
-  if (syncEnabled()) {
-    return `
-    <div class="setting-row" style="margin-top:20px;">
-      <div><div class="setting-label">${t('setting_sync_label')}</div><div class="setting-sub" id="sync-status">${t('sync_active')}${syncCode()}</div></div>
-    </div>
-    <div style="margin-top:10px;">
-      <button class="btn-main secondary" style="width:100%;" onclick="stopSync()">${t('btn_sync_beenden')}</button>
-    </div>`;
-  }
-  return `
-    <div class="setting-row" style="margin-top:20px;">
-      <div><div class="setting-label">${t('setting_sync_label')}</div><div class="setting-sub" id="sync-status">${t('sync_inactive')}</div></div>
-    </div>
-    <div style="margin-top:10px;display:flex;gap:8px;">
-      <button class="btn-main secondary" style="flex:1;" onclick="startSync()">${t('btn_sync_starten')}</button>
-      <button class="btn-main secondary" style="flex:1;" onclick="toggleSyncCodeInput()">${t('btn_code_eingeben')}</button>
-    </div>
-    <div id="sync-code-input-row" style="display:none;margin-top:10px;">
-      <div class="field">
-        <input class="note-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="sync-code-field" placeholder="${t('placeholder_sync_code')}">
-      </div>
-      <button class="btn-main primary" style="width:100%;margin-top:8px;" onclick="pairSync(document.getElementById('sync-code-field').value.trim())">${t('btn_verbinden')}</button>
-    </div>`;
-}
-function toggleSyncCodeInput() {
-  const row = document.getElementById('sync-code-input-row');
-  row.style.display = row.style.display === 'none' ? 'block' : 'none';
 }
 function updateConfigField(key, value) { config[key] = value; saveConfig(); renderAll(); }
 function importFromJson(input) {
@@ -2780,349 +2649,6 @@ function downloadBlob(blob, filename, toastPrefix) {
   URL.revokeObjectURL(url);
   closeSheet('sheet-export');
   toast((toastPrefix || t('t_heruntergeladen')) + filename);
-}
-
-// ─── Cloud-Synchronisierung ────────────────────────────────────────────
-// Zwei-Geräte-Sync über einen 6-stelligen Code. Kein Login, keine externe
-// Bibliothek im Frontend — nur fetch() gegen die eigene Netlify Function
-// (netlify/functions/sync.js). Push ist debounced (3s), Pull läuft beim
-// Öffnen/Fortsetzen der App. Bei einem echten Konflikt (beide Geräte haben
-// unabhängig voneinander geändert) entscheidet der Nutzer per Dialog.
-const SYNC_ENDPOINT = '/.netlify/functions/sync';
-let syncPushTimer = null;
-let syncInFlight = false;
-let syncConflictData = null;
-// true = lokale Änderung wurde noch nicht erfolgreich hochgeladen (offen seit
-// dem letzten scheduleSyncPush, oder ein Push ist fehlgeschlagen/im Konflikt).
-// Beim Fortsetzen der App wird bei syncDirty=true gepusht statt gepullt, damit
-// ein echter Konflikt (anderes Gerät hat währenddessen auch gespeichert) über
-// den normalen 409-Weg erkannt wird, statt die ungesicherte Änderung durch
-// einen blinden Pull stillschweigend zu verwerfen.
-let syncDirty = false;
-
-function syncEnabled() { return !!localStorage.getItem('monteur_sync_code'); }
-function syncCode() { return localStorage.getItem('monteur_sync_code') || ''; }
-function syncLastModified() {
-  const v = localStorage.getItem('monteur_sync_last_modified');
-  return v ? parseInt(v, 10) : null;
-}
-function setSyncState(code, lastModified) {
-  localStorage.setItem('monteur_sync_code', code);
-  localStorage.setItem('monteur_sync_last_modified', String(lastModified));
-}
-function clearSyncState() {
-  localStorage.removeItem('monteur_sync_code');
-  localStorage.removeItem('monteur_sync_last_modified');
-}
-function randomSyncCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-// state: 'syncing' (gelb) | 'error' (rot) | 'success' (grün) | weggelassen
-// (nur der Text in den Einstellungen wird aktualisiert, kein Banner).
-function setSyncStatus(text, state) {
-  const el = document.getElementById('sync-status');
-  if (el) el.textContent = text;
-  if (state) showSyncBanner(text, state);
-}
-let syncBannerTimer = null;
-function showSyncBanner(text, state) {
-  const banner = document.getElementById('sync-banner');
-  if (!banner) return;
-  banner.textContent = text;
-  banner.className = 'sync-banner open ' + state;
-  clearTimeout(syncBannerTimer);
-  if (state !== 'syncing') {
-    syncBannerTimer = setTimeout(function () { banner.classList.remove('open'); }, 3500);
-  }
-}
-// Immer sichtbares Zeichen (Punkt am Zahnrad-Symbol), dass gerade ein
-// Sync-Request läuft — im Unterschied zu setSyncStatus() ist das auch dann
-// zu sehen, wenn die Einstellungen-Ansicht gerade nicht offen ist.
-function setSyncIndicator(active) {
-  const el = document.getElementById('sync-indicator');
-  if (el) el.classList.toggle('active', !!active);
-}
-// Zuverlässiger, geräteunabhängiger Ersatz/Ergänzung zum Pull-to-Refresh-
-// Wisch (der auf manchen echten Handys/Browsern nicht anspringt): einfacher
-// Tap auf das Symbol neben dem Zahnrad.
-function manualSyncTap() {
-  if (!syncEnabled()) { toast(t('t_sync_nicht_aktiv')); return; }
-  syncOnResume();
-}
-// Der Button ist nur sichtbar, wenn Sync tatsächlich aktiv ist — sonst gäbe
-// es nichts zu synchronisieren und der Button wäre nur verwirrender Ballast.
-function updateManualSyncBtn() {
-  const el = document.getElementById('manual-sync-btn');
-  if (el) el.style.display = syncEnabled() ? 'flex' : 'none';
-}
-// addEventListener statt inline onclick="" — auf einem iPhone reagierte der
-// Button gar nicht auf Antippen (auf Android zumindest optisch schon), das
-// ist robuster. Einmalig verdrahtet, statt bei jedem updateManualSyncBtn().
-function initManualSyncBtn() {
-  const el = document.getElementById('manual-sync-btn');
-  if (el) el.addEventListener('click', manualSyncTap);
-}
-// Timeout ist wichtig: ohne ihn kann ein fetch() bei einer wackligen Mobil-
-// funkverbindung unbegrenzt hängen bleiben (weder Erfolg noch Fehler) — dann
-// bleibt syncInFlight für den Rest der Sitzung auf "true" stehen und JEDER
-// weitere Sync-Versuch (auch ein manueller Tap auf 🔄) wird von pushSync()/
-// pullSync() stillschweigend übersprungen, ohne jede Rückmeldung.
-const SYNC_TIMEOUT_MS = 12000;
-async function syncFetch(method, code, body) {
-  const url = SYNC_ENDPOINT + '?code=' + encodeURIComponent(code);
-  const controller = new AbortController();
-  const timeoutId = setTimeout(function () { controller.abort(); }, SYNC_TIMEOUT_MS);
-  let res;
-  try {
-    res = await fetch(url, {
-      method,
-      cache: 'no-store',
-      signal: controller.signal,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined
-    });
-  } finally {
-    clearTimeout(timeoutId);
-  }
-  let parsed = null;
-  try { parsed = await res.json(); } catch (e) {}
-  return { ok: res.ok, status: res.status, body: parsed };
-}
-
-async function startSync() {
-  setSyncIndicator(true);
-  try {
-    setSyncStatus(t('sync_status_code_wird_erzeugt'), 'syncing');
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const code = randomSyncCode();
-      const check = await syncFetch('GET', code).catch(() => null);
-      if (!check) { setSyncStatus(t('sync_status_keine_verbindung'), 'error'); return; }
-      if (check.status === 404) {
-        const created = await syncFetch('POST', code, { shifts, config, baseLastModified: null }).catch(() => null);
-        if (created && created.ok) {
-          setSyncState(code, created.body.lastModified);
-          renderSettings();
-          toast(t('t_sync_gestartet'));
-          showSyncBanner(t('sync_status_synchronisiert'), 'success');
-          return;
-        }
-        setSyncStatus(t('sync_status_fehler_starten'), 'error');
-        return;
-      }
-    }
-    setSyncStatus(t('sync_status_kein_freier_code'), 'error');
-  } finally {
-    setSyncIndicator(false);
-    updateManualSyncBtn();
-  }
-}
-
-async function pairSync(code) {
-  if (!/^\d{6}$/.test(code)) { toast(t('t_code_6_ziffern')); return; }
-  if (shifts.length > 0 && !confirm(shifts.length + t('pairsync_confirm'))) {
-    return;
-  }
-  setSyncIndicator(true);
-  try {
-    setSyncStatus(t('sync_status_verbinde'), 'syncing');
-    const res = await syncFetch('GET', code).catch(() => null);
-    if (!res) { setSyncStatus(t('sync_status_keine_verbindung'), 'error'); return; }
-    if (res.status === 404) { toast(t('t_code_nicht_gefunden')); showSyncBanner(t('t_code_nicht_gefunden'), 'error'); return; }
-    if (!res.ok) { setSyncStatus(t('sync_status_fehler_verbinden'), 'error'); return; }
-    shifts = res.body.shifts || [];
-    shifts.forEach(migrateShiftLegs);
-    config = Object.assign(config, res.body.config || {});
-    saveDataLocalOnly();
-    saveConfigLocalOnly();
-    setSyncState(code, res.body.lastModified);
-    syncDirty = false;
-    renderAll();
-    renderSettings();
-    toast(t('t_daten_uebernommen'));
-    showSyncBanner(t('sync_status_synchronisiert'), 'success');
-  } finally {
-    setSyncIndicator(false);
-    updateManualSyncBtn();
-  }
-}
-
-function stopSync() {
-  clearSyncState();
-  renderSettings();
-  updateManualSyncBtn();
-  toast(t('t_sync_beendet'));
-}
-
-function scheduleSyncPush() {
-  if (!syncEnabled()) return;
-  syncDirty = true;
-  clearTimeout(syncPushTimer);
-  syncPushTimer = setTimeout(pushSync, 3000);
-}
-
-async function pushSync() {
-  if (!syncEnabled() || syncInFlight) return;
-  syncInFlight = true;
-  setSyncIndicator(true);
-  try {
-    setSyncStatus(t('sync_status_synchronisiere'), 'syncing');
-    const res = await syncFetch('POST', syncCode(), { shifts, config, baseLastModified: syncLastModified() }).catch(() => null);
-    if (!res) { setSyncStatus(t('sync_status_nicht_synchronisiert'), 'error'); return; }
-    if (res.status === 409) {
-      syncConflictData = { remote: res.body };
-      openSyncConflict();
-      return;
-    }
-    if (!res.ok) { setSyncStatus(t('sync_status_fehlgeschlagen'), 'error'); return; }
-    setSyncState(syncCode(), res.body.lastModified);
-    syncDirty = false;
-    setSyncStatus(t('sync_status_synchronisiert'), 'success');
-  } finally {
-    syncInFlight = false;
-    setSyncIndicator(false);
-  }
-}
-
-async function pullSync() {
-  if (!syncEnabled() || syncInFlight) return;
-  syncInFlight = true;
-  setSyncIndicator(true);
-  try {
-    setSyncStatus(t('sync_status_synchronisiere'), 'syncing');
-    const res = await syncFetch('GET', syncCode()).catch(() => null);
-    if (!res || !res.ok) { setSyncStatus(t('sync_status_nicht_synchronisiert'), 'error'); return; }
-    if (res.body.lastModified === syncLastModified()) { setSyncStatus(t('sync_status_synchronisiert'), 'success'); return; }
-    shifts = res.body.shifts || [];
-    shifts.forEach(migrateShiftLegs);
-    config = Object.assign(config, res.body.config || {});
-    saveDataLocalOnly();
-    saveConfigLocalOnly();
-    setSyncState(syncCode(), res.body.lastModified);
-    renderAll();
-    renderSettings();
-    setSyncStatus(t('sync_status_synchronisiert'), 'success');
-  } finally {
-    syncInFlight = false;
-    setSyncIndicator(false);
-  }
-}
-
-// Beim App-Start/Fortsetzen aufgerufen: bei ungesicherten lokalen Änderungen
-// wird gepusht (damit ein echter Konflikt korrekt über 409 erkannt wird),
-// sonst normal gepullt. Siehe Kommentar bei syncDirty weiter oben.
-function syncOnResume() {
-  if (!syncEnabled()) return Promise.resolve();
-  return syncDirty ? pushSync() : pullSync();
-}
-
-function openSyncConflict() {
-  document.getElementById('confirm-sync-overlay').classList.add('open');
-}
-function resolveSyncConflict(choice) {
-  document.getElementById('confirm-sync-overlay').classList.remove('open');
-  if (!syncConflictData) return;
-  if (choice === 'remote') {
-    shifts = syncConflictData.remote.shifts || [];
-    shifts.forEach(migrateShiftLegs);
-    config = Object.assign(config, syncConflictData.remote.config || {});
-    saveDataLocalOnly();
-    saveConfigLocalOnly();
-    setSyncState(syncCode(), syncConflictData.remote.lastModified);
-    syncDirty = false;
-    renderAll();
-    renderSettings();
-    setSyncStatus(t('sync_status_synchronisiert'), 'success');
-    syncConflictData = null;
-  } else {
-    const remoteLastModified = syncConflictData.remote.lastModified;
-    syncConflictData = null;
-    setSyncState(syncCode(), remoteLastModified);
-    pushSync();
-  }
-}
-
-function initSync() {
-  // Listener wird immer registriert (auch wenn Sync gerade noch nicht aktiv
-  // ist) — falls Sync erst später in dieser Sitzung gestartet/verbunden
-  // wird, funktioniert Pull-beim-Fortsetzen sonst bis zum nächsten
-  // App-Neustart nicht (syncOnResume/pullSync/pushSync prüfen selbst
-  // syncEnabled() und tun bei inaktivem Sync nichts).
-  document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') syncOnResume();
-  });
-  syncOnResume();
-}
-
-// ─── Pull-to-Refresh ────────────────────────────────────────────────────
-// Am oberen Rand der Timeline (nur wenn schon ganz nach oben gescrollt)
-// nach unten ziehen löst eine manuelle Synchronisierung aus — bleibt
-// wirkungslos, solange Sync nicht aktiv ist (normales Scrollen/Bounce
-// bleibt dann unverändert).
-const PULL_THRESHOLD = 70;
-const PULL_MAX = 90;
-const PULL_CIRC = 94.2; // 2 * π * 15 (Radius des Rings im SVG)
-let pullStartY = null;
-let pulling = false;
-let pullDist = 0;
-let pullRefreshing = false;
-
-function setPullDist(dist) {
-  pullDist = dist;
-  const el = document.getElementById('pull-refresh');
-  if (el) el.style.height = dist + 'px';
-  const fill = document.getElementById('pull-refresh-fill');
-  if (fill) fill.style.strokeDashoffset = String(PULL_CIRC * (1 - Math.min(1, dist / PULL_THRESHOLD)));
-}
-function resetPull() {
-  const el = document.getElementById('pull-refresh');
-  if (el) { el.style.height = ''; el.classList.remove('loading'); }
-  const fill = document.getElementById('pull-refresh-fill');
-  if (fill) fill.style.strokeDashoffset = String(PULL_CIRC);
-  pullDist = 0;
-}
-async function triggerPullRefresh() {
-  pullRefreshing = true;
-  const el = document.getElementById('pull-refresh');
-  if (el) { el.style.height = '44px'; el.classList.add('loading'); }
-  try {
-    await syncOnResume();
-  } finally {
-    pullRefreshing = false;
-    resetPull();
-  }
-}
-function pullTouchStart(e) {
-  if (pullRefreshing || !syncEnabled()) { pullStartY = null; pulling = false; return; }
-  if (document.getElementById('timeline').scrollTop <= 0) {
-    pullStartY = e.touches[0].clientY;
-    pulling = true;
-  } else {
-    pullStartY = null; pulling = false;
-  }
-}
-function pullTouchMove(e) {
-  if (!pulling || pullStartY === null || pullRefreshing) return;
-  if (document.getElementById('timeline').scrollTop > 0) { pulling = false; resetPull(); return; }
-  const dy = e.touches[0].clientY - pullStartY;
-  if (dy <= 0) { setPullDist(0); return; }
-  e.preventDefault();
-  setPullDist(Math.min(dy * 0.5, PULL_MAX));
-}
-function pullTouchEnd() {
-  if (!pulling) return;
-  pulling = false;
-  if (pullDist >= PULL_THRESHOLD && !pullRefreshing) {
-    triggerPullRefresh();
-  } else {
-    resetPull();
-  }
-}
-function initPullToRefresh() {
-  const tl = document.getElementById('timeline');
-  tl.addEventListener('touchstart', pullTouchStart, { passive: true });
-  tl.addEventListener('touchmove', pullTouchMove, { passive: false });
-  tl.addEventListener('touchend', pullTouchEnd, { passive: true });
-  tl.addEventListener('touchcancel', pullTouchEnd, { passive: true });
 }
 
 </script>
