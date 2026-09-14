@@ -50,6 +50,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .app { display: grid; grid-template-rows: auto auto 1fr auto; height: 100dvh; max-width: 900px; margin: 0 auto; }
 
 .topbar { display: flex; flex-direction: column; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); box-shadow: 0 2px 10px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 10; width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
+.topbar::after {
+  content: '';
+  position: absolute; bottom: -1px; left: 20px; right: 20px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(226,0,26,0.35), transparent);
+}
 .topbar-row1 { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 900px; margin: 0 auto; padding: 10px 20px 12px; box-sizing: border-box; }
 .lely-badge { flex: 0 0 auto; }
 .topbar-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
@@ -60,7 +65,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .month-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg); overflow-x: auto; scrollbar-width: none; }
 .month-bar::-webkit-scrollbar { display: none; }
 .month-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-family: var(--mono); cursor: pointer; border: 1px solid var(--border); color: var(--muted); transition: all 0.15s; touch-action: manipulation; white-space: nowrap; }
-.month-chip.active { background: var(--brand-dim); border-color: var(--brand); color: var(--brand); font-weight: 500; }
+.month-chip.active { background: linear-gradient(135deg, rgba(226,0,26,0.18) 0%, rgba(151,12,34,0.12) 100%); border-color: rgba(226,0,26,0.7); color: var(--brand); font-weight: 500; box-shadow: 0 0 0 1px rgba(226,0,26,0.15); }
 
 .timeline { overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; padding: 16px 20px 24px; scrollbar-width: thin; scrollbar-color: var(--s3) transparent; }
 .timeline::-webkit-scrollbar { width: 4px; }
@@ -86,6 +91,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .day-card.sick::before      { background: var(--red); }
 .day-card.vacation::before  { background: var(--green); }
 .day-card.holiday-auto::before { background: var(--amber); }
+.day-card.work         { background: linear-gradient(135deg, var(--s1) 60%, rgba(226,0,26,0.04) 100%); }
+.day-card.sick          { background: linear-gradient(135deg, var(--s1) 60%, rgba(248,113,113,0.06) 100%); }
+.day-card.vacation      { background: linear-gradient(135deg, var(--s1) 60%, rgba(52,211,153,0.06) 100%); }
+.day-card.holiday-auto  { background: linear-gradient(135deg, var(--s1) 60%, rgba(251,191,36,0.06) 100%); }
 .day-card:active { transform: scale(0.985); background: var(--s2); }
 .day-date { font-family: var(--mono); font-size: 13px; color: var(--muted); line-height: 1.3; text-align: center; }
 .day-date .dd { font-size: 22px; font-weight: 500; color: var(--text); line-height: 1; }
@@ -105,16 +114,33 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .empty-state .big { font-family: var(--sans); font-weight: 700; font-size: 24px; color: var(--dim); display: block; margin-bottom: 8px; }
 
 .bottom-nav { display: flex; align-items: stretch; border-top: 1px solid var(--border); background: var(--bg); padding-bottom: env(safe-area-inset-bottom); }
-.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 8px; font-size: 11px; color: var(--muted); cursor: pointer; touch-action: manipulation; transition: color 0.12s; border: none; background: none; font-family: var(--sans); }
+.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 8px; font-size: 11px; color: var(--muted); cursor: pointer; touch-action: manipulation; transition: color 0.15s, background 0.15s; border: none; background: none; font-family: var(--sans); border-radius: 14px; margin: 6px 4px; }
 .nav-btn .icon { font-size: 20px; line-height: 1; }
-.nav-btn.active { color: var(--brand); }
+.nav-btn.active { color: var(--brand); background: var(--brand-dim); }
 
 .fab { position: relative; flex: none; width: 64px; display: flex; align-items: center; justify-content: center; margin: -20px 8px 0; }
-.fab-btn { width: 56px; height: 56px; border-radius: 18px; background: var(--brand); color: #fff; border: none; font-size: 26px; cursor: pointer; box-shadow: 0 4px 20px rgba(226,0,26,0.4); transition: all 0.15s; touch-action: manipulation; display: flex; align-items: center; justify-content: center; line-height: 1; }
-.fab-btn:active { transform: scale(0.93); }
-.fab-menu { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
-.fab-menu.open { opacity: 1; pointer-events: all; }
-.fab-item { display: flex; align-items: center; gap: 10px; background: var(--s2); border: 1px solid var(--border2); border-radius: 12px; padding: 10px 16px; white-space: nowrap; cursor: pointer; touch-action: manipulation; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.fab-btn { width: 56px; height: 56px; border-radius: 18px; background: linear-gradient(145deg, var(--brand) 0%, var(--brand-dark) 100%); color: #fff; border: none; font-size: 26px; cursor: pointer; box-shadow: 0 4px 24px rgba(226,0,26,0.5), 0 1px 0 rgba(255,255,255,0.15) inset; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s, opacity 0.15s; touch-action: manipulation; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.fab-btn.open        { transform: rotate(45deg); }
+.fab-btn:active       { transform: scale(0.93); box-shadow: 0 2px 12px rgba(226,0,26,0.3); }
+.fab-btn.open:active  { transform: rotate(45deg) scale(0.93); }
+/* Menu selbst hat keine eigene Opacity-Transition mehr — die spielt sich
+   jetzt (mit Stagger-Delay) auf jedem .fab-item einzeln ab, siehe unten. */
+.fab-menu { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+.fab-menu.open { pointer-events: all; }
+.fab-item { display: flex; align-items: center; gap: 10px; background: var(--s2); border: 1px solid var(--border2); border-radius: 12px; padding: 10px 16px; white-space: nowrap; cursor: pointer; touch-action: manipulation; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  opacity: 0; transform: translateY(16px) scale(0.88);
+  transition: opacity 0.28s, transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.12s;
+}
+.fab-menu.open .fab-item { opacity: 1; transform: translateY(0) scale(1); }
+/* Reihenfolge im HTML: Büro, Krank, Urlaub, Schicht — Schicht (letztes
+   Kind) liegt im Menü am nächsten am FAB-Button (Menü wächst nach oben)
+   und erscheint deshalb zuerst; Büro (erstes Kind) am weitesten weg und
+   erscheint zuletzt. */
+.fab-menu.open .fab-item:nth-child(4) { transition-delay:   0ms; }
+.fab-menu.open .fab-item:nth-child(3) { transition-delay:  45ms; }
+.fab-menu.open .fab-item:nth-child(2) { transition-delay:  90ms; }
+.fab-menu.open .fab-item:nth-child(1) { transition-delay: 135ms; }
+.fab-item:active { transform: scale(0.97) !important; }
 .fab-item .fi-icon { font-size: 18px; }
 
 .sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -188,7 +214,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .detail-v { font-family: var(--mono); font-size: 15px; font-weight: 500; }
 
 .summary-hero { text-align: center; padding: 24px 0 28px; border-bottom: 1px solid var(--border); }
-.summary-amount { font-family: var(--mono); font-size: 44px; font-weight: 500; color: var(--brand); line-height: 1; }
+.summary-amount { font-family: var(--mono); font-size: 44px; font-weight: 500; color: var(--brand); line-height: 1; text-shadow: 0 0 40px rgba(226,0,26,0.35); }
 .summary-period { font-size: 13px; color: var(--muted); margin-top: 8px; }
 .sum-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 24px 0; }
 .sum-tile { background: var(--s2); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
@@ -1073,7 +1099,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // Muss bei JEDEM Deploy auf das aktuelle Datum aktualisiert werden (Format
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
-const LAST_UPDATED = '31.08.2026';
+const LAST_UPDATED = '14.09.2026';
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // config.language steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -1592,8 +1618,8 @@ function openSettings() { renderSettings(); openSheet('sheet-settings'); }
 
 // ─── FAB ────────────────────────────────────────────────────────────────
 let fabOpen = false;
-function toggleFab() { fabOpen = !fabOpen; document.getElementById('fab-menu').classList.toggle('open', fabOpen); document.getElementById('fab-btn').textContent = fabOpen ? '✕' : '＋'; }
-function closeFab() { fabOpen = false; document.getElementById('fab-menu').classList.remove('open'); document.getElementById('fab-btn').textContent = '＋'; }
+function toggleFab() { fabOpen = !fabOpen; document.getElementById('fab-menu').classList.toggle('open', fabOpen); document.getElementById('fab-btn').classList.toggle('open', fabOpen); }
+function closeFab() { fabOpen = false; document.getElementById('fab-menu').classList.remove('open'); document.getElementById('fab-btn').classList.remove('open'); }
 function fabAction(type) {
   closeFab();
   if (type === 'buro') { addBuro(); return; }
