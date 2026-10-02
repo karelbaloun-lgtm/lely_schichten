@@ -285,6 +285,47 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
    irgendeinem Grund nicht laufen sollte. Bleibt sichtbar, bis der Monteur
    draufklickt — kein Auto-Dismiss, da ein Update sonst leicht übersehen
    wird. */
+/* Sichtbar, solange ein Sync-Request läuft — sonst wirkt die App beim
+   erneuten Öffnen (Cold-Start der Netlify Function, ~4s) so, als würde sie
+   einfrieren, ohne dass irgendetwas sichtbar passiert. */
+.sync-indicator { display: none; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #ffd766; box-shadow: 0 0 0 2px var(--brand); animation: sync-pulse 1s ease-in-out infinite; }
+.sync-indicator.active { display: block; }
+@keyframes sync-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(0.8); } }
+/* Farbiges Sync-Status-Banner: gelb = läuft, rot = Fehler, grün = erfolgreich.
+   display:none/block + @keyframes statt opacity-transition: eine transition
+   braucht einen gerenderten Vorher-Zustand und bleibt in Tabs, die gerade
+   nicht gerendert werden, hängen — die Animation spielt dagegen bei jedem
+   Öffnen sicher ab, und display:block macht das Banner so oder so sichtbar. */
+.sync-banner { display: none; position: fixed; top: 68px; left: 50%; width: calc(100% - 40px); max-width: 460px; padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 260; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.sync-banner.open { display: block; animation: sync-banner-in 0.25s ease-out forwards; }
+.sync-banner.syncing { background: var(--amber-dim); border: 1px solid var(--amber); color: var(--amber); }
+.sync-banner.error { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
+.sync-banner.success { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
+.topbar-sub { font-size: 11px; color: rgba(255,255,255,.9); cursor: pointer; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Anmeldung (Vollbild, über allem außer Toasts) */
+.auth-overlay { display: none; position: fixed; inset: 0; z-index: 280; background: var(--bg); align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+.auth-overlay.open { display: flex; }
+.auth-card { width: 100%; max-width: 380px; margin: auto; }
+.auth-brand { background: linear-gradient(135deg, var(--brand), var(--brand-dark)); color: #fff; padding: 16px 20px; border-radius: 16px 16px 0 0; font-size: 18px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
+.auth-body { background: var(--s1); border: 1px solid var(--border); border-top: none; border-radius: 0 0 16px 16px; padding: 20px; }
+.auth-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.auth-hint { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+.auth-field { margin-bottom: 12px; }
+.auth-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+.auth-msg { min-height: 18px; font-size: 13px; color: var(--red); margin: 6px 0 10px; line-height: 1.4; }
+.auth-msg.info { color: var(--muted); }
+.auth-link { display: block; width: 100%; background: none; border: none; color: var(--brand); font-size: 13px; padding: 12px 0 0; cursor: pointer; font-family: var(--sans); touch-action: manipulation; }
+.auth-lang { justify-content: center; margin-top: 16px; display: flex; }
+.auth-body button:disabled { opacity: .55; }
+.name-input:disabled, .setting-input:disabled { opacity: .55; }
+/* Benutzerverwaltung (Admin) */
+.user-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--s2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; }
+.user-main { min-width: 0; }
+.user-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.user-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.user-act { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border2); background: var(--s1); font-size: 16px; cursor: pointer; touch-action: manipulation; }
+
 .update-banner { display: none; position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; width: calc(100% - 40px); max-width: 460px; padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 270; box-shadow: 0 8px 24px rgba(0,0,0,0.3); background: var(--brand); color: #fff; cursor: pointer; }
 .update-banner.open { display: block; animation: sync-banner-in 0.25s ease-out forwards; }
 @keyframes sync-banner-in { from { opacity: 0; transform: translateX(-50%) translateY(-14px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
@@ -324,8 +365,10 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       </div>
       <div class="topbar-left">
         <div class="topbar-title">Lely Schichten</div>
+        <div class="topbar-sub" id="topbar-sub" style="display:none;" onclick="switchDataOwner(auth.username)"></div>
       </div>
-      <button class="topbar-settings" onclick="openSettings()">⚙</button>
+      <button class="topbar-settings" id="manual-sync-btn" aria-label="Sync" style="display:none;">🔄</button>
+      <button class="topbar-settings" onclick="openSettings()">⚙<span class="sync-indicator" id="sync-indicator"></span></button>
     </div>
   </header>
 
@@ -450,27 +493,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
 </div>
 
-<div class="sheet" id="sheet-welcome">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <div class="sheet-title" data-i18n="sheet_welcome_title">Willkommen! 👋</div>
-  </div>
-  <div class="sheet-body">
-    <p style="margin:0 0 20px;color:var(--muted);" data-i18n="welcome_text">Bitte gib deinen Namen ein — er wird für den Export und die Begrüßung verwendet.</p>
-    <div class="field">
-      <label data-i18n="label_vorname">Vorname</label>
-      <input class="note-input" type="text" id="welcome-firstname">
-    </div>
-    <div class="field">
-      <label data-i18n="label_nachname">Nachname</label>
-      <input class="note-input" type="text" id="welcome-lastname">
-    </div>
-  </div>
-  <div class="sheet-actions">
-    <button class="btn-main primary" style="width:100%;" onclick="saveWelcomeName()" data-i18n="btn_los_gehts">Los geht's</button>
-  </div>
-</div>
-
 <div class="cal-overlay" id="cal-overlay">
   <div class="cal-box">
     <div class="cal-header">
@@ -521,6 +543,65 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 
 <datalist id="customer-history"></datalist>
 <datalist id="hotel-address-history"></datalist>
+
+<div class="sync-banner" id="sync-banner"></div>
+
+<div class="confirm-overlay" id="confirm-sync-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" data-i18n="confirm_sync_title">Daten unterscheiden sich</div>
+    <div class="confirm-text" data-i18n="confirm_sync_text">Die Daten auf diesem Gerät unterscheiden sich von denen auf dem Server. Welche Version soll gelten?</div>
+    <div class="confirm-actions">
+      <button class="btn-main secondary" onclick="resolveSyncConflict('remote')" data-i18n="btn_sync_remote">SERVER</button>
+      <button class="btn-main primary" onclick="resolveSyncConflict('local')" data-i18n="btn_sync_local">DIESES GERÄT</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="sheet-users">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title" data-i18n="sheet_users_title">Benutzer</div>
+    <button class="sheet-close" onclick="closeSheet('sheet-users')">✕</button>
+  </div>
+  <div class="sheet-body" id="users-body"></div>
+  <div class="sheet-actions">
+    <button class="btn-main primary" style="width:100%;" onclick="openUserForm('create')" data-i18n="btn_new_user">＋ Neuer Benutzer</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet-user-form">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title" id="user-form-title"></div>
+    <button class="sheet-close" onclick="closeSheet('sheet-user-form')">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div id="user-form-body"></div>
+    <div class="auth-msg" id="user-form-msg"></div>
+  </div>
+  <div class="sheet-actions">
+    <button class="btn-main secondary" onclick="closeSheet('sheet-user-form')" data-i18n="btn_abbrechen">Abbrechen</button>
+    <button class="btn-main primary" onclick="submitUserForm()" data-i18n="btn_speichern">Speichern</button>
+  </div>
+</div>
+
+<div class="auth-overlay" id="auth-overlay">
+  <form class="auth-card" onsubmit="authSubmit(); return false;" novalidate>
+    <div class="auth-brand">Lely Schichten</div>
+    <div class="auth-body">
+      <div class="auth-title" id="auth-title"></div>
+      <div class="auth-hint" id="auth-hint"></div>
+      <div id="auth-fields"></div>
+      <div class="auth-msg" id="auth-msg"></div>
+      <button class="btn-main primary" id="auth-submit" type="submit" style="width:100%;"></button>
+      <button class="auth-link" id="auth-secondary" type="button" onclick="authSecondary()"></button>
+      <div class="theme-seg auth-lang">
+        <button type="button" class="theme-btn" id="auth-lang-cs" onclick="authSetLang('cs')">🇨🇿</button>
+        <button type="button" class="theme-btn" id="auth-lang-de" onclick="authSetLang('de')">🇩🇪</button>
+      </div>
+    </div>
+  </form>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -576,8 +657,8 @@ function segmentHours(start, end) { if (!start || !end) return 0; let mins = tim
 function mondayOf(iso) { const d = parseISODate(iso); const dow = (d.getDay()+6)%7; d.setDate(d.getDate()-dow); return d.toISOString().slice(0,10); }
 function weekDates(mondayIso) { const dates=[]; const d=parseISODate(mondayIso); for (let i=0;i<7;i++){ dates.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); } return dates; }
 // ─── Letztes Datum (für "Kopieren" -> automatisch nächster Werktag) ────────
-function getLastDate() { return localStorage.getItem('monteur_last_date') || new Date().toISOString().slice(0, 10); }
-function saveLastDate(d) { localStorage.setItem('monteur_last_date', d); }
+function getLastDate() { return localStorage.getItem(userKey('monteur_last_date')) || new Date().toISOString().slice(0, 10); }
+function saveLastDate(d) { localStorage.setItem(userKey('monteur_last_date'), d); }
 function getSuggestedDate(lastIso) {
   const d = parseISODate(lastIso);
   d.setDate(d.getDate() + 1);
@@ -1099,14 +1180,14 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // Muss bei JEDEM Deploy auf das aktuelle Datum aktualisiert werden (Format
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
-const LAST_UPDATED = '14.09.2026';
+const LAST_UPDATED = '02.10.2026';
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
-// config.language steuert NUR die Anzeige (Buttons, Labels, Meldungen).
+// uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
 // Der Excel-Export bleibt davon komplett unberührt und immer Deutsch —
 // dort werden ausschließlich die *_DE-Konstanten/Strings direkt verwendet,
 // nie t()/curDAYS()/curMONTHS().
-function curLang() { return config.language === 'cs' ? 'cs' : 'de'; }
+function curLang() { return uiLang === 'cs' ? 'cs' : 'de'; }
 function curDAYS() { return curLang() === 'cs' ? DAYS_CS : DAYS_DE; }
 function curMONTHS() { return curLang() === 'cs' ? MONTHS_CS : MONTHS_DE; }
 function curMONTHS_SHORT() { return curLang() === 'cs' ? MONTHS_SHORT_CS : MONTHS_SHORT_DE; }
@@ -1115,6 +1196,50 @@ const I18N = {
   de: {
     nav_teilen: 'Teilen', nav_uebersicht: 'Übersicht',
     update_banner_text: '🔄 Neue Version verfügbar – zum Aktualisieren tippen',
+    auth_title_login: 'Anmelden', auth_title_setup: 'Ersteinrichtung (Admin)',
+    auth_title_changepw: 'Passwort ändern', auth_title_forcepw: 'Neues Passwort festlegen',
+    auth_force_hint: 'Dein Passwort wurde vom Administrator gesetzt. Bitte wähle jetzt ein eigenes.',
+    auth_username: 'Benutzername', auth_password: 'Passwort', auth_old_password: 'Aktuelles Passwort',
+    auth_new_password: 'Neues Passwort (min. 8 Zeichen)', auth_new_password2: 'Neues Passwort wiederholen',
+    auth_setup_key: 'Einrichtungsschlüssel',
+    btn_login: 'Anmelden', btn_setup: 'Einrichten',
+    auth_link_setup: 'Ersteinrichtung', auth_link_back: 'Zurück zur Anmeldung',
+    auth_fill_all: '⚠ Bitte alle Felder ausfüllen',
+    auth_busy: 'Einen Moment …',
+    auth_no_connection: '⚠ Keine Verbindung — bitte später erneut versuchen',
+    auth_invalid: '⚠ Benutzername oder Passwort falsch',
+    auth_locked: '⚠ Zu viele Fehlversuche — bitte in {0} Min. erneut versuchen',
+    auth_error: '⚠ Fehler — bitte erneut versuchen',
+    auth_session_expired: 'Sitzung abgelaufen — bitte neu anmelden',
+    auth_already_set_up: 'Die Ersteinrichtung ist bereits abgeschlossen — bitte anmelden.',
+    auth_pw_mismatch: '⚠ Die neuen Passwörter stimmen nicht überein',
+    auth_pw_short: '⚠ Passwort: mindestens 8 Zeichen',
+    auth_username_invalid: '⚠ Benutzername: 3–32 Zeichen (a–z, 0–9, . _ -)',
+    auth_setup_key_wrong: '⚠ Einrichtungsschlüssel falsch',
+    t_password_changed: '✓ Passwort geändert',
+    account_signed_in: 'Angemeldet als', role_admin: 'Administrator', role_user: 'Benutzer',
+    btn_change_pw: '🔑 Passwort ändern', btn_logout: '🚪 Abmelden', btn_manage_users: '👥 Benutzer verwalten',
+    confirm_logout_dirty: 'Es gibt noch nicht übertragene Änderungen. Sie bleiben auf diesem Gerät gespeichert und werden nach der nächsten Anmeldung hochgeladen. Trotzdem abmelden?',
+    confirm_adopt_legacy: 'Auf diesem Gerät sind noch {0} Einträge aus der Zeit vor der Anmeldung gespeichert. In dein Konto übernehmen?',
+    profile_locked_hint: 'Wird vom Administrator festgelegt',
+    sheet_users_title: 'Benutzer', btn_new_user: '＋ Neuer Benutzer',
+    users_loading: 'Lade …', users_error: '⚠ Benutzer konnten nicht geladen werden',
+    user_act_open: 'Daten ansehen/bearbeiten', user_act_reset: 'Passwort zurücksetzen',
+    user_form_create: 'Neuer Benutzer', user_form_edit: 'Benutzer bearbeiten', user_form_reset: 'Passwort zurücksetzen',
+    user_initial_password: 'Anfangspasswort (min. 8 Zeichen)', user_role: 'Rolle',
+    user_pw_hint: 'Der Benutzer muss es bei der ersten Anmeldung ändern.',
+    t_user_created: '✓ Benutzer angelegt', t_user_deleted: '✓ Benutzer gelöscht', t_user_pw_reset: '✓ Passwort zurückgesetzt',
+    t_user_exists: '⚠ Benutzername existiert bereits', t_user_last_admin: '⚠ Der letzte Administrator kann nicht herabgestuft werden',
+    t_profile_not_saved: '⚠ Nicht gespeichert (keine Verbindung)',
+    confirm_delete_user: 'Benutzer „{0}“ und ALLE seine Daten endgültig löschen?',
+    viewing_prefix: 'Daten von', viewing_back: 'zurück',
+    sync_status_synchronisiere: 'Synchronisiere …',
+    sync_status_nicht_synchronisiert: '⚠ Nicht synchronisiert (keine Verbindung)',
+    sync_status_fehlgeschlagen: '⚠ Synchronisierung fehlgeschlagen',
+    sync_status_synchronisiert: '✓ Synchronisiert',
+    confirm_sync_title: 'Daten unterscheiden sich',
+    confirm_sync_text: 'Die Daten auf diesem Gerät unterscheiden sich von denen auf dem Server. Welche Version soll gelten?',
+    btn_sync_remote: 'SERVER', btn_sync_local: 'DIESES GERÄT',
     fab_krank: 'Krank', fab_urlaub: 'Urlaub', fab_schicht: 'Schicht', fab_buero: 'Büro (1h)',
     edit_title_add: 'Schicht hinzufügen', edit_title_edit: 'Eintrag bearbeiten',
     btn_abbrechen: 'Abbrechen', btn_speichern: 'Speichern',
@@ -1135,10 +1260,7 @@ const I18N = {
     help_ios_2: '<b>„Teilen“</b> auswählen.',
     help_ios_3: 'Nach unten scrollen und <b>„Zum Home-Bildschirm“</b> antippen.',
     help_ios_4: '<b>Hinzufügen</b> bestätigen.',
-    sheet_welcome_title: 'Willkommen! 👋',
-    welcome_text: 'Bitte gib deinen Namen ein — er wird für den Export und die Begrüßung verwendet.',
     label_vorname: 'Vorname', label_nachname: 'Nachname',
-    btn_los_gehts: "Los geht's",
     stay_heimfahrt_plain: 'Heimfahrt', stay_hotel_plain: 'Hotel',
     confirm_pause_title: 'Pause zu kurz?',
     btn_bestaetigen: 'BESTÄTIGEN', btn_ueberspringen: 'ÜBERSPRINGEN',
@@ -1190,8 +1312,6 @@ const I18N = {
     t_gespeichert_ersetzt: '✓ Gespeichert — bestehender Eintrag für dieses Datum wurde ersetzt',
     t_gespeichert: '✓ Gespeichert', t_hinzugefuegt: '✓ Hinzugefügt',
     t_geloescht: 'Gelöscht',
-    t_bitte_namen: '⚠ Bitte Vor- und Nachname eingeben',
-    t_willkommen: '✓ Willkommen, ',
     t_keine_eintraege_gefunden: '⚠ Keine Einträge gefunden',
     t_eintraege_importiert_1: '✓ ', t_eintraege_importiert_2: ' Einträge importiert',
     t_fehler: '⚠ Fehler: ',
@@ -1212,6 +1332,50 @@ const I18N = {
   cs: {
     nav_teilen: 'Sdílet', nav_uebersicht: 'Přehled',
     update_banner_text: '🔄 K dispozici nová verze – klepnutím aktualizuješ',
+    auth_title_login: 'Přihlášení', auth_title_setup: 'První nastavení (admin)',
+    auth_title_changepw: 'Změna hesla', auth_title_forcepw: 'Nastav si nové heslo',
+    auth_force_hint: 'Heslo ti nastavil administrátor. Zvol si prosím vlastní.',
+    auth_username: 'Uživatelské jméno', auth_password: 'Heslo', auth_old_password: 'Současné heslo',
+    auth_new_password: 'Nové heslo (min. 8 znaků)', auth_new_password2: 'Nové heslo znovu',
+    auth_setup_key: 'Instalační klíč',
+    btn_login: 'Přihlásit', btn_setup: 'Nastavit',
+    auth_link_setup: 'První nastavení', auth_link_back: 'Zpět na přihlášení',
+    auth_fill_all: '⚠ Vyplň prosím všechna pole',
+    auth_busy: 'Okamžik …',
+    auth_no_connection: '⚠ Bez připojení — zkus to prosím později',
+    auth_invalid: '⚠ Špatné uživatelské jméno nebo heslo',
+    auth_locked: '⚠ Příliš mnoho nezdařených pokusů — zkus to za {0} min.',
+    auth_error: '⚠ Chyba — zkus to prosím znovu',
+    auth_session_expired: 'Relace vypršela — přihlas se prosím znovu',
+    auth_already_set_up: 'První nastavení už proběhlo — přihlas se prosím.',
+    auth_pw_mismatch: '⚠ Nová hesla se neshodují',
+    auth_pw_short: '⚠ Heslo: alespoň 8 znaků',
+    auth_username_invalid: '⚠ Uživatelské jméno: 3–32 znaků (a–z, 0–9, . _ -)',
+    auth_setup_key_wrong: '⚠ Špatný instalační klíč',
+    t_password_changed: '✓ Heslo změněno',
+    account_signed_in: 'Přihlášen jako', role_admin: 'Administrátor', role_user: 'Uživatel',
+    btn_change_pw: '🔑 Změnit heslo', btn_logout: '🚪 Odhlásit', btn_manage_users: '👥 Správa uživatelů',
+    confirm_logout_dirty: 'Některé změny ještě nebyly přeneseny. Zůstanou uložené v tomto zařízení a po dalším přihlášení se nahrají. Přesto odhlásit?',
+    confirm_adopt_legacy: 'V tomto zařízení je ještě uloženo {0} záznamů z doby před přihlášením. Převzít je do tvého účtu?',
+    profile_locked_hint: 'Nastavuje administrátor',
+    sheet_users_title: 'Uživatelé', btn_new_user: '＋ Nový uživatel',
+    users_loading: 'Načítám …', users_error: '⚠ Uživatele se nepodařilo načíst',
+    user_act_open: 'Zobrazit/upravit data', user_act_reset: 'Obnovit heslo',
+    user_form_create: 'Nový uživatel', user_form_edit: 'Upravit uživatele', user_form_reset: 'Obnovit heslo',
+    user_initial_password: 'Počáteční heslo (min. 8 znaků)', user_role: 'Role',
+    user_pw_hint: 'Uživatel si ho musí při prvním přihlášení změnit.',
+    t_user_created: '✓ Uživatel vytvořen', t_user_deleted: '✓ Uživatel smazán', t_user_pw_reset: '✓ Heslo obnoveno',
+    t_user_exists: '⚠ Uživatelské jméno už existuje', t_user_last_admin: '⚠ Posledního administrátora nelze degradovat',
+    t_profile_not_saved: '⚠ Neuloženo (bez připojení)',
+    confirm_delete_user: 'Smazat uživatele „{0}“ a VŠECHNA jeho data natrvalo?',
+    viewing_prefix: 'Data uživatele', viewing_back: 'zpět',
+    sync_status_synchronisiere: 'Synchronizuje se …',
+    sync_status_nicht_synchronisiert: '⚠ Nesynchronizováno (bez připojení)',
+    sync_status_fehlgeschlagen: '⚠ Synchronizace se nezdařila',
+    sync_status_synchronisiert: '✓ Synchronizováno',
+    confirm_sync_title: 'Data se liší',
+    confirm_sync_text: 'Data v tomto zařízení se liší od dat na serveru. Která verze má platit?',
+    btn_sync_remote: 'SERVER', btn_sync_local: 'TOTO ZAŘÍZENÍ',
     fab_krank: 'Nemoc', fab_urlaub: 'Dovolená', fab_schicht: 'Směna', fab_buero: 'Kancelář (1h)',
     edit_title_add: 'Přidat směnu', edit_title_edit: 'Upravit záznam',
     btn_abbrechen: 'Zrušit', btn_speichern: 'Uložit',
@@ -1232,10 +1396,7 @@ const I18N = {
     help_ios_2: 'Vyber <b>„Sdílet“</b>.',
     help_ios_3: 'Sjeď dolů a klepni na <b>„Na plochu“</b>.',
     help_ios_4: 'Potvrď <b>Přidat</b>.',
-    sheet_welcome_title: 'Vítej! 👋',
-    welcome_text: 'Zadej prosím své jméno — použije se pro export a pozdrav.',
     label_vorname: 'Jméno', label_nachname: 'Příjmení',
-    btn_los_gehts: 'Jdeme na to',
     stay_heimfahrt_plain: 'Domů', stay_hotel_plain: 'Hotel',
     confirm_pause_title: 'Přestávka je krátká?',
     btn_bestaetigen: 'POTVRDIT', btn_ueberspringen: 'PŘESKOČIT',
@@ -1287,8 +1448,6 @@ const I18N = {
     t_gespeichert_ersetzt: '✓ Uloženo — existující záznam pro toto datum byl nahrazen',
     t_gespeichert: '✓ Uloženo', t_hinzugefuegt: '✓ Přidáno',
     t_geloescht: 'Smazáno',
-    t_bitte_namen: '⚠ Zadej prosím jméno a příjmení',
-    t_willkommen: '✓ Vítej, ',
     t_keine_eintraege_gefunden: '⚠ Nenalezeny žádné záznamy',
     t_eintraege_importiert_1: '✓ Importováno ', t_eintraege_importiert_2: ' záznamů',
     t_fehler: '⚠ Chyba: ',
@@ -1312,8 +1471,11 @@ function t(key) { const dict = I18N[curLang()]; return (dict && dict[key] !== un
 // tf('holiday_warning', datum, name) ersetzt {0} und {1} im übersetzten Text.
 function tf(key, ...args) { let s = t(key); args.forEach(function (a, i) { s = s.split('{' + i + '}').join(a); }); return s; }
 function setLanguage(lang) {
-  config.language = (lang === 'cs') ? 'cs' : 'de';
-  saveConfig();
+  uiLang = (lang === 'cs') ? 'cs' : 'de';
+  localStorage.setItem('monteur_lang', uiLang);
+  // Sieht der Admin gerade die Daten eines Kollegen, bleibt dessen
+  // gespeicherte Sprache unverändert (nur die Anzeige wechselt).
+  if (!viewingOther()) { config.language = uiLang; saveConfig(); }
   applyI18nStatic();
   renderAll();
   renderSettings();
@@ -1350,6 +1512,12 @@ function fmtHoursShort(h) { return (Math.round(h * 100) / 100).toFixed(2).replac
 let shifts = [];
 let config = { firstName: '', lastName: '', weeklyNorm: 40, language: 'de' };
 let activeMonth = null;
+let uiLang = 'de';        // Anzeigesprache dieses Geräts
+let auth = null;          // { token, username, role, mustChangePassword } — null = nicht angemeldet
+let dataOwner = null;     // Konto, dessen Daten gerade geladen sind (Admin kann Kollegen öffnen)
+// Lokale Daten liegen pro Benutzer (…:<benutzername>), damit auf einem Gerät
+// mehrere Konten nebeneinander funktionieren, ohne sich zu vermischen.
+function userKey(base) { return base + ':' + (dataOwner || '_'); }
 
 function getMonths() {
   const set = new Set(shifts.map(s => monthKey(s.date)));
@@ -1374,24 +1542,62 @@ function migrateShiftLegs(shift) {
     delete shift.note;
   }
 }
+// Einmalige Übernahme von Daten, die vor Einführung der Konten ungeschützt
+// lokal gespeichert wurden — aber nur nach Rückfrage, damit niemand auf einem
+// fremden Gerät versehentlich die Daten einer anderen Person in sein Konto
+// übernimmt. Bei "Nein" wird nicht erneut gefragt (die alten Daten bleiben
+// unangetastet liegen).
+function adoptLegacyData() {
+  if (!auth || viewingOther()) return;
+  const legacyShifts = localStorage.getItem('monteur_shifts');
+  if (legacyShifts === null) return;
+  if (localStorage.getItem(userKey('monteur_shifts')) !== null) return;
+  if (localStorage.getItem(userKey('monteur_legacy_declined')) === '1') return;
+  let count = 0;
+  try { count = JSON.parse(legacyShifts).length; } catch (e) {}
+  if (!count) return;
+  if (!confirm(tf('confirm_adopt_legacy', count))) {
+    localStorage.setItem(userKey('monteur_legacy_declined'), '1');
+    return;
+  }
+  localStorage.setItem(userKey('monteur_shifts'), legacyShifts);
+  const legacyConfig = localStorage.getItem('monteur_config');
+  if (legacyConfig !== null) localStorage.setItem(userKey('monteur_config'), legacyConfig);
+  const legacyLast = localStorage.getItem('monteur_last_date');
+  if (legacyLast !== null) localStorage.setItem(userKey('monteur_last_date'), legacyLast);
+  localStorage.removeItem('monteur_shifts');
+  localStorage.removeItem('monteur_config');
+  localStorage.removeItem('monteur_last_date');
+}
 function loadData() {
-  const s = localStorage.getItem('monteur_shifts');
+  adoptLegacyData();
+  const s = localStorage.getItem(userKey('monteur_shifts'));
   shifts = s ? JSON.parse(s) : [];
   shifts.forEach(migrateShiftLegs);
-  const c = localStorage.getItem('monteur_config');
+  config = { firstName: '', lastName: '', weeklyNorm: 40, language: 'de' };
+  const c = localStorage.getItem(userKey('monteur_config'));
   if (c) config = Object.assign(config, JSON.parse(c));
   if (config.name && !config.firstName && !config.lastName) {
     const parts = config.name.trim().split(/\s+/);
     config.lastName = parts.length > 1 ? parts.pop() : parts[0] || '';
     config.firstName = parts.join(' ');
     delete config.name;
-    saveConfig();
+    saveConfigLocalOnly();
+  }
+  // Name und Wochennorm kommen vom Server-Profil (vom Admin gepflegt) und
+  // haben Vorrang vor allem, was lokal in config steht.
+  const p = localStorage.getItem(userKey('monteur_profile'));
+  if (p) {
+    const prof = JSON.parse(p);
+    config.firstName = prof.firstName || '';
+    config.lastName = prof.lastName || '';
+    config.weeklyNorm = prof.weeklyNorm || 40;
   }
 }
-function saveDataLocalOnly() { localStorage.setItem('monteur_shifts', JSON.stringify(shifts)); }
-function saveConfigLocalOnly() { localStorage.setItem('monteur_config', JSON.stringify(config)); }
-function saveData() { saveDataLocalOnly(); }
-function saveConfig() { saveConfigLocalOnly(); }
+function saveDataLocalOnly() { localStorage.setItem(userKey('monteur_shifts'), JSON.stringify(shifts)); }
+function saveConfigLocalOnly() { localStorage.setItem(userKey('monteur_config'), JSON.stringify(config)); }
+function saveData() { saveDataLocalOnly(); scheduleSyncPush(); }
+function saveConfig() { saveConfigLocalOnly(); scheduleSyncPush(); }
 
 // ─── Theme ──────────────────────────────────────────────────────────────
 function applyTheme(mode) {
@@ -2429,10 +2635,8 @@ function buildPDFShift(iso,segs,idx){
 
 // ─── Init ───────────────────────────────────────────────────────────────
 applyTheme(localStorage.getItem('monteur_theme') || 'auto');
-loadData();
-if (!activeMonth) activeMonth = getMonths()[getMonths().length - 1];
-applyI18nStatic();
-renderAll();
+// Daten werden erst nach der Anmeldung geladen — authInit() ganz am Ende
+// des Skripts startet alles.
 
 // Service Worker nur registrieren, wenn unterstützt und nicht bei file://
 // (dort schlägt die Registrierung ohnehin fehl — kein Fehler, einfach übersprungen).
@@ -2502,21 +2706,6 @@ function timeBasedGreeting() {
   else pool = pools.night;
   return pool[Math.floor(Math.random() * pool.length)];
 }
-function saveWelcomeName() {
-  const fn = document.getElementById('welcome-firstname').value.trim();
-  const ln = document.getElementById('welcome-lastname').value.trim();
-  if (!fn || !ln) { toast(t('t_bitte_namen')); return; }
-  config.firstName = fn;
-  config.lastName = ln;
-  saveConfig();
-  closeSheet('sheet-welcome');
-  toast(t('t_willkommen') + fn + '!');
-}
-if (!config.firstName || !config.lastName) {
-  openSheet('sheet-welcome');
-} else {
-  toast(timeBasedGreeting() + ', ' + config.firstName + '!');
-}
 
 // ─── Zusammenfassung ────────────────────────────────────────────────────────
 function openSummary() {
@@ -2540,8 +2729,10 @@ function openSummary() {
 function renderSettings() {
   const theme = localStorage.getItem('monteur_theme') || 'auto';
   const lang = curLang();
+  const locked = !isAdmin();
   document.getElementById('settings-body').innerHTML = `
-    <div class="setting-row">
+    ${accountSettingsHtml()}
+    <div class="setting-row" style="margin-top:16px;">
       <div><div class="setting-label">${t('setting_sprache')}</div><div class="setting-sub">${t('setting_sprache_sub')}</div></div>
       <div class="theme-seg">
         <button class="theme-btn${lang==='cs'?' active':''}" onclick="setLanguage('cs')">🇨🇿</button>
@@ -2549,16 +2740,16 @@ function renderSettings() {
       </div>
     </div>
     <div class="setting-row">
-      <div><div class="setting-label">${t('label_vorname')}</div><div class="setting-sub">${t('setting_export_sub')}</div></div>
-      <input class="name-input" type="text" id="cfg-firstname" value="${config.firstName || ''}" onchange="updateConfigField('firstName', this.value)">
+      <div><div class="setting-label">${t('label_vorname')}</div><div class="setting-sub">${locked ? t('profile_locked_hint') : t('setting_export_sub')}</div></div>
+      <input class="name-input" type="text" id="cfg-firstname" value="${escHtml(config.firstName)}"${locked ? ' disabled' : ''} onchange="updateProfileField('firstName', this.value.trim())">
     </div>
     <div class="setting-row">
       <div><div class="setting-label">${t('label_nachname')}</div><div class="setting-sub">${t('setting_export_sub')}</div></div>
-      <input class="name-input" type="text" id="cfg-lastname" value="${config.lastName || ''}" onchange="updateConfigField('lastName', this.value)">
+      <input class="name-input" type="text" id="cfg-lastname" value="${escHtml(config.lastName)}"${locked ? ' disabled' : ''} onchange="updateProfileField('lastName', this.value.trim())">
     </div>
     <div class="setting-row">
       <div><div class="setting-label">${t('setting_wochennorm')}</div><div class="setting-sub">${t('setting_wochennorm_sub')}</div></div>
-      <input class="setting-input" type="number" id="cfg-norm" value="${config.weeklyNorm}" step="1" min="1" onchange="updateConfigField('weeklyNorm', parseFloat(this.value)||40)">
+      <input class="setting-input" type="number" id="cfg-norm" value="${config.weeklyNorm}" step="1" min="1"${locked ? ' disabled' : ''} onchange="updateProfileField('weeklyNorm', parseFloat(this.value)||40)">
     </div>
     <div class="setting-row">
       <div><div class="setting-label">${t('setting_erscheinungsbild')}</div><div class="setting-sub">${t('setting_erscheinungsbild_sub')}</div></div>
@@ -2571,7 +2762,7 @@ function renderSettings() {
     <div style="margin-top:20px;">
       <button class="btn-main secondary" style="width:100%;" onclick="openExport('download')">${t('btn_export_excel')}</button>
     </div>
-    <div style="margin-top:10px;">
+    ${locked ? '' : `<div style="margin-top:10px;">
       <button class="btn-main secondary" style="width:100%;" onclick="document.getElementById('monteur-import-input').click()">${t('btn_import')}</button>
       <input type="file" id="monteur-import-input" accept=".xlsx,.pdf,.json" multiple style="display:none" onchange="importFile(this)">
     </div>
@@ -2581,14 +2772,13 @@ function renderSettings() {
     <div style="margin-top:10px;">
       <button class="btn-main secondary" style="width:100%;" onclick="document.getElementById('monteur-backup-input').click()">${t('btn_backup_laden')}</button>
       <input type="file" id="monteur-backup-input" accept=".txt,.json" style="display:none" onchange="importBackup(this)">
-    </div>
+    </div>`}
     <div style="margin-top:10px;">
       <button class="btn-main secondary" style="width:100%;" onclick="openSheet('sheet-help')">${t('btn_zum_startbildschirm')}</button>
     </div>
     <div style="margin-top:20px;text-align:center;font-size:11px;color:var(--muted);">${t('letzte_aktualisierung')}${LAST_UPDATED}</div>
     <div style="margin-top:8px;text-align:center;font-size:11px;color:var(--muted);">${t('copyright')}</div>`;
 }
-function updateConfigField(key, value) { config[key] = value; saveConfig(); renderAll(); }
 // ─── Backup/Restore ──────────────────────────────────────────────────────
 // Vollständige Sicherung (im Gegensatz zum wochenweisen Import/Export):
 // enthält shifts UND config in einer .txt-Datei (reiner JSON-Text, damit sie
@@ -2771,6 +2961,645 @@ function finalizeMultiWeekExport(mondayList, hotelAddresses) {
     }, i * 400);
   });
 }
+
+// ─── Konto, Anmeldung & Synchronisierung ───────────────────────────────────
+// Jeder Benutzer hat ein Konto auf dem Server (netlify/functions/api.js,
+// Logik in lib/api-core.mjs). Die App bleibt local-first: alle Daten liegen
+// zusätzlich pro Benutzer in localStorage (Schlüssel "…:<benutzername>"), und
+// die Synchronisierung läuft im Hintergrund — ohne Signal funktioniert alles
+// weiter, nur der Abgleich wartet. Der Login-Token wird einmal pro Gerät
+// gespeichert (monteur_auth); danach öffnet die App direkt.
+const API_ENDPOINT = '/.netlify/functions/api';
+// Timeout ist wichtig: ohne ihn kann ein fetch() bei einer wackligen
+// Mobilfunkverbindung unbegrenzt hängen bleiben — dann bliebe syncInFlight für
+// den Rest der Sitzung auf "true" und JEDER weitere Abgleich würde
+// stillschweigend übersprungen.
+const API_TIMEOUT_MS = 12000;
+
+function byId(id) { return document.getElementById(id); }
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function loadAuth() {
+  try {
+    const a = JSON.parse(localStorage.getItem('monteur_auth') || 'null');
+    return (a && a.token && a.username) ? a : null;
+  } catch (e) { return null; }
+}
+function saveAuth() {
+  if (auth) {
+    localStorage.setItem('monteur_auth', JSON.stringify({
+      token: auth.token, username: auth.username, role: auth.role, mustChangePassword: !!auth.mustChangePassword
+    }));
+  } else {
+    localStorage.removeItem('monteur_auth');
+  }
+}
+function isAdmin() { return !!auth && auth.role === 'admin'; }
+function viewingOther() { return !!auth && !!dataOwner && dataOwner !== auth.username; }
+
+async function apiCall(body, opts) {
+  const noAuth = !!(opts && opts.noAuth);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(function () { controller.abort(); }, API_TIMEOUT_MS);
+  const headers = { 'Content-Type': 'application/json' };
+  if (!noAuth && auth && auth.token) headers.Authorization = 'Bearer ' + auth.token;
+  let res;
+  try {
+    res = await fetch(API_ENDPOINT, {
+      method: 'POST', cache: 'no-store', signal: controller.signal, headers, body: JSON.stringify(body)
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  let parsed = null;
+  try { parsed = await res.json(); } catch (e) {}
+  if (!noAuth && res.status === 401 && parsed && parsed.error === 'unauthorized') handleAuthLost();
+  return { ok: res.ok, status: res.status, body: parsed };
+}
+
+// ─── Anmelde-Overlay ───────────────────────────────────────────────────────
+let authMode = 'login';        // 'login' | 'setup' | 'changepw'
+let authForced = false;        // changepw: true = nicht abbrechbar (Erstanmeldung)
+let authNeedsSetup = false;
+let authBusy = false;
+let authPrefillUser = '';
+
+function authField(id, labelKey, type, autocomplete, value) {
+  return '<div class="auth-field"><label for="' + id + '">' + t(labelKey) + '</label>' +
+    '<input class="note-input" id="' + id + '" type="' + type + '" autocomplete="' + autocomplete + '"' +
+    ' autocapitalize="none" autocorrect="off" spellcheck="false" value="' + escHtml(value || '') + '"></div>';
+}
+function setAuthMsg(text, info) {
+  const el = byId('auth-msg');
+  el.textContent = text || '';
+  el.classList.toggle('info', !!info);
+}
+function renderAuthSecondary() {
+  const btn = byId('auth-secondary');
+  let label = '';
+  if (authMode === 'login') label = authNeedsSetup ? t('auth_link_setup') : '';
+  else if (authMode === 'setup') label = t('auth_link_back');
+  else if (!authForced) label = t('btn_abbrechen');
+  btn.textContent = label;
+  btn.style.display = label ? '' : 'none';
+}
+function renderAuthMode(msg, info) {
+  let html = '', title = '', submit = '', hint = '';
+  if (authMode === 'login') {
+    title = t('auth_title_login'); submit = t('btn_login');
+    html = authField('auth-username', 'auth_username', 'text', 'username', authPrefillUser) +
+           authField('auth-password', 'auth_password', 'password', 'current-password');
+  } else if (authMode === 'setup') {
+    title = t('auth_title_setup'); submit = t('btn_setup');
+    html = authField('auth-setupkey', 'auth_setup_key', 'text', 'off') +
+           authField('auth-username', 'auth_username', 'text', 'username') +
+           authField('auth-password', 'auth_new_password', 'password', 'new-password') +
+           authField('auth-firstname', 'label_vorname', 'text', 'given-name') +
+           authField('auth-lastname', 'label_nachname', 'text', 'family-name');
+  } else {
+    title = authForced ? t('auth_title_forcepw') : t('auth_title_changepw');
+    hint = authForced ? t('auth_force_hint') : '';
+    submit = t('btn_speichern');
+    html = authField('auth-oldpw', 'auth_old_password', 'password', 'current-password') +
+           authField('auth-newpw', 'auth_new_password', 'password', 'new-password') +
+           authField('auth-newpw2', 'auth_new_password2', 'password', 'new-password');
+  }
+  byId('auth-fields').innerHTML = html;
+  byId('auth-title').textContent = title;
+  byId('auth-hint').textContent = hint;
+  byId('auth-submit').textContent = submit;
+  renderAuthSecondary();
+  setAuthMsg(msg || '', info);
+  byId('auth-lang-cs').classList.toggle('active', curLang() === 'cs');
+  byId('auth-lang-de').classList.toggle('active', curLang() === 'de');
+}
+function showAuthOverlay(mode, msg, opts) {
+  authMode = mode;
+  authForced = !!(opts && opts.forced);
+  if (opts && opts.username !== undefined) authPrefillUser = opts.username;
+  byId('auth-overlay').classList.add('open');
+  renderAuthMode(msg, !!(opts && opts.info));
+  if (mode === 'login') checkNeedsSetup();
+}
+function hideAuthOverlay() { byId('auth-overlay').classList.remove('open'); }
+async function checkNeedsSetup() {
+  const res = await apiCall({ action: 'status' }, { noAuth: true }).catch(function () { return null; });
+  if (res && res.ok && res.body) {
+    authNeedsSetup = !!res.body.needsSetup;
+    if (authMode === 'login') renderAuthSecondary();
+  }
+}
+function authSecondary() {
+  if (authMode === 'login') showAuthOverlay('setup');
+  else if (authMode === 'setup') showAuthOverlay('login');
+  else if (!authForced) hideAuthOverlay();
+}
+function authSetLang(lang) {
+  uiLang = lang === 'cs' ? 'cs' : 'de';
+  localStorage.setItem('monteur_lang', uiLang);
+  applyI18nStatic();
+  renderAuthMode('', false);
+}
+function authValue(id) { const el = byId(id); return el ? el.value : ''; }
+
+async function authSubmit() {
+  if (authBusy) return;
+  authBusy = true;
+  byId('auth-submit').disabled = true;
+  try {
+    if (authMode === 'login') await doLogin();
+    else if (authMode === 'setup') await doSetup();
+    else await doChangePassword();
+  } finally {
+    authBusy = false;
+    byId('auth-submit').disabled = false;
+  }
+}
+function authErrorText(res) {
+  if (!res) return t('auth_no_connection');
+  const code = res.body && res.body.error;
+  if (res.status === 429) return tf('auth_locked', Math.max(1, Math.ceil(((res.body && res.body.retryAfterSec) || 900) / 60)));
+  if (code === 'invalid_credentials') return t('auth_invalid');
+  if (code === 'invalid_username') return t('auth_username_invalid');
+  if (code === 'invalid_password') return t('auth_pw_short');
+  if (code === 'bad_setup_key') return t('auth_setup_key_wrong');
+  return t('auth_error');
+}
+async function doLogin() {
+  const username = authValue('auth-username').trim().toLowerCase();
+  const password = authValue('auth-password');
+  if (!username || !password) { setAuthMsg(t('auth_fill_all')); return; }
+  setAuthMsg(t('auth_busy'), true);
+  const res = await apiCall({ action: 'login', username, password }, { noAuth: true }).catch(function () { return null; });
+  if (res && res.ok) { onAuthenticated(res.body); return; }
+  setAuthMsg(authErrorText(res));
+}
+async function doSetup() {
+  const username = authValue('auth-username').trim().toLowerCase();
+  const password = authValue('auth-password');
+  const setupKey = authValue('auth-setupkey').trim();
+  const firstName = authValue('auth-firstname').trim();
+  const lastName = authValue('auth-lastname').trim();
+  if (!username || !password || !setupKey || !firstName || !lastName) { setAuthMsg(t('auth_fill_all')); return; }
+  setAuthMsg(t('auth_busy'), true);
+  const res = await apiCall({ action: 'setup', setupKey, username, password, firstName, lastName, weeklyNorm: 40 }, { noAuth: true }).catch(function () { return null; });
+  if (res && res.ok) { onAuthenticated(res.body); return; }
+  if (res && res.body && res.body.error === 'already_set_up') { authNeedsSetup = false; showAuthOverlay('login', t('auth_already_set_up')); return; }
+  setAuthMsg(authErrorText(res));
+}
+async function doChangePassword() {
+  const oldPassword = authValue('auth-oldpw');
+  const newPassword = authValue('auth-newpw');
+  if (!oldPassword || !newPassword || !authValue('auth-newpw2')) { setAuthMsg(t('auth_fill_all')); return; }
+  if (newPassword !== authValue('auth-newpw2')) { setAuthMsg(t('auth_pw_mismatch')); return; }
+  if (newPassword.length < 8) { setAuthMsg(t('auth_pw_short')); return; }
+  setAuthMsg(t('auth_busy'), true);
+  const res = await apiCall({ action: 'changePassword', oldPassword, newPassword }).catch(function () { return null; });
+  if (!(res && res.ok)) { setAuthMsg(authErrorText(res)); return; }
+  const wasForced = authForced;
+  auth.token = res.body.token;
+  auth.mustChangePassword = false;
+  saveAuth();
+  hideAuthOverlay();
+  toast(t('t_password_changed'));
+  if (wasForced) startSync();
+}
+
+function onAuthenticated(body) {
+  auth = { token: body.token, username: body.user.username, role: body.user.role, mustChangePassword: !!body.user.mustChangePassword };
+  saveAuth();
+  dataOwner = auth.username;
+  localStorage.setItem(userKey('monteur_profile'), JSON.stringify(body.user.profile || {}));
+  hideAuthOverlay();
+  startSession();
+}
+// Sitzung auf dem Server ungültig (abgelaufen, Passwort geändert, Konto
+// gelöscht): Token verwerfen und neu anmelden lassen. Lokale Daten bleiben
+// erhalten und werden nach der nächsten Anmeldung wieder abgeglichen.
+function handleAuthLost() {
+  if (!auth) return;
+  const username = auth.username;
+  auth = null;
+  saveAuth();
+  clearTimeout(syncPushTimer);
+  showAuthOverlay('login', t('auth_session_expired'), { username, info: true });
+}
+async function doLogout() {
+  if (isDirty() && !confirm(t('confirm_logout_dirty'))) return;
+  const username = auth.username;
+  apiCall({ action: 'logout' }).catch(function () {});
+  auth = null;
+  saveAuth();
+  clearTimeout(syncPushTimer);
+  closeAllSheets();
+  showAuthOverlay('login', '', { username });
+}
+function openChangePassword() {
+  closeAllSheets();
+  showAuthOverlay('changepw', '', { forced: false });
+}
+
+// ─── Sitzung starten ──────────────────────────────────────────────────────
+let sessionListenersBound = false;
+function startSession() {
+  dataOwner = auth.username;
+  loadData();
+  uiLang = (config.language === 'cs' || config.language === 'de') ? config.language : uiLang;
+  localStorage.setItem('monteur_lang', uiLang);
+  applyI18nStatic();
+  activeMonth = getMonths()[getMonths().length - 1];
+  renderAll();
+  renderSettings();
+  renderAccountUi();
+  toast(timeBasedGreeting() + ', ' + (config.firstName || auth.username) + '!');
+  if (auth.mustChangePassword) {
+    showAuthOverlay('changepw', '', { forced: true });
+    return;
+  }
+  startSync();
+}
+function startSync() {
+  if (!sessionListenersBound) {
+    sessionListenersBound = true;
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') syncNow();
+    });
+    window.addEventListener('online', function () { syncNow(); });
+    const btn = byId('manual-sync-btn');
+    // addEventListener statt inline onclick="" — auf iPhones war der inline-
+    // Handler bei diesem anfangs versteckten Button unzuverlässig.
+    if (btn) btn.addEventListener('click', function () { syncNow(); });
+  }
+  updateManualSyncBtn();
+  syncNow();
+}
+function updateManualSyncBtn() {
+  const el = byId('manual-sync-btn');
+  if (el) el.style.display = syncEnabled() ? 'flex' : 'none';
+}
+
+// ─── Synchronisierung ──────────────────────────────────────────────────────
+let syncPushTimer = null;
+let syncInFlight = false;
+let syncConflictData = null;
+let dataVersion = 0;   // zählt lokale Änderungen, damit ein laufender Upload spätere Änderungen nicht als "gesichert" markiert
+
+function syncEnabled() { return !!(auth && auth.token && dataOwner); }
+function syncLmKey() { return userKey('monteur_sync_lm'); }
+function syncLastModified() {
+  const v = localStorage.getItem(syncLmKey());
+  return v ? parseInt(v, 10) : null;
+}
+function setSyncLm(v) {
+  if (v === null || v === undefined) localStorage.removeItem(syncLmKey());
+  else localStorage.setItem(syncLmKey(), String(v));
+}
+// true = lokale Änderung wurde noch nicht erfolgreich hochgeladen. Wird
+// dauerhaft gespeichert (nicht nur im Speicher): sonst würde ein App-Neustart
+// den Hinweis vergessen und der nächste Abgleich könnte ungesicherte lokale
+// Änderungen durch den Serverstand überschreiben.
+function isDirty() { return localStorage.getItem(userKey('monteur_sync_dirty')) === '1'; }
+function setDirty(on) {
+  if (on) localStorage.setItem(userKey('monteur_sync_dirty'), '1');
+  else localStorage.removeItem(userKey('monteur_sync_dirty'));
+}
+
+let syncBannerTimer = null;
+// state: 'syncing' (gelb) | 'error' (rot) | 'success' (grün)
+function setSyncStatus(text, state) {
+  const banner = byId('sync-banner');
+  if (!banner) return;
+  banner.textContent = text;
+  banner.className = 'sync-banner open ' + state;
+  clearTimeout(syncBannerTimer);
+  if (state !== 'syncing') {
+    syncBannerTimer = setTimeout(function () { banner.classList.remove('open'); }, 3500);
+  }
+}
+// Immer sichtbares Zeichen (Punkt am Zahnrad), dass gerade ein Request läuft.
+function setSyncIndicator(active) {
+  const el = byId('sync-indicator');
+  if (el) el.classList.toggle('active', !!active);
+}
+
+function scheduleSyncPush() {
+  if (!dataOwner) return;
+  dataVersion++;
+  setDirty(true);
+  if (!syncEnabled()) return;
+  clearTimeout(syncPushTimer);
+  syncPushTimer = setTimeout(pushSync, 3000);
+}
+function remoteTarget() { return viewingOther() ? dataOwner : undefined; }
+
+// Hochladen (Aufrufer hält syncInFlight). base = bekannter Serverstand.
+async function doPush(owner, base) {
+  const versionAtSend = dataVersion;
+  const res = await apiCall({ action: 'putData', user: remoteTarget(), shifts, config, baseLastModified: base }).catch(function () { return null; });
+  if (owner !== dataOwner || !syncEnabled()) return;
+  if (!res) { setSyncStatus(t('sync_status_nicht_synchronisiert'), 'error'); return; }
+  if (res.status === 409) { syncConflictData = { remote: res.body }; openSyncConflict(); return; }
+  if (!res.ok) { setSyncStatus(t('sync_status_fehlgeschlagen'), 'error'); return; }
+  setSyncLm(res.body.lastModified);
+  if (dataVersion === versionAtSend) {
+    setDirty(false);
+  } else {
+    // Während des Uploads gab es neue Änderungen — erneut hochladen.
+    clearTimeout(syncPushTimer);
+    syncPushTimer = setTimeout(pushSync, 1000);
+  }
+  setSyncStatus(t('sync_status_synchronisiert'), 'success');
+}
+
+async function pushSync() {
+  if (!syncEnabled()) return;
+  clearTimeout(syncPushTimer);
+  // Nichts Neues (z. B. Konflikt zugunsten des Servers entschieden) → kein Upload.
+  if (!isDirty()) return;
+  if (syncInFlight) { syncPushTimer = setTimeout(pushSync, 3000); return; }
+  syncInFlight = true;
+  setSyncIndicator(true);
+  const owner = dataOwner;
+  try {
+    setSyncStatus(t('sync_status_synchronisiere'), 'syncing');
+    await doPush(owner, syncLastModified());
+  } finally {
+    syncInFlight = false;
+    setSyncIndicator(false);
+    if (syncEnabled() && dataOwner !== owner) setTimeout(syncNow, 0);
+  }
+}
+
+// Vollständiger Abgleich (beim Öffnen/Fortsetzen, nach Wiederverbindung, per 🔄).
+async function syncNow() {
+  if (!syncEnabled() || syncInFlight) return;
+  syncInFlight = true;
+  setSyncIndicator(true);
+  const owner = dataOwner;
+  try {
+    setSyncStatus(t('sync_status_synchronisiere'), 'syncing');
+    const res = await apiCall({ action: 'getData', user: remoteTarget() }).catch(function () { return null; });
+    if (owner !== dataOwner || !syncEnabled()) return;
+    if (!res || !res.ok) { setSyncStatus(t('sync_status_nicht_synchronisiert'), 'error'); return; }
+    const remote = res.body;
+    applyProfile(remote.profile);
+    const localLm = syncLastModified();
+    if (remote.lastModified === null) {
+      // Server hat für dieses Konto noch keine Daten.
+      if (shifts.length > 0 || isDirty()) await doPush(owner, null);
+      else setSyncStatus(t('sync_status_synchronisiert'), 'success');
+      return;
+    }
+    if (remote.lastModified === localLm) {
+      if (isDirty()) await doPush(owner, localLm);
+      else setSyncStatus(t('sync_status_synchronisiert'), 'success');
+      return;
+    }
+    // Server hat einen anderen Stand als unser letzter bekannter.
+    if ((localLm === null && shifts.length > 0) || isDirty()) {
+      // Beide Seiten haben Daten, die der andere nicht kennt → Benutzer entscheidet.
+      syncConflictData = { remote };
+      openSyncConflict();
+      return;
+    }
+    adoptRemote(remote);
+    setSyncStatus(t('sync_status_synchronisiert'), 'success');
+  } finally {
+    syncInFlight = false;
+    setSyncIndicator(false);
+    if (syncEnabled() && dataOwner !== owner) setTimeout(syncNow, 0);
+  }
+}
+
+function adoptRemote(remote) {
+  shifts = remote.shifts || [];
+  shifts.forEach(migrateShiftLegs);
+  config = Object.assign(config, remote.config || {}, remote.profile || {});
+  saveDataLocalOnly();
+  saveConfigLocalOnly();
+  setSyncLm(remote.lastModified);
+  setDirty(false);
+  if (!viewingOther() && (config.language === 'cs' || config.language === 'de') && config.language !== uiLang) {
+    uiLang = config.language;
+    localStorage.setItem('monteur_lang', uiLang);
+    applyI18nStatic();
+  }
+  renderAll();
+  renderSettings();
+}
+// Profil (Name, Wochennorm) kommt vom Server und wird vom Admin gepflegt.
+function applyProfile(p) {
+  if (!p) return;
+  const key = userKey('monteur_profile');
+  const json = JSON.stringify(p);
+  if (localStorage.getItem(key) === json && config.firstName === p.firstName && config.lastName === p.lastName && config.weeklyNorm === p.weeklyNorm) return;
+  localStorage.setItem(key, json);
+  config.firstName = p.firstName || '';
+  config.lastName = p.lastName || '';
+  config.weeklyNorm = p.weeklyNorm || 40;
+  saveConfigLocalOnly();
+  renderAll();
+  renderSettings();
+  renderAccountUi();
+}
+
+function openSyncConflict() { byId('confirm-sync-overlay').classList.add('open'); }
+function resolveSyncConflict(choice) {
+  byId('confirm-sync-overlay').classList.remove('open');
+  if (!syncConflictData) return;
+  const remote = syncConflictData.remote;
+  syncConflictData = null;
+  if (choice === 'remote') {
+    adoptRemote(remote);
+    setSyncStatus(t('sync_status_synchronisiert'), 'success');
+  } else {
+    setSyncLm(remote.lastModified);
+    setDirty(true);
+    dataVersion++;
+    pushSync();
+  }
+}
+
+// ─── Kontobereich (Einstellungen, Kopfzeile) ──────────────────────────────
+function roleLabel(role) { return role === 'admin' ? t('role_admin') : t('role_user'); }
+function accountSettingsHtml() {
+  if (!auth) return '';
+  let html = '<div class="setting-row"><div><div class="setting-label">' + t('account_signed_in') + '</div>' +
+    '<div class="setting-sub">' + escHtml(auth.username) + ' · ' + roleLabel(auth.role) + '</div></div></div>' +
+    '<div style="margin-top:10px;display:flex;gap:8px;">' +
+    '<button class="btn-main secondary" style="flex:1;" onclick="openChangePassword()">' + t('btn_change_pw') + '</button>' +
+    '<button class="btn-main secondary" style="flex:1;" onclick="doLogout()">' + t('btn_logout') + '</button></div>';
+  if (isAdmin()) {
+    html += '<div style="margin-top:10px;"><button class="btn-main secondary" style="width:100%;" onclick="openUsers()">' + t('btn_manage_users') + '</button></div>';
+  }
+  return html;
+}
+// Zeile unter dem Titel, solange der Admin die Daten eines Kollegen bearbeitet.
+function renderAccountUi() {
+  const sub = byId('topbar-sub');
+  if (!sub) return;
+  if (viewingOther()) {
+    const name = ((config.firstName || '') + ' ' + (config.lastName || '')).trim() || dataOwner;
+    sub.textContent = '👁 ' + t('viewing_prefix') + ' ' + name + ' · ' + t('viewing_back') + ' ✕';
+    sub.style.display = '';
+  } else {
+    sub.style.display = 'none';
+  }
+}
+// Name und Wochennorm ändert nur der Admin (über den Server, für das gerade
+// geöffnete Konto).
+async function updateProfileField(key, value) {
+  if (!isAdmin()) return;
+  const previous = config[key];
+  config[key] = value;
+  saveConfigLocalOnly();
+  renderAll();
+  const body = { action: 'updateUser', username: dataOwner };
+  body[key] = value;
+  const res = await apiCall(body).catch(function () { return null; });
+  if (res && res.ok) { applyProfile(res.body.user.profile); return; }
+  config[key] = previous;
+  saveConfigLocalOnly();
+  renderAll();
+  renderSettings();
+  toast(t('t_profile_not_saved'));
+}
+
+// ─── Benutzerverwaltung (Admin) ────────────────────────────────────────────
+let usersCache = [];
+async function openUsers() {
+  if (!isAdmin()) return;
+  openSheet('sheet-users');
+  byId('users-body').innerHTML = '<div class="empty-state">' + t('users_loading') + '</div>';
+  const res = await apiCall({ action: 'listUsers' }).catch(function () { return null; });
+  if (!res || !res.ok) { byId('users-body').innerHTML = '<div class="empty-state">' + t('users_error') + '</div>'; return; }
+  usersCache = res.body.users;
+  renderUsersList();
+}
+function renderUsersList() {
+  byId('users-body').innerHTML = usersCache.map(function (u) {
+    const name = ((u.profile.firstName || '') + ' ' + (u.profile.lastName || '')).trim() || u.username;
+    const me = auth && u.username === auth.username;
+    return '<div class="user-row"><div class="user-main"><div class="user-name">' + escHtml(name) + '</div>' +
+      '<div class="user-sub">' + escHtml(u.username) + ' · ' + roleLabel(u.role) + (u.mustChangePassword ? ' · ⏳' : '') + '</div></div>' +
+      '<div class="user-actions">' +
+      '<button class="user-act" title="' + t('user_act_open') + '" onclick="viewUserData(\'' + u.username + '\')">📂</button>' +
+      '<button class="user-act" title="' + t('btn_bearbeiten') + '" onclick="openUserForm(\'edit\',\'' + u.username + '\')">✏️</button>' +
+      '<button class="user-act" title="' + t('user_act_reset') + '" onclick="openUserForm(\'reset\',\'' + u.username + '\')">🔑</button>' +
+      (me ? '' : '<button class="user-act" title="' + t('btn_loeschen') + '" onclick="deleteUserPrompt(\'' + u.username + '\')">🗑</button>') +
+      '</div></div>';
+  }).join('');
+}
+let userFormMode = 'create';
+let userFormTarget = null;
+function openUserForm(mode, username) {
+  userFormMode = mode;
+  userFormTarget = username || null;
+  const u = usersCache.find(function (x) { return x.username === username; }) || { profile: { firstName: '', lastName: '', weeklyNorm: 40 }, role: 'user' };
+  let html = '';
+  if (mode === 'create') {
+    html += authField('uf-username', 'auth_username', 'text', 'off');
+    html += authField('uf-password', 'user_initial_password', 'text', 'off');
+    html += '<div class="setting-sub" style="margin:-4px 0 12px;">' + t('user_pw_hint') + '</div>';
+  }
+  if (mode === 'reset') {
+    html += authField('uf-password', 'user_initial_password', 'text', 'off');
+    html += '<div class="setting-sub" style="margin:-4px 0 12px;">' + t('user_pw_hint') + '</div>';
+  } else {
+    html += authField('uf-firstname', 'label_vorname', 'text', 'off', u.profile.firstName);
+    html += authField('uf-lastname', 'label_nachname', 'text', 'off', u.profile.lastName);
+    html += authField('uf-norm', 'setting_wochennorm', 'number', 'off', u.profile.weeklyNorm);
+    html += '<div class="auth-field"><label for="uf-role">' + t('user_role') + '</label><select class="note-input" id="uf-role">' +
+      '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>' + t('role_user') + '</option>' +
+      '<option value="admin"' + (u.role === 'admin' ? ' selected' : '') + '>' + t('role_admin') + '</option></select></div>';
+  }
+  byId('user-form-title').textContent = t('user_form_' + mode) + (username ? ' — ' + username : '');
+  byId('user-form-body').innerHTML = html;
+  byId('user-form-msg').textContent = '';
+  openSheet('sheet-user-form');
+}
+async function submitUserForm() {
+  const msg = byId('user-form-msg');
+  const val = function (id) { const el = byId(id); return el ? el.value.trim() : ''; };
+  let body;
+  if (userFormMode === 'create') {
+    const username = val('uf-username').toLowerCase();
+    if (!/^[a-z0-9][a-z0-9._-]{2,31}$/.test(username)) { msg.textContent = t('auth_username_invalid'); return; }
+    if (val('uf-password').length < 8) { msg.textContent = t('auth_pw_short'); return; }
+    body = { action: 'createUser', username, password: val('uf-password'), firstName: val('uf-firstname'), lastName: val('uf-lastname'), weeklyNorm: parseFloat(val('uf-norm')) || 40, role: val('uf-role') };
+  } else if (userFormMode === 'edit') {
+    body = { action: 'updateUser', username: userFormTarget, firstName: val('uf-firstname'), lastName: val('uf-lastname'), weeklyNorm: parseFloat(val('uf-norm')) || 40, role: val('uf-role') };
+  } else {
+    if (val('uf-password').length < 8) { msg.textContent = t('auth_pw_short'); return; }
+    body = { action: 'resetPassword', username: userFormTarget, newPassword: val('uf-password') };
+  }
+  const res = await apiCall(body).catch(function () { return null; });
+  if (!res || !res.ok) {
+    const code = res && res.body && res.body.error;
+    msg.textContent = !res ? t('auth_no_connection') : code === 'exists' ? t('t_user_exists') : code === 'last_admin' ? t('t_user_last_admin') : authErrorText(res);
+    return;
+  }
+  closeSheet('sheet-user-form');
+  toast(userFormMode === 'create' ? t('t_user_created') : userFormMode === 'reset' ? t('t_user_pw_reset') : t('t_gespeichert'));
+  // Eigenes Passwort zurückgesetzt → neuer Token wird mitgeliefert.
+  if (res.body.token && userFormTarget === auth.username) { auth.token = res.body.token; saveAuth(); }
+  if (userFormMode === 'edit' && userFormTarget === dataOwner) applyProfile(res.body.user.profile);
+  const list = await apiCall({ action: 'listUsers' }).catch(function () { return null; });
+  if (list && list.ok) { usersCache = list.body.users; renderUsersList(); }
+}
+async function deleteUserPrompt(username) {
+  if (!confirm(tf('confirm_delete_user', username))) return;
+  const res = await apiCall({ action: 'deleteUser', username }).catch(function () { return null; });
+  if (!res || !res.ok) { toast(t('t_fehler') + (res && res.body ? res.body.error : t('auth_no_connection'))); return; }
+  toast(t('t_user_deleted'));
+  if (dataOwner === username) switchDataOwner(auth.username);
+  usersCache = usersCache.filter(function (u) { return u.username !== username; });
+  renderUsersList();
+  purgeLocalUser(username);
+}
+// Lokale Kopien eines gelöschten Kontos (…:<benutzername>) entfernen.
+function purgeLocalUser(username) {
+  const suffix = ':' + username;
+  Object.keys(localStorage).forEach(function (k) {
+    if (k.indexOf('monteur_') === 0 && k.slice(-suffix.length) === suffix) localStorage.removeItem(k);
+  });
+}
+function viewUserData(username) {
+  closeAllSheets();
+  switchDataOwner(username);
+}
+function switchDataOwner(username) {
+  clearTimeout(syncPushTimer);
+  syncConflictData = null;
+  byId('confirm-sync-overlay').classList.remove('open');
+  dataOwner = username;
+  loadData();
+  activeMonth = getMonths()[getMonths().length - 1];
+  renderAll();
+  renderSettings();
+  renderAccountUi();
+  syncNow();
+}
+
+// ─── Start ─────────────────────────────────────────────────────────────────
+// Ganz am Ende des Skripts aufgerufen, damit alle Deklarationen oben schon
+// ausgeführt sind (sonst droht "Cannot access … before initialization").
+function authInit() {
+  let lang = localStorage.getItem('monteur_lang');
+  if (!lang) {
+    try { lang = (JSON.parse(localStorage.getItem('monteur_config') || '{}') || {}).language; } catch (e) {}
+  }
+  uiLang = lang === 'cs' ? 'cs' : 'de';
+  applyI18nStatic();
+  auth = loadAuth();
+  if (auth) startSession();
+  else showAuthOverlay('login');
+}
+authInit();
 
 </script>
 </body>
