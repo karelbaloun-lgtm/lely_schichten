@@ -565,7 +565,8 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
   <div class="sheet-body" id="users-body"></div>
   <div class="sheet-actions">
-    <button class="btn-main primary" style="width:100%;" onclick="openUserForm('create')" data-i18n="btn_new_user">＋ Neuer Benutzer</button>
+    <button class="btn-main secondary" style="flex:1;" onclick="exportUserList()" data-i18n="btn_export_users">📄 Liste (TXT)</button>
+    <button class="btn-main primary" style="flex:1;" onclick="openUserForm('create')" data-i18n="btn_new_user">＋ Neuer Benutzer</button>
   </div>
 </div>
 
@@ -1222,7 +1223,7 @@ const I18N = {
     confirm_logout_dirty: 'Es gibt noch nicht übertragene Änderungen. Sie bleiben auf diesem Gerät gespeichert und werden nach der nächsten Anmeldung hochgeladen. Trotzdem abmelden?',
     confirm_adopt_legacy: 'Auf diesem Gerät sind noch {0} Einträge aus der Zeit vor der Anmeldung gespeichert. In dein Konto übernehmen?',
     profile_locked_hint: 'Wird vom Administrator festgelegt',
-    sheet_users_title: 'Benutzer', btn_new_user: '＋ Neuer Benutzer',
+    sheet_users_title: 'Benutzer', btn_new_user: '＋ Neuer Benutzer', btn_export_users: '📄 Liste (TXT)',
     users_loading: 'Lade …', users_error: '⚠ Benutzer konnten nicht geladen werden',
     user_act_open: 'Daten ansehen/bearbeiten', user_act_reset: 'Passwort zurücksetzen',
     user_form_create: 'Neuer Benutzer', user_form_edit: 'Benutzer bearbeiten', user_form_reset: 'Passwort zurücksetzen',
@@ -1358,7 +1359,7 @@ const I18N = {
     confirm_logout_dirty: 'Některé změny ještě nebyly přeneseny. Zůstanou uložené v tomto zařízení a po dalším přihlášení se nahrají. Přesto odhlásit?',
     confirm_adopt_legacy: 'V tomto zařízení je ještě uloženo {0} záznamů z doby před přihlášením. Převzít je do tvého účtu?',
     profile_locked_hint: 'Nastavuje administrátor',
-    sheet_users_title: 'Uživatelé', btn_new_user: '＋ Nový uživatel',
+    sheet_users_title: 'Uživatelé', btn_new_user: '＋ Nový uživatel', btn_export_users: '📄 Seznam (TXT)',
     users_loading: 'Načítám …', users_error: '⚠ Uživatele se nepodařilo načíst',
     user_act_open: 'Zobrazit/upravit data', user_act_reset: 'Obnovit heslo',
     user_form_create: 'Nový uživatel', user_form_edit: 'Upravit uživatele', user_form_reset: 'Obnovit heslo',
@@ -3493,6 +3494,26 @@ function renderUsersList() {
       (me ? '' : '<button class="user-act" title="' + t('btn_loeschen') + '" onclick="deleteUserPrompt(\'' + u.username + '\')">🗑</button>') +
       '</div></div>';
   }).join('');
+}
+// Übersicht aller Konten als TXT — bewusst OHNE Passwörter (der Server kennt
+// nur Hashes; Passwörter gehören in einen Passwortmanager). Datei bleibt wie
+// jeder Export deutsch.
+function exportUserList() {
+  if (!isAdmin() || !usersCache.length) return;
+  const pad = function (s, n) { s = String(s); return s + ' '.repeat(Math.max(1, n - s.length)); };
+  const today = new Date().toISOString().slice(0, 10);
+  const lines = ['Lely Schichten – Benutzerliste', 'Stand: ' + today, 'Hinweis: enthält keine Passwörter.', ''];
+  lines.push(pad('Benutzername', 20) + pad('Name', 28) + pad('Rolle', 15) + pad('Norm h/Wo', 11) + 'Angelegt');
+  usersCache.forEach(function (u) {
+    const p = u.profile || {};
+    const name = ((p.firstName || '') + ' ' + (p.lastName || '')).trim();
+    lines.push(pad(u.username, 20) + pad(name, 28) + pad(u.role === 'admin' ? 'Administrator' : 'Benutzer', 15) +
+      pad(p.weeklyNorm || '', 11) + (u.createdAt ? new Date(u.createdAt).toISOString().slice(0, 10) : '') +
+      (u.mustChangePassword ? '  (Passwort noch nicht geändert)' : ''));
+  });
+  const filename = 'Lely_Schichten_Benutzer_' + today + '.txt';
+  triggerDownload(new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/plain;charset=utf-8' }), filename);
+  toast(t('t_backup_gespeichert') + filename);
 }
 let userFormMode = 'create';
 let userFormTarget = null;
