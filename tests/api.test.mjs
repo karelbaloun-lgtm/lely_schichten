@@ -75,6 +75,17 @@ await test('status → needsSetup, setup flow, setup disabled afterwards', async
   assert.equal(r.body.error, 'already_set_up');
 });
 
+await test('setup: 10 wrong keys lock guessing, even the right key is refused while locked; no account created', async () => {
+  const api = makeApi();
+  for (let i = 0; i < 10; i++) {
+    assert.equal((await api.call({ action: 'setup', setupKey: '10000' + i, username: 'karel', password: 'password123' })).status, 403);
+  }
+  const r = await api.call({ action: 'setup', setupKey: SETUP_KEY, username: 'karel', password: 'password123', firstName: 'K', lastName: 'B' });
+  assert.equal(r.status, 429);
+  assert.ok(r.body.retryAfterSec > 0);
+  assert.equal((await api.call({ action: 'status' })).body.needsSetup, true);
+});
+
 async function withAdmin() {
   const api = makeApi();
   const r = await api.call({ action: 'setup', setupKey: SETUP_KEY, username: 'karel', password: 'password123', firstName: 'Karel', lastName: 'Baloun', weeklyNorm: 40 });
