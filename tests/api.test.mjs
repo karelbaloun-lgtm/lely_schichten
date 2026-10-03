@@ -223,6 +223,23 @@ await test('admin cannot delete self or demote the last admin', async () => {
   assert.equal((await api.call({ action: 'updateUser', username: 'karel', role: 'user' }, api.admin)).body.error, 'last_admin');
 });
 
+await test('roster: admin sets/gets, sanitized + deduplicated; users and anonymous refused; _roster is not a reachable account', async () => {
+  const api = await withAdmin(); await withUser(api);
+  assert.deepEqual((await api.call({ action: 'getRoster' }, api.admin)).body.roster, []);
+  const set = await api.call({ action: 'setRoster', roster: ['  Jan   Novak ', 'jan novak', '', 'Petr Svoboda', 42, null] }, api.admin);
+  assert.equal(set.status, 200);
+  assert.deepEqual(set.body.roster, ['Jan Novak', 'Petr Svoboda', '42']);
+  assert.deepEqual((await api.call({ action: 'getRoster' }, api.admin)).body.roster, ['Jan Novak', 'Petr Svoboda', '42']);
+  assert.equal((await api.call({ action: 'getRoster' }, api.user)).status, 403);
+  assert.equal((await api.call({ action: 'setRoster', roster: ['x'] }, api.user)).status, 403);
+  assert.equal((await api.call({ action: 'getRoster' })).status, 401);
+  assert.equal((await api.call({ action: 'getData', user: '_roster' }, api.admin)).status, 404);
+  assert.equal((await api.call({ action: 'setRoster', roster: 'nonsense' }, api.admin)).body.roster.length, 0);
+  assert.equal((await api.call({ action: 'setRoster', roster: Array.from({ length: 500 }, (_, i) => 'Name ' + i) }, api.admin)).body.roster.length, 300);
+  // seznam se neobjeví v listUsers
+  assert.equal((await api.call({ action: 'listUsers' }, api.admin)).body.users.length, 2);
+});
+
 // ─── tvrdost vstupů ────────────────────────────────────────────────────────
 await test('malformed requests', async () => {
   const api = await withAdmin();

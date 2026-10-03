@@ -586,6 +586,23 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
 </div>
 
+<div class="sheet" id="sheet-roster">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title" data-i18n="sheet_roster_title">Monteurliste</div>
+    <button class="sheet-close" onclick="closeSheet('sheet-roster')">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="auth-hint" data-i18n="roster_hint">Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.</div>
+    <textarea class="note-input" id="roster-text" rows="12" style="width:100%;resize:vertical;" autocomplete="off" autocapitalize="words" spellcheck="false"></textarea>
+    <div class="auth-msg" id="roster-msg"></div>
+  </div>
+  <div class="sheet-actions">
+    <button class="btn-main secondary" onclick="closeSheet('sheet-roster')" data-i18n="btn_abbrechen">Abbrechen</button>
+    <button class="btn-main primary" onclick="saveRoster()" data-i18n="btn_speichern">Speichern</button>
+  </div>
+</div>
+
 <div class="auth-overlay" id="auth-overlay">
   <form class="auth-card" onsubmit="authSubmit(); return false;" novalidate>
     <div class="auth-brand">Lely Schichten</div>
@@ -1181,7 +1198,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // Muss bei JEDEM Deploy auf das aktuelle Datum aktualisiert werden (Format
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
-const LAST_UPDATED = '02.10.2026';
+const LAST_UPDATED = '03.10.2026';
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -1224,6 +1241,10 @@ const I18N = {
     confirm_adopt_legacy: 'Auf diesem Gerät sind noch {0} Einträge aus der Zeit vor der Anmeldung gespeichert. In dein Konto übernehmen?',
     profile_locked_hint: 'Wird vom Administrator festgelegt',
     sheet_users_title: 'Benutzer', btn_new_user: '＋ Neuer Benutzer', btn_export_users: '📄 Liste (TXT)',
+    roster_edit: '👷 Monteurliste bearbeiten', sheet_roster_title: 'Monteurliste',
+    roster_hint: 'Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
+    roster_label: 'Monteur', roster_pick: '— Monteur wählen —', roster_other: '✏️ Anderer Name …',
+    roster_choose: '⚠ Bitte einen Monteur wählen', t_roster_saved: '✓ Liste gespeichert',
     users_loading: 'Lade …', users_error: '⚠ Benutzer konnten nicht geladen werden',
     user_act_open: 'Daten ansehen/bearbeiten', user_act_reset: 'Passwort zurücksetzen',
     user_form_create: 'Neuer Benutzer', user_form_edit: 'Benutzer bearbeiten', user_form_reset: 'Passwort zurücksetzen',
@@ -1360,6 +1381,10 @@ const I18N = {
     confirm_adopt_legacy: 'V tomto zařízení je ještě uloženo {0} záznamů z doby před přihlášením. Převzít je do tvého účtu?',
     profile_locked_hint: 'Nastavuje administrátor',
     sheet_users_title: 'Uživatelé', btn_new_user: '＋ Nový uživatel', btn_export_users: '📄 Seznam (TXT)',
+    roster_edit: '👷 Upravit seznam montérů', sheet_roster_title: 'Seznam montérů',
+    roster_hint: 'Jedno jméno na řádek (Jméno Příjmení). Kdo už má účet, z výběru automaticky zmizí.',
+    roster_label: 'Montér', roster_pick: '— Vyber montéra —', roster_other: '✏️ Jiné jméno …',
+    roster_choose: '⚠ Vyber prosím montéra', t_roster_saved: '✓ Seznam uložen',
     users_loading: 'Načítám …', users_error: '⚠ Uživatele se nepodařilo načíst',
     user_act_open: 'Zobrazit/upravit data', user_act_reset: 'Obnovit heslo',
     user_form_create: 'Nový uživatel', user_form_edit: 'Upravit uživatele', user_form_reset: 'Obnovit heslo',
@@ -3476,10 +3501,64 @@ async function openUsers() {
   if (!isAdmin()) return;
   openSheet('sheet-users');
   byId('users-body').innerHTML = '<div class="empty-state">' + t('users_loading') + '</div>';
-  const res = await apiCall({ action: 'listUsers' }).catch(function () { return null; });
+  const results = await Promise.all([
+    apiCall({ action: 'listUsers' }).catch(function () { return null; }),
+    apiCall({ action: 'getRoster' }).catch(function () { return null; })
+  ]);
+  const res = results[0], ros = results[1];
   if (!res || !res.ok) { byId('users-body').innerHTML = '<div class="empty-state">' + t('users_error') + '</div>'; return; }
   usersCache = res.body.users;
+  if (ros && ros.ok) rosterCache = ros.body.roster;
   renderUsersList();
+}
+
+// ─── Monteurliste (Auswahl beim Anlegen eines Kontos) ──────────────────────
+let rosterCache = [];
+let rosterAvail = [];
+let suggestedUsername = '';
+function nameKey(first, last) { return ((first || '') + ' ' + (last || '')).replace(/\s+/g, ' ').trim().toLowerCase(); }
+// Namen aus der Liste, für die noch kein Konto existiert.
+function availableRoster() {
+  const taken = new Set(usersCache.map(function (u) { return nameKey(u.profile && u.profile.firstName, u.profile && u.profile.lastName); }));
+  return rosterCache.filter(function (n) { return !taken.has(nameKey(n)); });
+}
+function splitFullName(full) {
+  const i = full.indexOf(' ');
+  return i < 0 ? { first: full, last: '' } : { first: full.slice(0, i), last: full.slice(i + 1).trim() };
+}
+function suggestUsernameFor(first) {
+  const base = first.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  return base.length >= 3 ? base : '';
+}
+function onRosterPick() {
+  const v = byId('uf-roster').value;
+  const manual = byId('uf-name-manual');
+  manual.style.display = v === '__other' ? '' : 'none';
+  let first = '', last = '';
+  if (v !== '' && v !== '__other') {
+    const p = splitFullName(rosterAvail[parseInt(v, 10)] || '');
+    first = p.first; last = p.last;
+  }
+  byId('uf-firstname').value = first;
+  byId('uf-lastname').value = last;
+  const un = byId('uf-username');
+  if (un && first && (un.value === '' || un.value === suggestedUsername)) {
+    suggestedUsername = suggestUsernameFor(first);
+    un.value = suggestedUsername;
+  }
+}
+function openRoster() {
+  byId('roster-text').value = rosterCache.join('\n');
+  byId('roster-msg').textContent = '';
+  openSheet('sheet-roster');
+}
+async function saveRoster() {
+  const lines = byId('roster-text').value.split(/\r?\n/);
+  const res = await apiCall({ action: 'setRoster', roster: lines }).catch(function () { return null; });
+  if (!res || !res.ok) { byId('roster-msg').textContent = !res ? t('auth_no_connection') : t('auth_error'); return; }
+  rosterCache = res.body.roster;
+  closeSheet('sheet-roster');
+  toast(t('t_roster_saved'));
 }
 function renderUsersList() {
   byId('users-body').innerHTML = usersCache.map(function (u) {
@@ -3493,7 +3572,7 @@ function renderUsersList() {
       '<button class="user-act" title="' + t('user_act_reset') + '" onclick="openUserForm(\'reset\',\'' + u.username + '\')">🔑</button>' +
       (me ? '' : '<button class="user-act" title="' + t('btn_loeschen') + '" onclick="deleteUserPrompt(\'' + u.username + '\')">🗑</button>') +
       '</div></div>';
-  }).join('');
+  }).join('') + '<button class="auth-link" onclick="openRoster()">' + t('roster_edit') + '</button>';
 }
 // Übersicht aller Konten als TXT — bewusst OHNE Passwörter (der Server kennt
 // nur Hashes; Passwörter gehören in einen Passwortmanager). Datei bleibt wie
@@ -3522,6 +3601,19 @@ function openUserForm(mode, username) {
   userFormTarget = username || null;
   const u = usersCache.find(function (x) { return x.username === username; }) || { profile: { firstName: '', lastName: '', weeklyNorm: 40 }, role: 'user' };
   let html = '';
+  const nameFields = authField('uf-firstname', 'label_vorname', 'text', 'off', u.profile.firstName) +
+    authField('uf-lastname', 'label_nachname', 'text', 'off', u.profile.lastName);
+  rosterAvail = mode === 'create' ? availableRoster() : [];
+  suggestedUsername = '';
+  const useRoster = rosterAvail.length > 0;
+  if (useRoster) {
+    // Name aus der Monteurliste wählen; „Anderer Name“ blendet die Freitextfelder ein.
+    html += '<div class="auth-field"><label for="uf-roster">' + t('roster_label') + '</label>' +
+      '<select class="note-input" id="uf-roster" onchange="onRosterPick()"><option value="">' + t('roster_pick') + '</option>' +
+      rosterAvail.map(function (n, i) { return '<option value="' + i + '">' + escHtml(n) + '</option>'; }).join('') +
+      '<option value="__other">' + t('roster_other') + '</option></select></div>' +
+      '<div id="uf-name-manual" style="display:none;">' + nameFields + '</div>';
+  }
   if (mode === 'create') {
     html += authField('uf-username', 'auth_username', 'text', 'off');
     html += authField('uf-password', 'user_initial_password', 'text', 'off');
@@ -3531,8 +3623,7 @@ function openUserForm(mode, username) {
     html += authField('uf-password', 'user_initial_password', 'text', 'off');
     html += '<div class="setting-sub" style="margin:-4px 0 12px;">' + t('user_pw_hint') + '</div>';
   } else {
-    html += authField('uf-firstname', 'label_vorname', 'text', 'off', u.profile.firstName);
-    html += authField('uf-lastname', 'label_nachname', 'text', 'off', u.profile.lastName);
+    if (!useRoster) html += nameFields;
     html += authField('uf-norm', 'setting_wochennorm', 'number', 'off', u.profile.weeklyNorm);
     html += '<div class="auth-field"><label for="uf-role">' + t('user_role') + '</label><select class="note-input" id="uf-role">' +
       '<option value="user"' + (u.role === 'user' ? ' selected' : '') + '>' + t('role_user') + '</option>' +
@@ -3549,6 +3640,7 @@ async function submitUserForm() {
   let body;
   if (userFormMode === 'create') {
     const username = val('uf-username').toLowerCase();
+    if (byId('uf-roster') && byId('uf-roster').value === '') { msg.textContent = t('roster_choose'); return; }
     if (!/^[a-z0-9][a-z0-9._-]{2,31}$/.test(username)) { msg.textContent = t('auth_username_invalid'); return; }
     if (val('uf-password').length < 8) { msg.textContent = t('auth_pw_short'); return; }
     body = { action: 'createUser', username, password: val('uf-password'), firstName: val('uf-firstname'), lastName: val('uf-lastname'), weeklyNorm: parseFloat(val('uf-norm')) || 40, role: val('uf-role') };
