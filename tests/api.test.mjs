@@ -240,6 +240,60 @@ await test('roster: admin sets/gets, sanitized + deduplicated; users and anonymo
   assert.equal((await api.call({ action: 'listUsers' }, api.admin)).body.users.length, 2);
 });
 
+await test('activation: off by default, code gates the name list, activate creates a user account, name disappears', async () => {
+  const api = await withAdmin();
+  await api.call({ action: 'setRoster', roster: ['Karel Baloun', 'Jan Novák', 'Petr van Berg'] }, api.admin);
+  // vypnuto → i "prázdný" kód je špatný
+  assert.equal((await api.call({ action: 'activationInfo', code: '' })).status, 403);
+  assert.equal((await api.call({ action: 'activationInfo', code: undefined })).status, 403);
+  const gen = await api.call({ action: 'setActivation', mode: 'generate' }, api.admin);
+  const code = gen.body.activationCode;
+  assert.match(code, /^[2-9A-Z]{4}-[2-9A-Z]{4}$/);
+  assert.equal((await api.call({ action: 'getRoster' }, api.admin)).body.activationCode, code);
+  assert.equal((await api.call({ action: 'setActivation', mode: 'generate' }, api.user || 'x')).status, 401);
+  // kód je jen pro aktivaci, nepouští k ničemu jinému; zadání bez pomlčky/malými je OK
+  const info = await api.call({ action: 'activationInfo', code: code.toLowerCase().replace('-', '') });
+  assert.equal(info.status, 200);
+  assert.deepEqual(info.body.names, ['Jan Novák', 'Petr van Berg']); // Karel už účet má
+  // špatné jméno / už obsazené / špatné heslo / špatné uživatelské jméno
+  assert.equal((await api.call({ action: 'activate', code, name: 'Karel Baloun', username: 'karel2', password: 'secret-pass1' })).body.error, 'name_unavailable');
+  assert.equal((await api.call({ action: 'activate', code, name: 'Nobody', username: 'nobody', password: 'secret-pass1' })).body.error, 'name_unavailable');
+  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'jan', password: 'short' })).body.error, 'invalid_password');
+  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'a', password: 'secret-pass1' })).body.error, 'invalid_username');
+  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'karel', password: 'secret-pass1' })).body.error, 'exists');
+  const ok = await api.call({ action: 'activate', code, name: 'jan  novák', username: 'jan', password: 'secret-pass1' });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.body.user.role, 'user');
+  assert.equal(ok.body.user.mustChangePassword, false);
+  assert.equal(ok.body.user.profile.firstName, 'Jan');
+  assert.equal(ok.body.user.profile.lastName, 'Novák');
+  assert.equal((await api.call({ action: 'me' }, ok.body.token)).body.user.username, 'jan');
+  // jméno zmizelo; druhá aktivace stejného jména selže
+  assert.deepEqual((await api.call({ action: 'activationInfo', code })).body.names, ['Petr van Berg']);
+  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'jan2', password: 'secret-pass1' })).body.error, 'name_unavailable');
+  // uživatel s právy user nemůže kód spravovat
+  assert.equal((await api.call({ action: 'setActivation', mode: 'off' }, ok.body.token)).status, 403);
+  assert.equal((await api.call({ action: 'getRoster' }, ok.body.token)).status, 403);
+  // nový kód zneplatní starý; vypnutí zneplatní vše
+  const code2 = (await api.call({ action: 'setActivation', mode: 'generate' }, api.admin)).body.activationCode;
+  assert.notEqual(code2, code);
+  assert.equal((await api.call({ action: 'activationInfo', code })).status, 403);
+  assert.equal((await api.call({ action: 'activationInfo', code: code2 })).status, 200);
+  await api.call({ action: 'setActivation', mode: 'off' }, api.admin);
+  assert.equal((await api.call({ action: 'activationInfo', code: code2 })).status, 403);
+  assert.equal((await api.call({ action: 'getRoster' }, api.admin)).body.activationCode, '');
+});
+await test('activation: 10 wrong codes lock guessing for everyone (even the right code)', async () => {
+  const api = await withAdmin();
+  await api.call({ action: 'setRoster', roster: ['Jan Novák'] }, api.admin);
+  const code = (await api.call({ action: 'setActivation', mode: 'generate' }, api.admin)).body.activationCode;
+  for (let i = 0; i < 10; i++) assert.equal((await api.call({ action: 'activationInfo', code: 'AAAA-' + String(i).padStart(4, '2') })).status, 403);
+  const r = await api.call({ action: 'activationInfo', code });
+  assert.equal(r.status, 429);
+  assert.ok(r.body.retryAfterSec > 0);
+  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'jan', password: 'secret-pass1' })).status, 429);
+});
+
 // ─── tvrdost vstupů ────────────────────────────────────────────────────────
 await test('malformed requests', async () => {
   const api = await withAdmin();

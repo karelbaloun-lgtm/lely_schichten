@@ -594,8 +594,15 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
   <div class="sheet-body">
     <div class="auth-hint" data-i18n="roster_hint">Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.</div>
-    <textarea class="note-input" id="roster-text" rows="12" style="width:100%;resize:vertical;" autocomplete="off" autocapitalize="words" spellcheck="false"></textarea>
+    <textarea class="note-input" id="roster-text" rows="10" style="width:100%;resize:vertical;" autocomplete="off" autocapitalize="words" spellcheck="false"></textarea>
     <div class="auth-msg" id="roster-msg"></div>
+    <div class="setting-label" data-i18n="roster_code_label">Aktivierungscode</div>
+    <div id="roster-code" style="font-family:var(--mono,monospace);font-size:24px;font-weight:700;letter-spacing:.12em;margin:6px 0;user-select:all;"></div>
+    <div class="setting-sub" data-i18n="roster_code_hint">Mit diesem Code legen Kollegen ihr Konto selbst an („Erste Anmeldung“) und wählen ihren Namen aus der Liste.</div>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button class="btn-main secondary" style="flex:1;" onclick="setActivationCode('generate')" data-i18n="btn_code_new">🔄 Neuen Code erzeugen</button>
+      <button class="btn-main secondary" style="flex:1;" id="roster-code-off" onclick="setActivationCode('off')" data-i18n="btn_code_off">Ausschalten</button>
+    </div>
   </div>
   <div class="sheet-actions">
     <button class="btn-main secondary" onclick="closeSheet('sheet-roster')" data-i18n="btn_abbrechen">Abbrechen</button>
@@ -612,6 +619,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       <div id="auth-fields"></div>
       <div class="auth-msg" id="auth-msg"></div>
       <button class="btn-main primary" id="auth-submit" type="submit" style="width:100%;"></button>
+      <button class="auth-link" id="auth-activate" type="button" onclick="showAuthOverlay('activate')"></button>
       <button class="auth-link" id="auth-secondary" type="button" onclick="authSecondary()"></button>
       <div class="theme-seg auth-lang">
         <button type="button" class="theme-btn" id="auth-lang-cs" onclick="authSetLang('cs')">🇨🇿</button>
@@ -1245,6 +1253,17 @@ const I18N = {
     roster_hint: 'Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
     roster_label: 'Monteur', roster_pick: '— Monteur wählen —', roster_other: '✏️ Anderer Name …',
     roster_choose: '⚠ Bitte einen Monteur wählen', t_roster_saved: '✓ Liste gespeichert',
+    auth_title_activate: 'Erste Anmeldung', auth_link_activate: 'Erste Anmeldung (mit Code)',
+    auth_activate_hint1: 'Gib den Aktivierungscode ein, den du erhalten hast.',
+    auth_activate_hint2: 'Wähle deinen Namen und lege Benutzername und Passwort fest.',
+    auth_code: 'Aktivierungscode', btn_weiter: 'Weiter', btn_activate: 'Aktivieren',
+    auth_code_wrong: '⚠ Code falsch',
+    auth_no_names: 'Es ist kein freier Name mehr in der Liste. Bitte melde dich bei deinem Vorgesetzten.',
+    auth_name_taken: '⚠ Name nicht mehr verfügbar — bitte Code erneut eingeben',
+    roster_code_label: 'Aktivierungscode', roster_code_off: 'Selbst-Anmeldung ausgeschaltet',
+    roster_code_hint: 'Mit diesem Code legen Kollegen ihr Konto selbst an („Erste Anmeldung“) und wählen ihren Namen aus der Liste.',
+    btn_code_new: '🔄 Neuen Code erzeugen', btn_code_off: 'Ausschalten', t_code_changed: '✓ Code aktualisiert',
+    confirm_code_new: 'Einen neuen Code erzeugen? Der bisherige Code wird damit ungültig.',
     users_loading: 'Lade …', users_error: '⚠ Benutzer konnten nicht geladen werden',
     user_act_open: 'Daten ansehen/bearbeiten', user_act_reset: 'Passwort zurücksetzen',
     user_form_create: 'Neuer Benutzer', user_form_edit: 'Benutzer bearbeiten', user_form_reset: 'Passwort zurücksetzen',
@@ -1385,6 +1404,17 @@ const I18N = {
     roster_hint: 'Jedno jméno na řádek (Jméno Příjmení). Kdo už má účet, z výběru automaticky zmizí.',
     roster_label: 'Montér', roster_pick: '— Vyber montéra —', roster_other: '✏️ Jiné jméno …',
     roster_choose: '⚠ Vyber prosím montéra', t_roster_saved: '✓ Seznam uložen',
+    auth_title_activate: 'První přihlášení', auth_link_activate: 'První přihlášení (s kódem)',
+    auth_activate_hint1: 'Zadej aktivační kód, který jsi dostal.',
+    auth_activate_hint2: 'Vyber své jméno a zvol uživatelské jméno a heslo.',
+    auth_code: 'Aktivační kód', btn_weiter: 'Dál', btn_activate: 'Aktivovat',
+    auth_code_wrong: '⚠ Špatný kód',
+    auth_no_names: 'V seznamu už není žádné volné jméno. Ozvi se prosím svému nadřízenému.',
+    auth_name_taken: '⚠ Jméno už není k dispozici — zadej prosím kód znovu',
+    roster_code_label: 'Aktivační kód', roster_code_off: 'Samostatné přihlášení vypnuto',
+    roster_code_hint: 'Tímto kódem si kolegové sami založí účet („První přihlášení“) a vyberou své jméno ze seznamu.',
+    btn_code_new: '🔄 Vytvořit nový kód', btn_code_off: 'Vypnout', t_code_changed: '✓ Kód aktualizován',
+    confirm_code_new: 'Vytvořit nový kód? Dosavadní kód tím přestane platit.',
     users_loading: 'Načítám …', users_error: '⚠ Uživatele se nepodařilo načíst',
     user_act_open: 'Zobrazit/upravit data', user_act_reset: 'Obnovit heslo',
     user_form_create: 'Nový uživatel', user_form_edit: 'Upravit uživatele', user_form_reset: 'Obnovit heslo',
@@ -3067,8 +3097,11 @@ function setAuthMsg(text, info) {
 function renderAuthSecondary() {
   const btn = byId('auth-secondary');
   let label = '';
+  const act = byId('auth-activate');
+  act.textContent = t('auth_link_activate');
+  act.style.display = authMode === 'login' ? '' : 'none';
   if (authMode === 'login') label = authNeedsSetup ? t('auth_link_setup') : '';
-  else if (authMode === 'setup') label = t('auth_link_back');
+  else if (authMode === 'setup' || authMode === 'activate') label = t('auth_link_back');
   else if (!authForced) label = t('btn_abbrechen');
   btn.textContent = label;
   btn.style.display = label ? '' : 'none';
@@ -3086,6 +3119,22 @@ function renderAuthMode(msg, info) {
            authField('auth-password', 'auth_new_password', 'password', 'new-password') +
            authField('auth-firstname', 'label_vorname', 'text', 'given-name') +
            authField('auth-lastname', 'label_nachname', 'text', 'family-name');
+  } else if (authMode === 'activate') {
+    title = t('auth_title_activate');
+    if (activateStep === 1) {
+      hint = t('auth_activate_hint1'); submit = t('btn_weiter');
+      html = authField('auth-code', 'auth_code', 'text', 'off');
+    } else {
+      hint = activateNames.length ? t('auth_activate_hint2') : t('auth_no_names'); submit = t('btn_activate');
+      if (activateNames.length) {
+        html = '<div class="auth-field"><label for="auth-name">' + t('roster_label') + '</label>' +
+          '<select class="note-input" id="auth-name" onchange="activatePick()"><option value="">' + t('roster_pick') + '</option>' +
+          activateNames.map(function (n, i) { return '<option value="' + i + '">' + escHtml(n) + '</option>'; }).join('') + '</select></div>' +
+          authField('auth-username', 'auth_username', 'text', 'username') +
+          authField('auth-password', 'auth_new_password', 'password', 'new-password') +
+          authField('auth-password2', 'auth_new_password2', 'password', 'new-password');
+      }
+    }
   } else {
     title = authForced ? t('auth_title_forcepw') : t('auth_title_changepw');
     hint = authForced ? t('auth_force_hint') : '';
@@ -3098,12 +3147,16 @@ function renderAuthMode(msg, info) {
   byId('auth-title').textContent = title;
   byId('auth-hint').textContent = hint;
   byId('auth-submit').textContent = submit;
+  byId('auth-submit').style.display = (authMode === 'activate' && activateStep === 2 && !activateNames.length) ? 'none' : '';
   renderAuthSecondary();
   setAuthMsg(msg || '', info);
   byId('auth-lang-cs').classList.toggle('active', curLang() === 'cs');
   byId('auth-lang-de').classList.toggle('active', curLang() === 'de');
 }
+// Erste Anmeldung (Selbst-Aktivierung): Schritt 1 = Code, Schritt 2 = Name wählen + Zugangsdaten.
+let activateStep = 1, activateCode = '', activateNames = [];
 function showAuthOverlay(mode, msg, opts) {
+  if (mode === 'activate') { activateStep = 1; activateCode = ''; activateNames = []; }
   authMode = mode;
   authForced = !!(opts && opts.forced);
   if (opts && opts.username !== undefined) authPrefillUser = opts.username;
@@ -3121,7 +3174,7 @@ async function checkNeedsSetup() {
 }
 function authSecondary() {
   if (authMode === 'login') showAuthOverlay('setup');
-  else if (authMode === 'setup') showAuthOverlay('login');
+  else if (authMode === 'setup' || authMode === 'activate') showAuthOverlay('login');
   else if (!authForced) hideAuthOverlay();
 }
 function authSetLang(lang) {
@@ -3139,6 +3192,7 @@ async function authSubmit() {
   try {
     if (authMode === 'login') await doLogin();
     else if (authMode === 'setup') await doSetup();
+    else if (authMode === 'activate') await doActivate();
     else await doChangePassword();
   } finally {
     authBusy = false;
@@ -3153,6 +3207,9 @@ function authErrorText(res) {
   if (code === 'invalid_username') return t('auth_username_invalid');
   if (code === 'invalid_password') return t('auth_pw_short');
   if (code === 'bad_setup_key') return t('auth_setup_key_wrong');
+  if (code === 'bad_code') return t('auth_code_wrong');
+  if (code === 'exists') return t('t_user_exists');
+  if (code === 'name_unavailable') return t('auth_name_taken');
   return t('auth_error');
 }
 async function doLogin() {
@@ -3175,6 +3232,48 @@ async function doSetup() {
   const res = await apiCall({ action: 'setup', setupKey, username, password, firstName, lastName, weeklyNorm: 40 }, { noAuth: true }).catch(function () { return null; });
   if (res && res.ok) { onAuthenticated(res.body); return; }
   if (res && res.body && res.body.error === 'already_set_up') { authNeedsSetup = false; showAuthOverlay('login', t('auth_already_set_up')); return; }
+  setAuthMsg(authErrorText(res));
+}
+function activatePick() {
+  const v = byId('auth-name').value;
+  const un = byId('auth-username');
+  if (v === '') return;
+  const first = splitFullName(activateNames[parseInt(v, 10)] || '').first;
+  if (un.value === '' || un.value === suggestedUsername) {
+    suggestedUsername = suggestUsernameFor(first);
+    un.value = suggestedUsername;
+  }
+}
+async function doActivate() {
+  if (activateStep === 1) {
+    const code = authValue('auth-code').trim();
+    if (!code) { setAuthMsg(t('auth_fill_all')); return; }
+    setAuthMsg(t('auth_busy'), true);
+    const res = await apiCall({ action: 'activationInfo', code }, { noAuth: true }).catch(function () { return null; });
+    if (!(res && res.ok)) { setAuthMsg(authErrorText(res)); return; }
+    activateCode = code;
+    activateNames = res.body.names || [];
+    activateStep = 2;
+    suggestedUsername = '';
+    renderAuthMode();
+    return;
+  }
+  const idx = authValue('auth-name');
+  const username = authValue('auth-username').trim().toLowerCase();
+  const password = authValue('auth-password');
+  if (idx === '' || !username || !password || !authValue('auth-password2')) { setAuthMsg(t('auth_fill_all')); return; }
+  if (password !== authValue('auth-password2')) { setAuthMsg(t('auth_pw_mismatch')); return; }
+  if (password.length < 8) { setAuthMsg(t('auth_pw_short')); return; }
+  setAuthMsg(t('auth_busy'), true);
+  const res = await apiCall({ action: 'activate', code: activateCode, name: activateNames[parseInt(idx, 10)], username, password }, { noAuth: true }).catch(function () { return null; });
+  if (res && res.ok) { onAuthenticated(res.body); return; }
+  const err = res && res.body && res.body.error;
+  if (err === 'name_unavailable' || err === 'bad_code') {
+    // Liste/Code sind nicht mehr aktuell → zurück zu Schritt 1.
+    activateStep = 1; activateNames = [];
+    renderAuthMode(authErrorText(res));
+    return;
+  }
   setAuthMsg(authErrorText(res));
 }
 async function doChangePassword() {
@@ -3508,7 +3607,7 @@ async function openUsers() {
   const res = results[0], ros = results[1];
   if (!res || !res.ok) { byId('users-body').innerHTML = '<div class="empty-state">' + t('users_error') + '</div>'; return; }
   usersCache = res.body.users;
-  if (ros && ros.ok) rosterCache = ros.body.roster;
+  if (ros && ros.ok) { rosterCache = ros.body.roster; activationCode = ros.body.activationCode || ''; }
   renderUsersList();
 }
 
@@ -3547,10 +3646,25 @@ function onRosterPick() {
     un.value = suggestedUsername;
   }
 }
+let activationCode = '';
+function renderActivationCode() {
+  byId('roster-code').textContent = activationCode || t('roster_code_off');
+  byId('roster-code').style.fontSize = activationCode ? '' : '14px';
+  byId('roster-code-off').style.display = activationCode ? '' : 'none';
+}
 function openRoster() {
   byId('roster-text').value = rosterCache.join('\n');
   byId('roster-msg').textContent = '';
+  renderActivationCode();
   openSheet('sheet-roster');
+}
+async function setActivationCode(mode) {
+  if (mode === 'generate' && activationCode && !confirm(t('confirm_code_new'))) return;
+  const res = await apiCall({ action: 'setActivation', mode }).catch(function () { return null; });
+  if (!res || !res.ok) { byId('roster-msg').textContent = !res ? t('auth_no_connection') : t('auth_error'); return; }
+  activationCode = res.body.activationCode || '';
+  renderActivationCode();
+  toast(t('t_code_changed'));
 }
 async function saveRoster() {
   const lines = byId('roster-text').value.split(/\r?\n/);
