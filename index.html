@@ -326,8 +326,10 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .user-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .user-act { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border2); background: var(--s1); font-size: 16px; cursor: pointer; touch-action: manipulation; }
 
-.update-banner { display: none; position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; width: calc(100% - 40px); max-width: 460px; padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 270; box-shadow: 0 8px 24px rgba(0,0,0,0.3); background: var(--brand); color: #fff; cursor: pointer; }
-.update-banner.open { display: block; animation: sync-banner-in 0.25s ease-out forwards; }
+/* Dezenter Hinweis: schmaler orangefarbener Rahmen (kein Vollton-Balken), per ✕ wegklickbar. */
+.update-banner { display: none; position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 360px; padding: 8px 12px 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; z-index: 270; box-shadow: 0 4px 14px rgba(0,0,0,0.18); background: var(--s1); color: var(--text); border: 1.5px solid var(--amber); cursor: pointer; align-items: center; justify-content: space-between; gap: 10px; }
+.update-banner.open { display: flex; }
+.update-banner-x { flex-shrink: 0; width: 24px; height: 24px; border: none; background: transparent; color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer; touch-action: manipulation; }
 @keyframes sync-banner-in { from { opacity: 0; transform: translateX(-50%) translateY(-14px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
 :root[data-theme="light"] {
@@ -631,7 +633,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 
 <div class="toast" id="toast"></div>
 
-<div class="update-banner" id="update-banner" onclick="applyPendingUpdate()"><span data-i18n="update_banner_text">🔄 Neue Version verfügbar – zum Aktualisieren tippen</span></div>
+<div class="update-banner" id="update-banner" onclick="applyPendingUpdate()"><span data-i18n="update_banner_text">🔄 Neue Version verfügbar</span><button class="update-banner-x" aria-label="✕" onclick="event.stopPropagation(); this.parentNode.classList.remove('open');">✕</button></div>
 
 <script>
 // ─── calc.js (eingebettet, siehe dev/calc.js — dort mit Node.js getestet) ──
@@ -1221,7 +1223,7 @@ function curMONTHS_SHORT() { return curLang() === 'cs' ? MONTHS_SHORT_CS : MONTH
 const I18N = {
   de: {
     nav_teilen: 'Teilen', nav_uebersicht: 'Übersicht',
-    update_banner_text: '🔄 Neue Version verfügbar – zum Aktualisieren tippen',
+    update_banner_text: '🔄 Neue Version verfügbar',
     auth_title_login: 'Anmelden', auth_title_setup: 'Ersteinrichtung',
     auth_title_changepw: 'Passwort ändern', auth_title_forcepw: 'Neues Passwort festlegen',
     auth_force_hint: 'Dein Passwort wurde vom Administrator gesetzt. Bitte wähle jetzt ein eigenes.',
@@ -1372,7 +1374,7 @@ const I18N = {
   },
   cs: {
     nav_teilen: 'Sdílet', nav_uebersicht: 'Přehled',
-    update_banner_text: '🔄 K dispozici nová verze – klepnutím aktualizuješ',
+    update_banner_text: '🔄 K dispozici nová verze',
     auth_title_login: 'Přihlášení', auth_title_setup: 'První nastavení',
     auth_title_changepw: 'Změna hesla', auth_title_forcepw: 'Nastav si nové heslo',
     auth_force_hint: 'Heslo ti nastavil administrátor. Zvol si prosím vlastní.',
