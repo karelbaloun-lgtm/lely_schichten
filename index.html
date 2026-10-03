@@ -61,6 +61,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .topbar-title { margin: 0; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 16.8px; font-weight: 800; color: #fff; letter-spacing: .02em; text-transform: uppercase; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-settings { position: relative; flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.3); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px; transition: background 0.15s; touch-action: manipulation; }
 .topbar-settings:active { background: rgba(255,255,255,.28); }
+/* Schmale Handys: bis zu drei Knöpfe (Sync, Einstellungen, Benutzer) sollen den Titel nicht abschneiden. */
+@media (max-width: 430px) {
+  .topbar-row1 { gap: 6px; padding-left: 14px; padding-right: 14px; }
+  .topbar-settings { width: 34px; height: 34px; font-size: 16px; }
+}
 
 .month-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg); overflow-x: auto; scrollbar-width: none; }
 .month-bar::-webkit-scrollbar { display: none; }
@@ -371,6 +376,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       </div>
       <button class="topbar-settings" id="manual-sync-btn" aria-label="Sync" style="display:none;">🔄</button>
       <button class="topbar-settings" onclick="openSettings()">⚙<span class="sync-indicator" id="sync-indicator"></span></button>
+      <button class="topbar-settings" id="users-btn" onclick="openUsers()" style="display:none;">👤</button>
     </div>
   </header>
 
@@ -3560,13 +3566,16 @@ function accountSettingsHtml() {
     '<div style="margin-top:10px;display:flex;gap:8px;">' +
     '<button class="btn-main secondary" style="flex:1;" onclick="openChangePassword()">' + t('btn_change_pw') + '</button>' +
     '<button class="btn-main secondary" style="flex:1;" onclick="doLogout()">' + t('btn_logout') + '</button></div>';
-  if (isAdmin()) {
-    html += '<div style="margin-top:10px;"><button class="btn-main secondary" style="width:100%;" onclick="openUsers()">' + t('btn_manage_users') + '</button></div>';
-  }
   return html;
 }
 // Zeile unter dem Titel, solange der Admin die Daten eines Kollegen bearbeitet.
 function renderAccountUi() {
+  // Benutzerverwaltung: eigener Knopf neben dem Zahnrad, nur für den Admin.
+  const ub = byId('users-btn');
+  if (ub) {
+    ub.style.display = isAdmin() ? 'flex' : 'none';
+    ub.title = ub.ariaLabel = t('sheet_users_title');
+  }
   const sub = byId('topbar-sub');
   if (!sub) return;
   if (viewingOther()) {
