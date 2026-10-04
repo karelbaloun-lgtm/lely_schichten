@@ -43,19 +43,21 @@
   --r:         16px;
   --sheet-h:   92vh;
 }
+@supports (height: 100dvh) { :root { --sheet-h: 92dvh; } }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body { height: 100%; overscroll-behavior: none; }
 body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; overflow: hidden; }
 
-.app { display: grid; grid-template-rows: auto auto 1fr auto; height: 100dvh; max-width: 900px; margin: 0 auto; }
+.app { display: grid; grid-template-rows: auto auto 1fr auto; height: 100vh; height: 100dvh; max-width: 900px; margin: 0 auto; }
 
-.topbar { display: flex; flex-direction: column; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); box-shadow: 0 2px 10px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 10; width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
+.topbar { display: flex; flex-direction: column; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); box-shadow: 0 2px 10px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 10; padding-top: env(safe-area-inset-top); width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
 .topbar::after {
   content: '';
   position: absolute; bottom: -1px; left: 20px; right: 20px; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(226,0,26,0.35), transparent);
 }
-.topbar-row1 { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 900px; margin: 0 auto; padding: 10px 20px 12px; box-sizing: border-box; }
+.topbar-row1 { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 900px; margin: 0 auto; padding: 10px max(20px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left)); box-sizing: border-box; }
 .lely-badge { flex: 0 0 auto; }
 .topbar-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
 .topbar-title { margin: 0; font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size: 16.8px; font-weight: 800; color: #fff; letter-spacing: .02em; text-transform: uppercase; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -66,6 +68,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
   .topbar-row1 { gap: 6px; padding-left: 14px; padding-right: 14px; }
   .topbar-settings { width: 34px; height: 34px; font-size: 16px; }
 }
+/* iPhone/Safari: Felder < 16 px lösen beim Antippen einen Zoom aus; native Innenschatten/Rundungen entfernen. */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea, .note-input, .setting-input, .name-input, .pause-input { font-size: 16px; }
+}
+input.note-input, textarea.note-input, input.setting-input, input.name-input, input.pause-input { -webkit-appearance: none; appearance: none; }
 
 .month-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg); overflow-x: auto; scrollbar-width: none; }
 .month-bar::-webkit-scrollbar { display: none; }
@@ -148,7 +155,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .fab-item:active { transform: scale(0.97) !important; }
 .fab-item .fi-icon { font-size: 18px; }
 
-.sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
 .sheet-overlay.open { opacity: 1; pointer-events: all; }
 .sheet { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 900px; background: var(--s1); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border2); max-height: var(--sheet-h); display: flex; flex-direction: column; transition: transform 0.35s cubic-bezier(.32,0,.67,0); z-index: 101; padding-bottom: env(safe-area-inset-bottom); }
 .sheet.open { transform: translateX(-50%) translateY(0); }
@@ -177,8 +184,9 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 .leg-sublabel:first-of-type { margin-top: 0; }
 .add-leg-btn { width: 100%; padding: 12px; border-radius: 12px; background: var(--s2); border: 1px dashed var(--border2); color: var(--brand); font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 14px; touch-action: manipulation; font-family: var(--sans); }
 .add-leg-btn:active { background: var(--brand-dim); }
-.time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.time-input { background: var(--s1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-family: var(--mono); font-size: 18px; width: 100%; transition: border-color 0.15s; text-align: center; -webkit-appearance: none; }
+.time-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.time-input { background: var(--s1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-family: var(--mono); font-size: 18px; width: 100%; transition: border-color 0.15s; text-align: center; -webkit-appearance: none; appearance: none; min-width: 0; min-height: 52px; display: block; }
+.time-input::-webkit-date-and-time-value { text-align: center; }
 .time-input:focus { outline: none; border-color: var(--brand); }
 input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .pause-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
@@ -255,7 +263,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .theme-btn { width: 36px; height: 36px; border-radius: 7px; border: 1px solid transparent; background: none; cursor: pointer; font-size: 17px; line-height: 1; touch-action: manipulation; }
 .theme-btn.active { background: var(--s1); border-color: var(--border2); }
 
-.cal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.cal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 .cal-overlay.open { opacity: 1; pointer-events: all; }
 .cal-box { background: var(--s1); border: 1px solid var(--border2); border-radius: 20px; padding: 20px; width: 340px; max-width: 95vw; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
 .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -272,7 +280,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .cal-footer { display: flex; gap: 8px; margin-top: 14px; }
 .cal-footer .btn-main { font-size: 14px; padding: 12px; }
 
-.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 250; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 250; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 .confirm-overlay.open { opacity: 1; pointer-events: all; }
 .confirm-box { background: var(--s1); border: 1px solid var(--border2); border-radius: 20px; padding: 24px; width: 320px; max-width: 90vw; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
 .confirm-title { font-size: 17px; font-weight: 600; margin-bottom: 10px; }
@@ -301,7 +309,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
    braucht einen gerenderten Vorher-Zustand und bleibt in Tabs, die gerade
    nicht gerendert werden, hängen — die Animation spielt dagegen bei jedem
    Öffnen sicher ab, und display:block macht das Banner so oder so sichtbar. */
-.sync-banner { display: none; position: fixed; top: 68px; left: 50%; width: calc(100% - 40px); max-width: 460px; padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 260; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.sync-banner { display: none; pointer-events: none; position: fixed; top: calc(68px + env(safe-area-inset-top)); left: 50%; width: calc(100% - 40px); max-width: 460px; padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 260; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
 .sync-banner.open { display: block; animation: sync-banner-in 0.25s ease-out forwards; }
 .sync-banner.syncing { background: var(--amber-dim); border: 1px solid var(--amber); color: var(--amber); }
 .sync-banner.error { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
@@ -1214,7 +1222,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // Muss bei JEDEM Deploy auf das aktuelle Datum aktualisiert werden (Format
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
-const LAST_UPDATED = '03.10.2026';
+const LAST_UPDATED = '04.10.2026';
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
