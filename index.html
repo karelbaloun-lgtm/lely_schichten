@@ -305,13 +305,14 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 @keyframes sync-spin { to { transform: rotate(360deg); } }
 /* Sync-Symbol: weiß im Ruhezustand; während des Abgleichs orange + drehend, danach grün
    (erfolgreich, kurz) bzw. rot (fehlgeschlagen, bleibt bis zum nächsten Versuch). Für die
-   Farben bekommt der Knopf einen weißen Hintergrund, damit sie auf der roten Leiste lesbar sind. */
+   Farben bleibt der Knopf rot; in den Farbzuständen ist er nur etwas dunkler abgesetzt und die Töne
+   sind aufgehellt, damit sie auf der roten Leiste lesbar sind. */
 #manual-sync-btn .sync-ico svg { display: block; }
 #manual-sync-btn { transition: background 0.2s, color 0.2s, border-color 0.2s; }
-#manual-sync-btn.sync-run, #manual-sync-btn.sync-ok, #manual-sync-btn.sync-err { background: #fff; border-color: #fff; }
-#manual-sync-btn.sync-run { color: #f28c00; }
-#manual-sync-btn.sync-ok { color: #16a34a; }
-#manual-sync-btn.sync-err { color: #dc2626; }
+#manual-sync-btn.sync-run, #manual-sync-btn.sync-ok, #manual-sync-btn.sync-err { background: rgba(70, 0, 12, 0.42); }
+#manual-sync-btn.sync-run { color: #ffab2e; }
+#manual-sync-btn.sync-ok { color: #4ade80; }
+#manual-sync-btn.sync-err { color: #ff7b7b; }
 .topbar-sub { font-size: 11px; color: rgba(255,255,255,.9); cursor: pointer; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Anmeldung (Vollbild, über allem außer Toasts) */
 .auth-overlay { display: none; position: fixed; inset: 0; z-index: 280; background: var(--bg); align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
