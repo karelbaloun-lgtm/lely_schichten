@@ -1,6 +1,6 @@
 // Service Worker für Lely Schichten — Netzwerk zuerst (aktuelle Version, wenn
 // online), sonst aus dem Cache (funktioniert offline nach dem ersten Besuch).
-const CACHE_VERSION = 'lely-schichten-v16';
+const CACHE_VERSION = 'lely-schichten-v17';
 const CORE_FILES = [
   './',
   './index.html',

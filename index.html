@@ -625,6 +625,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       <div class="auth-msg" id="auth-msg"></div>
       <button class="btn-main primary" id="auth-submit" type="submit" style="width:100%;"></button>
       <button class="auth-link" id="auth-activate" type="button" onclick="showAuthOverlay('activate')"></button>
+      <button class="auth-link" id="auth-local" type="button" onclick="authLocalClick()"></button>
       <button class="auth-link" id="auth-secondary" type="button" onclick="authSecondary()"></button>
       <div class="theme-seg auth-lang">
         <button type="button" class="theme-btn" id="auth-lang-cs" onclick="authSetLang('cs')">🇨🇿</button>
@@ -1258,6 +1259,9 @@ const I18N = {
     roster_hint: 'Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
     roster_label: 'Monteur', roster_pick: '— Monteur wählen —', roster_other: '✏️ Anderer Name …',
     roster_choose: '⚠ Bitte einen Monteur wählen', t_roster_saved: '✓ Liste gespeichert',
+    auth_local_start: 'Nur auf diesem Gerät nutzen (ohne Anmeldung)', auth_local_back: 'Zurück — ohne Anmeldung weiterarbeiten',
+    confirm_local_start: 'Ohne Anmeldung werden die Daten NUR auf diesem Gerät gespeichert — ohne Sicherung auf dem Server und ohne Synchronisierung. Gehen sie hier verloren, sind sie weg. Trotzdem ohne Anmeldung fortfahren?',
+    local_mode_title: 'Ohne Anmeldung', local_mode_sub: 'Daten nur auf diesem Gerät — keine Sicherung auf dem Server.', btn_login_sync: '🔄 Anmelden & synchronisieren',
     auth_title_activate: 'Erste Anmeldung', auth_link_activate: 'Erste Anmeldung (mit Code)',
     auth_activate_hint1: 'Gib den Aktivierungscode ein, den du erhalten hast.',
     auth_activate_hint2: 'Wähle deinen Namen und lege Benutzername und Passwort fest.',
@@ -1409,6 +1413,9 @@ const I18N = {
     roster_hint: 'Jedno jméno na řádek (Jméno Příjmení). Kdo už má účet, z výběru automaticky zmizí.',
     roster_label: 'Montér', roster_pick: '— Vyber montéra —', roster_other: '✏️ Jiné jméno …',
     roster_choose: '⚠ Vyber prosím montéra', t_roster_saved: '✓ Seznam uložen',
+    auth_local_start: 'Používat jen v tomto telefonu (bez přihlášení)', auth_local_back: 'Zpět — pokračovat bez přihlášení',
+    confirm_local_start: 'Bez přihlášení se data ukládají POUZE v tomto zařízení — bez zálohy na serveru a bez synchronizace. Když se tu ztratí, jsou pryč. Opravdu pokračovat bez přihlášení?',
+    local_mode_title: 'Bez přihlášení', local_mode_sub: 'Data jen v tomto zařízení — bez zálohy na serveru.', btn_login_sync: '🔄 Přihlásit a synchronizovat',
     auth_title_activate: 'První přihlášení', auth_link_activate: 'První přihlášení (s kódem)',
     auth_activate_hint1: 'Zadej aktivační kód, který jsi dostal.',
     auth_activate_hint2: 'Vyber své jméno a zvol uživatelské jméno a heslo.',
@@ -1578,7 +1585,12 @@ let auth = null;          // { token, username, role, mustChangePassword } — n
 let dataOwner = null;     // Konto, dessen Daten gerade geladen sind (Admin kann Kollegen öffnen)
 // Lokale Daten liegen pro Benutzer (…:<benutzername>), damit auf einem Gerät
 // mehrere Konten nebeneinander funktionieren, ohne sich zu vermischen.
-function userKey(base) { return base + ':' + (dataOwner || '_'); }
+// Lokalmodus (ohne Anmeldung): Daten liegen unter den alten, unpräfixierten
+// Schlüsseln. So greift bei einer späteren Anmeldung die vorhandene Übernahme
+// ("In dein Konto übernehmen?") ohne Sonderlogik.
+const LOCAL_OWNER = '__local';
+let localMode = false;
+function userKey(base) { return dataOwner === LOCAL_OWNER ? base : base + ':' + (dataOwner || '_'); }
 
 function getMonths() {
   const set = new Set(shifts.map(s => monthKey(s.date)));
@@ -2790,7 +2802,7 @@ function openSummary() {
 function renderSettings() {
   const theme = localStorage.getItem('monteur_theme') || 'auto';
   const lang = curLang();
-  const locked = !isAdmin();
+  const locked = !!auth && !isAdmin();
   document.getElementById('settings-body').innerHTML = `
     ${accountSettingsHtml()}
     <div class="setting-row" style="margin-top:16px;">
@@ -3105,6 +3117,9 @@ function renderAuthSecondary() {
   const act = byId('auth-activate');
   act.textContent = t('auth_link_activate');
   act.style.display = authMode === 'login' ? '' : 'none';
+  const loc = byId('auth-local');
+  loc.textContent = localMode ? t('auth_local_back') : t('auth_local_start');
+  loc.style.display = authMode === 'login' ? '' : 'none';
   if (authMode === 'login') label = authNeedsSetup ? t('auth_link_setup') : '';
   else if (authMode === 'setup' || authMode === 'activate') label = t('auth_link_back');
   else if (!authForced) label = t('btn_abbrechen');
@@ -3299,7 +3314,37 @@ async function doChangePassword() {
   if (wasForced) startSync();
 }
 
+// ─── Lokalmodus (ohne Anmeldung, nur dieses Gerät) ─────────────────────────
+function authLocalClick() {
+  if (localMode) { hideAuthOverlay(); return; }
+  if (!confirm(t('confirm_local_start'))) return;
+  hideAuthOverlay();
+  startLocalSession();
+}
+function startLocalSession() {
+  localMode = true;
+  localStorage.setItem('monteur_local_mode', '1');
+  dataOwner = LOCAL_OWNER;
+  loadData();
+  uiLang = (config.language === 'cs' || config.language === 'de') ? config.language : uiLang;
+  localStorage.setItem('monteur_lang', uiLang);
+  applyI18nStatic();
+  activeMonth = getMonths()[getMonths().length - 1];
+  renderAll();
+  renderSettings();
+  renderAccountUi();
+  updateManualSyncBtn();
+  bindSyncBtn();
+  toast(timeBasedGreeting() + (config.firstName ? ', ' + config.firstName : '') + '!');
+}
+// 🔄 im Lokalmodus: erst jetzt wird eine Anmeldung verlangt.
+function openLoginFromLocal() {
+  closeAllSheets();
+  showAuthOverlay('login');
+}
 function onAuthenticated(body) {
+  localMode = false;
+  localStorage.removeItem('monteur_local_mode');
   auth = { token: body.token, username: body.user.username, role: body.user.role, mustChangePassword: !!body.user.mustChangePassword };
   saveAuth();
   dataOwner = auth.username;
@@ -3359,17 +3404,27 @@ function startSync() {
       if (document.visibilityState === 'visible') syncNow();
     });
     window.addEventListener('online', function () { syncNow(); });
-    const btn = byId('manual-sync-btn');
-    // addEventListener statt inline onclick="" — auf iPhones war der inline-
-    // Handler bei diesem anfangs versteckten Button unzuverlässig.
-    if (btn) btn.addEventListener('click', function () { syncNow(); });
   }
+  bindSyncBtn();
   updateManualSyncBtn();
   syncNow();
 }
+let syncBtnBound = false;
+function bindSyncBtn() {
+  if (syncBtnBound) return;
+  const btn = byId('manual-sync-btn');
+  if (!btn) return;
+  syncBtnBound = true;
+  // addEventListener statt inline onclick="" — auf iPhones war der inline-
+  // Handler bei diesem anfangs versteckten Button unzuverlässig.
+  btn.addEventListener('click', function () {
+    if (!auth && localMode) { openLoginFromLocal(); return; }
+    syncNow();
+  });
+}
 function updateManualSyncBtn() {
   const el = byId('manual-sync-btn');
-  if (el) el.style.display = syncEnabled() ? 'flex' : 'none';
+  if (el) el.style.display = (syncEnabled() || localMode) ? 'flex' : 'none';
 }
 
 // ─── Synchronisierung ──────────────────────────────────────────────────────
@@ -3425,7 +3480,7 @@ function setSyncIndicator(active) {
 }
 
 function scheduleSyncPush() {
-  if (!dataOwner) return;
+  if (!dataOwner || dataOwner === LOCAL_OWNER) return;
   dataVersion++;
   setDirty(true);
   if (!syncEnabled()) return;
@@ -3565,6 +3620,11 @@ function resolveSyncConflict(choice) {
 // ─── Kontobereich (Einstellungen, Kopfzeile) ──────────────────────────────
 function roleLabel(role) { return role === 'admin' ? t('role_admin') : t('role_user'); }
 function accountSettingsHtml() {
+  if (!auth && localMode) {
+    return '<div class="setting-row"><div><div class="setting-label">' + t('local_mode_title') + '</div>' +
+      '<div class="setting-sub">' + t('local_mode_sub') + '</div></div></div>' +
+      '<div style="margin-top:10px;"><button class="btn-main secondary" style="width:100%;" onclick="openLoginFromLocal()">' + t('btn_login_sync') + '</button></div>';
+  }
   if (!auth) return '';
   let html = '<div class="setting-row"><div><div class="setting-label">' + t('account_signed_in') + '</div>' +
     '<div class="setting-sub">' + escHtml(auth.username) + ' · ' + roleLabel(auth.role) + '</div></div></div>' +
@@ -3594,6 +3654,12 @@ function renderAccountUi() {
 // Name und Wochennorm ändert nur der Admin (über den Server, für das gerade
 // geöffnete Konto).
 async function updateProfileField(key, value) {
+  if (localMode && !auth) {   // ohne Konto gibt es kein Server-Profil: lokal speichern
+    config[key] = value;
+    saveConfigLocalOnly();
+    renderAll();
+    return;
+  }
   if (!isAdmin()) return;
   const previous = config[key];
   config[key] = value;
@@ -3840,6 +3906,7 @@ function authInit() {
   applyI18nStatic();
   auth = loadAuth();
   if (auth) startSession();
+  else if (localStorage.getItem('monteur_local_mode') === '1') startLocalSession();
   else showAuthOverlay('login');
 }
 authInit();
