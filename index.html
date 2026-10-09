@@ -303,6 +303,8 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
    einfrieren, ohne dass irgendetwas sichtbar passiert. */
 .sync-indicator { display: none; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #ffd766; box-shadow: 0 0 0 2px var(--brand); animation: sync-pulse 1s ease-in-out infinite; }
 .sync-indicator.active { display: block; }
+/* Letzter Abgleich fehlgeschlagen / offline: ruhiger gelber Punkt am 🔄-Knopf (statt Banner). */
+#manual-sync-btn.sync-err::after { content: ''; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #ffd766; box-shadow: 0 0 0 2px var(--brand); }
 @keyframes sync-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(0.8); } }
 /* Farbiges Sync-Status-Banner: gelb = läuft, rot = Fehler, grün = erfolgreich.
    display:none/block + @keyframes statt opacity-transition: eine transition
@@ -382,8 +384,8 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
         <div class="topbar-title">Lely Schichten</div>
         <div class="topbar-sub" id="topbar-sub" style="display:none;" onclick="switchDataOwner(auth.username)"></div>
       </div>
-      <button class="topbar-settings" id="manual-sync-btn" aria-label="Sync" style="display:none;">🔄</button>
-      <button class="topbar-settings" onclick="openSettings()">⚙<span class="sync-indicator" id="sync-indicator"></span></button>
+      <button class="topbar-settings" id="manual-sync-btn" aria-label="Sync" style="display:none;">🔄<span class="sync-indicator" id="sync-indicator"></span></button>
+      <button class="topbar-settings" onclick="openSettings()">⚙</button>
       <button class="topbar-settings" id="users-btn" onclick="openUsers()" style="display:none;">👤</button>
     </div>
   </header>
@@ -1222,7 +1224,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // Muss bei JEDEM Deploy auf das aktuelle Datum aktualisiert werden (Format
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
-const LAST_UPDATED = '04.10.2026';
+const LAST_UPDATED = '09.10.2026';
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -3373,7 +3375,13 @@ function startSync() {
     const btn = byId('manual-sync-btn');
     // addEventListener statt inline onclick="" — auf iPhones war der inline-
     // Handler bei diesem anfangs versteckten Button unzuverlässig.
-    if (btn) btn.addEventListener('click', function () { syncNow(); });
+    // Nur wer selbst auf 🔄 tippt, bekommt das Status-Banner zu sehen (10 s lang).
+    if (btn) btn.addEventListener('click', function () {
+      syncManual = true;
+      clearTimeout(syncManualTimer);
+      syncManualTimer = setTimeout(function () { syncManual = false; }, 10000);
+      syncNow();
+    });
   }
   updateManualSyncBtn();
   syncNow();
@@ -3410,10 +3418,20 @@ function setDirty(on) {
 }
 
 let syncBannerTimer = null;
+let syncManual = false, syncManualTimer = null;
 // state: 'syncing' (gelb) | 'error' (rot) | 'success' (grün)
+// Diskret: automatische Abgleiche zeigen kein Banner — nur der Punkt am 🔄-Knopf
+// (pulsiert während des Abgleichs, bleibt stehen, wenn er fehlgeschlagen ist).
+// Das Banner erscheint nur, wenn der Benutzer selbst auf 🔄 getippt hat.
 function setSyncStatus(text, state) {
+  const syncBtn = byId('manual-sync-btn');
+  if (syncBtn) {
+    if (state === 'error') syncBtn.classList.add('sync-err');
+    else if (state === 'success') syncBtn.classList.remove('sync-err');
+  }
   const banner = byId('sync-banner');
   if (!banner) return;
+  if (!syncManual) { banner.classList.remove('open'); return; }
   banner.textContent = text;
   banner.className = 'sync-banner open ' + state;
   clearTimeout(syncBannerTimer);
