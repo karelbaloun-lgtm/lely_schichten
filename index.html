@@ -303,6 +303,9 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
    einfrieren, ohne dass irgendetwas sichtbar passiert. */
 .sync-indicator { display: none; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #ffd766; box-shadow: 0 0 0 2px var(--brand); animation: sync-pulse 1s ease-in-out infinite; }
 .sync-indicator.active { display: block; }
+.sync-ico { display: inline-block; line-height: 1; }
+.sync-ico.spinning { animation: sync-spin 0.8s linear infinite; }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
 /* Letzter Abgleich fehlgeschlagen / offline: ruhiger gelber Punkt am 🔄-Knopf (statt Banner). */
 #manual-sync-btn.sync-err::after { content: ''; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #ffd766; box-shadow: 0 0 0 2px var(--brand); }
 @keyframes sync-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(0.8); } }
@@ -384,7 +387,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
         <div class="topbar-title">Lely Schichten</div>
         <div class="topbar-sub" id="topbar-sub" style="display:none;" onclick="switchDataOwner(auth.username)"></div>
       </div>
-      <button class="topbar-settings" id="manual-sync-btn" aria-label="Sync" style="display:none;">🔄<span class="sync-indicator" id="sync-indicator"></span></button>
+      <button class="topbar-settings" id="manual-sync-btn" aria-label="Sync" style="display:none;"><span class="sync-ico" id="sync-ico">🔄</span></button>
       <button class="topbar-settings" onclick="openSettings()">⚙</button>
       <button class="topbar-settings" id="users-btn" onclick="openUsers()" style="display:none;">👤</button>
     </div>
@@ -3439,10 +3442,21 @@ function setSyncStatus(text, state) {
     syncBannerTimer = setTimeout(function () { banner.classList.remove('open'); }, 3500);
   }
 }
-// Immer sichtbares Zeichen (Punkt am Zahnrad), dass gerade ein Request läuft.
+// Sichtbares Zeichen, dass gerade abgeglichen wird: das 🔄-Symbol dreht sich
+// (wie der Ladekreis bei Windows). Dreht mindestens eine volle Umdrehung, damit
+// auch ein sehr schneller Abgleich erkennbar bleibt.
+let syncSpinSince = 0, syncSpinTimer = null;
+const SYNC_SPIN_MIN_MS = 800;
 function setSyncIndicator(active) {
-  const el = byId('sync-indicator');
-  if (el) el.classList.toggle('active', !!active);
+  const el = byId('sync-ico');
+  if (!el) return;
+  clearTimeout(syncSpinTimer);
+  if (active) {
+    if (!el.classList.contains('spinning')) { syncSpinSince = Date.now(); el.classList.add('spinning'); }
+    return;
+  }
+  const wait = Math.max(0, SYNC_SPIN_MIN_MS - (Date.now() - syncSpinSince));
+  syncSpinTimer = setTimeout(function () { el.classList.remove('spinning'); }, wait);
 }
 
 function scheduleSyncPush() {
