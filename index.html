@@ -298,27 +298,13 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
    irgendeinem Grund nicht laufen sollte. Bleibt sichtbar, bis der Monteur
    draufklickt — kein Auto-Dismiss, da ein Update sonst leicht übersehen
    wird. */
-/* Sichtbar, solange ein Sync-Request läuft — sonst wirkt die App beim
-   erneuten Öffnen (Cold-Start der Netlify Function, ~4s) so, als würde sie
-   einfrieren, ohne dass irgendetwas sichtbar passiert. */
-.sync-indicator { display: none; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #ffd766; box-shadow: 0 0 0 2px var(--brand); animation: sync-pulse 1s ease-in-out infinite; }
-.sync-indicator.active { display: block; }
+/* Sync-Status nur am 🔄-Knopf: dreht sich während des Abgleichs (sonst wirkt die App beim
+   Öffnen wegen des Cold-Starts der Netlify Function ~4 s wie eingefroren). */
 .sync-ico { display: inline-block; line-height: 1; }
 .sync-ico.spinning { animation: sync-spin 0.8s linear infinite; }
 @keyframes sync-spin { to { transform: rotate(360deg); } }
 /* Letzter Abgleich fehlgeschlagen / offline: ruhiger gelber Punkt am 🔄-Knopf (statt Banner). */
 #manual-sync-btn.sync-err::after { content: ''; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #ffd766; box-shadow: 0 0 0 2px var(--brand); }
-@keyframes sync-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(0.8); } }
-/* Farbiges Sync-Status-Banner: gelb = läuft, rot = Fehler, grün = erfolgreich.
-   display:none/block + @keyframes statt opacity-transition: eine transition
-   braucht einen gerenderten Vorher-Zustand und bleibt in Tabs, die gerade
-   nicht gerendert werden, hängen — die Animation spielt dagegen bei jedem
-   Öffnen sicher ab, und display:block macht das Banner so oder so sichtbar. */
-.sync-banner { display: none; pointer-events: none; position: fixed; top: calc(68px + env(safe-area-inset-top)); left: 50%; width: calc(100% - 40px); max-width: 460px; padding: 11px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; text-align: center; z-index: 260; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-.sync-banner.open { display: block; animation: sync-banner-in 0.25s ease-out forwards; }
-.sync-banner.syncing { background: var(--amber-dim); border: 1px solid var(--amber); color: var(--amber); }
-.sync-banner.error { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
-.sync-banner.success { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
 .topbar-sub { font-size: 11px; color: rgba(255,255,255,.9); cursor: pointer; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Anmeldung (Vollbild, über allem außer Toasts) */
 .auth-overlay { display: none; position: fixed; inset: 0; z-index: 280; background: var(--bg); align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
@@ -348,7 +334,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .update-banner { display: none; position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 360px; padding: 8px 12px 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; z-index: 270; box-shadow: 0 4px 14px rgba(0,0,0,0.18); background: var(--s1); color: var(--text); border: 1.5px solid var(--amber); cursor: pointer; align-items: center; justify-content: space-between; gap: 10px; }
 .update-banner.open { display: flex; }
 .update-banner-x { flex-shrink: 0; width: 24px; height: 24px; border: none; background: transparent; color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer; touch-action: manipulation; }
-@keyframes sync-banner-in { from { opacity: 0; transform: translateX(-50%) translateY(-14px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
 :root[data-theme="light"] {
   --bg: #f2f2f7; --s1: #ffffff; --s2: #ebebf0; --s3: #e0e0e8;
@@ -565,7 +550,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 <datalist id="customer-history"></datalist>
 <datalist id="hotel-address-history"></datalist>
 
-<div class="sync-banner" id="sync-banner"></div>
 
 <div class="confirm-overlay" id="confirm-sync-overlay">
   <div class="confirm-box">
@@ -3378,13 +3362,7 @@ function startSync() {
     const btn = byId('manual-sync-btn');
     // addEventListener statt inline onclick="" — auf iPhones war der inline-
     // Handler bei diesem anfangs versteckten Button unzuverlässig.
-    // Nur wer selbst auf 🔄 tippt, bekommt das Status-Banner zu sehen (10 s lang).
-    if (btn) btn.addEventListener('click', function () {
-      syncManual = true;
-      clearTimeout(syncManualTimer);
-      syncManualTimer = setTimeout(function () { syncManual = false; }, 10000);
-      syncNow();
-    });
+    if (btn) btn.addEventListener('click', function () { syncNow(); });
   }
   updateManualSyncBtn();
   syncNow();
@@ -3420,27 +3398,14 @@ function setDirty(on) {
   else localStorage.removeItem(userKey('monteur_sync_dirty'));
 }
 
-let syncBannerTimer = null;
-let syncManual = false, syncManualTimer = null;
-// state: 'syncing' (gelb) | 'error' (rot) | 'success' (grün)
-// Diskret: automatische Abgleiche zeigen kein Banner — nur der Punkt am 🔄-Knopf
-// (pulsiert während des Abgleichs, bleibt stehen, wenn er fehlgeschlagen ist).
-// Das Banner erscheint nur, wenn der Benutzer selbst auf 🔄 getippt hat.
+// Kein Banner mehr: Status zeigt nur der 🔄-Knopf — er dreht sich während des
+// Abgleichs, ein ruhiger gelber Punkt bleibt stehen, solange der letzte Abgleich
+// fehlgeschlagen ist (Text als Tooltip). state: 'syncing' | 'error' | 'success'
 function setSyncStatus(text, state) {
   const syncBtn = byId('manual-sync-btn');
-  if (syncBtn) {
-    if (state === 'error') syncBtn.classList.add('sync-err');
-    else if (state === 'success') syncBtn.classList.remove('sync-err');
-  }
-  const banner = byId('sync-banner');
-  if (!banner) return;
-  if (!syncManual) { banner.classList.remove('open'); return; }
-  banner.textContent = text;
-  banner.className = 'sync-banner open ' + state;
-  clearTimeout(syncBannerTimer);
-  if (state !== 'syncing') {
-    syncBannerTimer = setTimeout(function () { banner.classList.remove('open'); }, 3500);
-  }
+  if (!syncBtn) return;
+  if (state === 'error') { syncBtn.classList.add('sync-err'); syncBtn.title = text; }
+  else if (state === 'success') { syncBtn.classList.remove('sync-err'); syncBtn.title = ''; }
 }
 // Sichtbares Zeichen, dass gerade abgeglichen wird: das 🔄-Symbol dreht sich
 // (wie der Ladekreis bei Windows). Dreht mindestens eine volle Umdrehung, damit
