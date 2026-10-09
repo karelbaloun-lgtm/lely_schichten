@@ -303,8 +303,15 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .sync-ico { display: inline-block; line-height: 1; }
 .sync-ico.spinning { animation: sync-spin 0.8s linear infinite; }
 @keyframes sync-spin { to { transform: rotate(360deg); } }
-/* Letzter Abgleich fehlgeschlagen / offline: ruhiger gelber Punkt am 🔄-Knopf (statt Banner). */
-#manual-sync-btn.sync-err::after { content: ''; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #ffd766; box-shadow: 0 0 0 2px var(--brand); }
+/* Sync-Symbol: weiß im Ruhezustand; während des Abgleichs orange + drehend, danach grün
+   (erfolgreich, kurz) bzw. rot (fehlgeschlagen, bleibt bis zum nächsten Versuch). Für die
+   Farben bekommt der Knopf einen weißen Hintergrund, damit sie auf der roten Leiste lesbar sind. */
+#manual-sync-btn .sync-ico svg { display: block; }
+#manual-sync-btn { transition: background 0.2s, color 0.2s, border-color 0.2s; }
+#manual-sync-btn.sync-run, #manual-sync-btn.sync-ok, #manual-sync-btn.sync-err { background: #fff; border-color: #fff; }
+#manual-sync-btn.sync-run { color: #f28c00; }
+#manual-sync-btn.sync-ok { color: #16a34a; }
+#manual-sync-btn.sync-err { color: #dc2626; }
 .topbar-sub { font-size: 11px; color: rgba(255,255,255,.9); cursor: pointer; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Anmeldung (Vollbild, über allem außer Toasts) */
 .auth-overlay { display: none; position: fixed; inset: 0; z-index: 280; background: var(--bg); align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
@@ -372,7 +379,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
         <div class="topbar-title">Lely Schichten</div>
         <div class="topbar-sub" id="topbar-sub" style="display:none;" onclick="switchDataOwner(auth.username)"></div>
       </div>
-      <button class="topbar-settings" id="manual-sync-btn" aria-label="Sync" style="display:none;"><span class="sync-ico" id="sync-ico">🔄</span></button>
+      <button class="topbar-settings" id="manual-sync-btn" aria-label="Sync" style="display:none;"><span class="sync-ico" id="sync-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span></button>
       <button class="topbar-settings" onclick="openSettings()">⚙</button>
       <button class="topbar-settings" id="users-btn" onclick="openUsers()" style="display:none;">👤</button>
     </div>
@@ -3453,30 +3460,52 @@ function setDirty(on) {
   else localStorage.removeItem(userKey('monteur_sync_dirty'));
 }
 
-// Kein Banner mehr: Status zeigt nur der 🔄-Knopf — er dreht sich während des
-// Abgleichs, ein ruhiger gelber Punkt bleibt stehen, solange der letzte Abgleich
-// fehlgeschlagen ist (Text als Tooltip). state: 'syncing' | 'error' | 'success'
-function setSyncStatus(text, state) {
-  const syncBtn = byId('manual-sync-btn');
-  if (!syncBtn) return;
-  if (state === 'error') { syncBtn.classList.add('sync-err'); syncBtn.title = text; }
-  else if (state === 'success') { syncBtn.classList.remove('sync-err'); syncBtn.title = ''; }
+// Kein Banner: Status zeigt nur das Sync-Symbol (siehe CSS oben) —
+// orange + drehend während des Abgleichs, danach grün (2,5 s) bzw. rot (bis zum
+// nächsten Versuch; Fehlertext als Tooltip). state: 'syncing' | 'error' | 'success'
+let syncResult = null, syncOkTimer = null;
+function applySyncResult() {
+  const btn = byId('manual-sync-btn');
+  if (!btn) return;
+  clearTimeout(syncOkTimer);
+  btn.classList.remove('sync-ok', 'sync-err');
+  if (syncResult === 'error') btn.classList.add('sync-err');
+  else if (syncResult === 'success') {
+    btn.classList.add('sync-ok');
+    syncOkTimer = setTimeout(function () { btn.classList.remove('sync-ok'); }, 2500);
+  }
 }
-// Sichtbares Zeichen, dass gerade abgeglichen wird: das 🔄-Symbol dreht sich
-// (wie der Ladekreis bei Windows). Dreht mindestens eine volle Umdrehung, damit
-// auch ein sehr schneller Abgleich erkennbar bleibt.
+function setSyncStatus(text, state) {
+  const btn = byId('manual-sync-btn');
+  if (!btn || state === 'syncing') return;
+  syncResult = state;
+  btn.title = state === 'error' ? text : '';
+  // Läuft die Drehung noch (Mindestdauer), wird das Ergebnis erst beim Stoppen gezeigt.
+  const ico = byId('sync-ico');
+  if (!(ico && ico.classList.contains('spinning'))) applySyncResult();
+}
+// Dreht mindestens eine volle Umdrehung, damit auch ein sehr schneller Abgleich
+// erkennbar bleibt.
 let syncSpinSince = 0, syncSpinTimer = null;
 const SYNC_SPIN_MIN_MS = 800;
 function setSyncIndicator(active) {
-  const el = byId('sync-ico');
-  if (!el) return;
+  const el = byId('sync-ico'), btn = byId('manual-sync-btn');
+  if (!el || !btn) return;
   clearTimeout(syncSpinTimer);
   if (active) {
     if (!el.classList.contains('spinning')) { syncSpinSince = Date.now(); el.classList.add('spinning'); }
+    syncResult = null;
+    clearTimeout(syncOkTimer);
+    btn.classList.remove('sync-ok', 'sync-err');
+    btn.classList.add('sync-run');
     return;
   }
   const wait = Math.max(0, SYNC_SPIN_MIN_MS - (Date.now() - syncSpinSince));
-  syncSpinTimer = setTimeout(function () { el.classList.remove('spinning'); }, wait);
+  syncSpinTimer = setTimeout(function () {
+    el.classList.remove('spinning');
+    btn.classList.remove('sync-run');
+    applySyncResult();
+  }, wait);
 }
 
 function scheduleSyncPush() {
