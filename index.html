@@ -3002,7 +3002,6 @@ function finishWeekExport(useAddresses) {
   finalizeMultiWeekExport(pendingExportMondays, addresses);
 }
 const HR_EMAIL = 'lelycenter.kd.admin@eder-gmbh.de';
-const HR_CC_EMAIL = 'r.bindl@eder-gmbh.de';
 function emailSubjectForWeeks(mondayList) {
   return config.lastName + ' ' + mondayList.map(function (mon) { return 'KW ' + isoWeekNumber(mon); }).join(', ');
 }
@@ -3035,7 +3034,7 @@ function finalizeMultiWeekExport(mondayList, hotelAddresses) {
         toast(t('t_dateien_heruntergeladen_1') + mondayList.length + t('t_dateien_heruntergeladen_2'));
         if (exportMode === 'share') {
           const subject = emailSubjectForWeeks(mondayList);
-          const mailto = 'mailto:' + HR_EMAIL + '?cc=' + encodeURIComponent(HR_CC_EMAIL) + '&subject=' + encodeURIComponent(subject);
+          const mailto = 'mailto:' + HR_EMAIL + '?subject=' + encodeURIComponent(subject);
           setTimeout(function () { window.location.href = mailto; }, 300);
         }
       }
