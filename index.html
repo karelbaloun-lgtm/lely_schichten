@@ -692,7 +692,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
   <div class="sheet-body">
     <div class="auth-hint" data-i18n="roster_hint">Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.</div>
-    <textarea class="note-input" id="roster-text" rows="10" style="width:100%;resize:vertical;" autocomplete="off" autocapitalize="words" spellcheck="false"></textarea>
+    <textarea class="note-input" id="roster-text" rows="10" placeholder="Jan Novák; jan.novak@eder-gmbh.de" style="width:100%;resize:vertical;" autocomplete="off" autocapitalize="words" spellcheck="false"></textarea>
     <div class="auth-msg" id="roster-msg"></div>
     <div class="setting-label" data-i18n="roster_code_label">Aktivierungscode</div>
     <div id="roster-code" style="font-family:var(--mono,monospace);font-size:24px;font-weight:700;letter-spacing:.12em;margin:6px 0;user-select:all;"></div>
@@ -1341,6 +1341,8 @@ const I18N = {
     auth_pw_short: '⚠ Passwort: mindestens 8 Zeichen',
     auth_username_invalid: '⚠ Benutzername (3–32 Zeichen: a–z, 0–9, . _ -) oder E-Mail-Adresse',
     auth_email_invalid: '⚠ Bitte eine gültige E-Mail-Adresse eingeben',
+    auth_email_domain: '⚠ Es sind nur Adressen mit @eder-gmbh.de erlaubt',
+    auth_name_ph: 'Namen eintippen …', auth_email_known: 'Anmeldung mit: {0}',
     auth_setup_key_wrong: '⚠ Einrichtungsschlüssel falsch',
     t_password_changed: '✓ Passwort geändert',
     account_signed_in: 'Angemeldet als', role_admin: 'Administrator', role_user: 'Benutzer',
@@ -1353,7 +1355,7 @@ const I18N = {
     search_summary: '{0} Einsätze an {1} Tagen · {2} vor Ort', search_travel: 'Anfahrt', nav_kunden: 'Kunden', cust_filter_ph: 'Kunde filtern', sum_line_diet: 'Auslöse', sum_line_ot: 'Überstunden', sum_line_vac: 'Urlaub', sum_line_sick: 'Krank', cust_empty: 'Noch keine Kunden eingetragen.',
     cust_visit_1: 'Besuch', cust_visit_2: 'Besuche', cust_visit_5: 'Besuche', cust_visits: 'Besuche', cust_onsite: 'vor Ort', cust_last: 'zuletzt', cust_last_short: 'zuletzt',
     roster_edit: 'Monteurliste bearbeiten', sheet_roster_title: 'Monteurliste',
-    roster_hint: 'Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
+    roster_hint: 'Ein Monteur pro Zeile: Vorname Nachname; E-Mail (die Adresse ist optional, gilt dann als Anmeldename). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
     roster_label: 'Monteur', roster_pick: '— Monteur wählen —', roster_other: 'Anderer Name …',
     roster_choose: '⚠ Bitte einen Monteur wählen', t_roster_saved: '✓ Liste gespeichert',
     auth_local_start: 'Nur auf diesem Gerät nutzen (ohne Anmeldung)', auth_local_back: 'Zurück — ohne Anmeldung weiterarbeiten',
@@ -1361,7 +1363,7 @@ const I18N = {
     local_mode_title: 'Ohne Anmeldung', local_mode_sub: 'Daten nur auf diesem Gerät — keine Sicherung auf dem Server.', btn_login_sync: 'Anmelden & synchronisieren',
     auth_title_activate: 'Erste Anmeldung', auth_link_activate: 'Erste Anmeldung (mit Code)',
     auth_activate_hint1: 'Gib den Aktivierungscode ein, den du erhalten hast.',
-    auth_activate_hint2: 'Wähle deinen Namen und gib deine Firmen-E-Mail-Adresse und ein Passwort an. Mit der E-Mail meldest du dich künftig an.',
+    auth_activate_hint2: 'Tippe deinen Namen ein und wähle ihn aus der Liste. Dann lege ein Passwort fest. Mit deiner Firmen-E-Mail meldest du dich künftig an.',
     auth_code: 'Aktivierungscode', btn_weiter: 'Weiter', btn_activate: 'Aktivieren',
     auth_code_wrong: '⚠ Code falsch',
     auth_no_names: 'Es ist kein freier Name mehr in der Liste. Bitte melde dich bei deinem Vorgesetzten.',
@@ -1500,6 +1502,8 @@ const I18N = {
     auth_pw_short: '⚠ Heslo: alespoň 8 znaků',
     auth_username_invalid: '⚠ Uživatelské jméno (3–32 znaků: a–z, 0–9, . _ -) nebo e-mail',
     auth_email_invalid: '⚠ Zadej platnou e-mailovou adresu',
+    auth_email_domain: '⚠ Povoleny jsou jen adresy s @eder-gmbh.de',
+    auth_name_ph: 'Začni psát své jméno …', auth_email_known: 'Přihlašování e-mailem: {0}',
     auth_setup_key_wrong: '⚠ Špatný instalační klíč',
     t_password_changed: '✓ Heslo změněno',
     account_signed_in: 'Přihlášen jako', role_admin: 'Administrátor', role_user: 'Uživatel',
@@ -1512,7 +1516,7 @@ const I18N = {
     search_summary: '{0} zakázek za {1} dnů · {2} na místě', search_travel: 'Cesta', nav_kunden: 'Zákazníci', cust_filter_ph: 'Filtrovat zákazníka', sum_line_diet: 'Diety', sum_line_ot: 'přesčas', sum_line_vac: 'Dovolená', sum_line_sick: 'Nemoc', cust_empty: 'Zatím žádní zákazníci.',
     cust_visit_1: 'návštěva', cust_visit_2: 'návštěvy', cust_visit_5: 'návštěv', cust_visits: 'návštěv', cust_onsite: 'na místě', cust_last: 'naposledy', cust_last_short: 'naposledy',
     roster_edit: 'Upravit seznam montérů', sheet_roster_title: 'Seznam montérů',
-    roster_hint: 'Jedno jméno na řádek (Jméno Příjmení). Kdo už má účet, z výběru automaticky zmizí.',
+    roster_hint: 'Jeden montér na řádek: Jméno Příjmení; e-mail (adresa je nepovinná, pak slouží jako přihlašovací jméno). Kdo už má účet, z výběru automaticky zmizí.',
     roster_label: 'Montér', roster_pick: '— Vyber montéra —', roster_other: 'Jiné jméno …',
     roster_choose: '⚠ Vyber prosím montéra', t_roster_saved: '✓ Seznam uložen',
     auth_local_start: 'Používat jen v tomto telefonu (bez přihlášení)', auth_local_back: 'Zpět — pokračovat bez přihlášení',
@@ -1520,7 +1524,7 @@ const I18N = {
     local_mode_title: 'Bez přihlášení', local_mode_sub: 'Data jen v tomto zařízení — bez zálohy na serveru.', btn_login_sync: 'Přihlásit a synchronizovat',
     auth_title_activate: 'První přihlášení', auth_link_activate: 'První přihlášení (s kódem)',
     auth_activate_hint1: 'Zadej aktivační kód, který jsi dostal.',
-    auth_activate_hint2: 'Vyber své jméno a zadej firemní e-mail a heslo. E-mailem se budeš příště přihlašovat.',
+    auth_activate_hint2: 'Začni psát své jméno a vyber ho ze seznamu. Pak zvol heslo. Příště se budeš přihlašovat firemním e-mailem.',
     auth_code: 'Aktivační kód', btn_weiter: 'Dál', btn_activate: 'Aktivovat',
     auth_code_wrong: '⚠ Špatný kód',
     auth_no_names: 'V seznamu už není žádné volné jméno. Ozvi se prosím svému nadřízenému.',
@@ -3372,6 +3376,9 @@ function authField(id, labelKey, type, autocomplete, value, inputmode) {
 // Anmeldename: E-Mail (normale Benutzer) oder kurzer Benutzername (Admin) — gleiche Regeln wie auf dem Server.
 const EMAIL_RE = /^[a-z0-9][a-z0-9._-]{0,63}@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/;
 function isEmail(v) { return typeof v === 'string' && v.length <= 100 && EMAIL_RE.test(v); }
+// Normale Benutzer: nur Adressen der Firmendomäne (der Server erzwingt dasselbe).
+const ALLOWED_EMAIL_DOMAIN = 'eder-gmbh.de';
+function isUserEmail(v) { return isEmail(v) && v.endsWith('@' + ALLOWED_EMAIL_DOMAIN); }
 function isLoginId(v) { return /^[a-z0-9][a-z0-9._-]{2,31}$/.test(v) || isEmail(v); }
 function setAuthMsg(text, info) {
   const el = byId('auth-msg');
@@ -3412,12 +3419,13 @@ function renderAuthMode(msg, info) {
       hint = t('auth_activate_hint1'); submit = t('btn_weiter');
       html = authField('auth-code', 'auth_code', 'text', 'off');
     } else {
-      hint = activateNames.length ? t('auth_activate_hint2') : t('auth_no_names'); submit = t('btn_activate');
-      if (activateNames.length) {
+      hint = activateEntries.length ? t('auth_activate_hint2') : t('auth_no_names'); submit = t('btn_activate');
+      if (activateEntries.length) {
         html = '<div class="auth-field"><label for="auth-name">' + t('roster_label') + '</label>' +
-          '<select class="note-input" id="auth-name" onchange="activatePick()"><option value="">' + t('roster_pick') + '</option>' +
-          activateNames.map(function (n, i) { return '<option value="' + i + '">' + escHtml(n) + '</option>'; }).join('') + '</select></div>' +
-          authField('auth-username', 'auth_email', 'text', 'username') +
+          '<input class="note-input" id="auth-name" type="text" list="auth-name-list" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" placeholder="' + escHtml(t('auth_name_ph')) + '" oninput="activateNameInput()" onchange="activateNameInput()">' +
+          '<datalist id="auth-name-list">' + activateEntries.map(function (e) { return '<option value="' + escHtml(e.name) + '"></option>'; }).join('') + '</datalist></div>' +
+          '<div class="auth-hint" id="auth-email-info" style="display:none;"></div>' +
+          '<div id="auth-email-box" style="display:none;">' + authField('auth-username', 'auth_email', 'text', 'username') + '</div>' +
           authField('auth-password', 'auth_new_password', 'password', 'new-password') +
           authField('auth-password2', 'auth_new_password2', 'password', 'new-password');
       }
@@ -3431,19 +3439,20 @@ function renderAuthMode(msg, info) {
            authField('auth-newpw2', 'auth_new_password2', 'password', 'new-password');
   }
   byId('auth-fields').innerHTML = html;
+  if (authMode === 'activate' && byId('auth-username')) byId('auth-username').placeholder = 'name@' + ALLOWED_EMAIL_DOMAIN;
   byId('auth-title').textContent = title;
   byId('auth-hint').textContent = hint;
   byId('auth-submit').textContent = submit;
-  byId('auth-submit').style.display = (authMode === 'activate' && activateStep === 2 && !activateNames.length) ? 'none' : '';
+  byId('auth-submit').style.display = (authMode === 'activate' && activateStep === 2 && !activateEntries.length) ? 'none' : '';
   renderAuthSecondary();
   setAuthMsg(msg || '', info);
   byId('auth-lang-cs').classList.toggle('active', curLang() === 'cs');
   byId('auth-lang-de').classList.toggle('active', curLang() === 'de');
 }
 // Erste Anmeldung (Selbst-Aktivierung): Schritt 1 = Code, Schritt 2 = Name wählen + Zugangsdaten.
-let activateStep = 1, activateCode = '', activateNames = [];
+let activateStep = 1, activateCode = '', activateEntries = [];
 function showAuthOverlay(mode, msg, opts) {
-  if (mode === 'activate') { activateStep = 1; activateCode = ''; activateNames = []; }
+  if (mode === 'activate') { activateStep = 1; activateCode = ''; activateEntries = []; }
   authMode = mode;
   authForced = !!(opts && opts.forced);
   if (opts && opts.username !== undefined) authPrefillUser = opts.username;
@@ -3493,6 +3502,7 @@ function authErrorText(res) {
   if (code === 'invalid_credentials') return t('auth_invalid');
   if (code === 'invalid_username') return t('auth_username_invalid');
   if (code === 'invalid_email') return t('auth_email_invalid');
+  if (code === 'invalid_email_domain') return t('auth_email_domain');
   if (code === 'invalid_password') return t('auth_pw_short');
   if (code === 'bad_setup_key') return t('auth_setup_key_wrong');
   if (code === 'bad_code') return t('auth_code_wrong');
@@ -3522,8 +3532,20 @@ async function doSetup() {
   if (res && res.body && res.body.error === 'already_set_up') { authNeedsSetup = false; showAuthOverlay('login', t('auth_already_set_up')); return; }
   setAuthMsg(authErrorText(res));
 }
-// (kein Namensvorschlag mehr: der Anmeldename ist die E-Mail-Adresse)
-function activatePick() {}
+// Eintrag der Monteurliste, der zum eingetippten Namen passt (ohne Groß-/Kleinschreibung und Akzente).
+function activateMatch() {
+  const typed = searchNorm(authValue('auth-name'));
+  return typed ? (activateEntries.find(function (e) { return searchNorm(e.name) === typed; }) || null) : null;
+}
+// Je nach Auswahl: hinterlegte E-Mail (nur maskiert angezeigt) oder Eingabefeld für die Adresse.
+function activateNameInput() {
+  const e = activateMatch();
+  const info = byId('auth-email-info'), box = byId('auth-email-box');
+  if (!info || !box) return;
+  if (!e) { info.style.display = 'none'; box.style.display = 'none'; return; }
+  if (e.emailHint) { info.textContent = tf('auth_email_known', e.emailHint); info.style.display = ''; box.style.display = 'none'; }
+  else { info.style.display = 'none'; box.style.display = ''; }
+}
 async function doActivate() {
   if (activateStep === 1) {
     const code = authValue('auth-code').trim();
@@ -3532,26 +3554,31 @@ async function doActivate() {
     const res = await apiCall({ action: 'activationInfo', code }, { noAuth: true }).catch(function () { return null; });
     if (!(res && res.ok)) { setAuthMsg(authErrorText(res)); return; }
     activateCode = code;
-    activateNames = res.body.names || [];
+    activateEntries = res.body.entries || (res.body.names || []).map(function (n) { return { name: n }; });
     activateStep = 2;
     suggestedUsername = '';
     renderAuthMode();
     return;
   }
-  const idx = authValue('auth-name');
-  const username = authValue('auth-username').trim().toLowerCase();
+  const entry = activateMatch();
+  const typed = authValue('auth-username').trim().toLowerCase();
   const password = authValue('auth-password');
-  if (idx === '' || !username || !password || !authValue('auth-password2')) { setAuthMsg(t('auth_fill_all')); return; }
-  if (!isEmail(username)) { setAuthMsg(t('auth_email_invalid')); return; }
+  if (!entry) { setAuthMsg(t(authValue('auth-name').trim() ? 'roster_choose' : 'auth_fill_all')); return; }
+  if (!password || !authValue('auth-password2')) { setAuthMsg(t('auth_fill_all')); return; }
+  if (!entry.emailHint) {   // keine Adresse hinterlegt → muss selbst eingegeben werden
+    if (!typed) { setAuthMsg(t('auth_fill_all')); return; }
+    if (!isEmail(typed)) { setAuthMsg(t('auth_email_invalid')); return; }
+    if (!isUserEmail(typed)) { setAuthMsg(t('auth_email_domain')); return; }
+  }
   if (password !== authValue('auth-password2')) { setAuthMsg(t('auth_pw_mismatch')); return; }
   if (password.length < 8) { setAuthMsg(t('auth_pw_short')); return; }
   setAuthMsg(t('auth_busy'), true);
-  const res = await apiCall({ action: 'activate', code: activateCode, name: activateNames[parseInt(idx, 10)], username, password }, { noAuth: true }).catch(function () { return null; });
+  const res = await apiCall({ action: 'activate', code: activateCode, name: entry.name, username: entry.emailHint ? undefined : typed, password }, { noAuth: true }).catch(function () { return null; });
   if (res && res.ok) { onAuthenticated(res.body); return; }
   const err = res && res.body && res.body.error;
   if (err === 'name_unavailable' || err === 'bad_code') {
     // Liste/Code sind nicht mehr aktuell → zurück zu Schritt 1.
-    activateStep = 1; activateNames = [];
+    activateStep = 1; activateEntries = [];
     renderAuthMode(authErrorText(res));
     return;
   }
@@ -3984,7 +4011,8 @@ function nameKey(first, last) { return ((first || '') + ' ' + (last || '')).repl
 // Namen aus der Liste, für die noch kein Konto existiert.
 function availableRoster() {
   const taken = new Set(usersCache.map(function (u) { return nameKey(u.profile && u.profile.firstName, u.profile && u.profile.lastName); }));
-  return rosterCache.filter(function (n) { return !taken.has(nameKey(n)); });
+  const takenMail = new Set(usersCache.map(function (u) { return u.username; }));
+  return rosterCache.filter(function (e) { return !taken.has(nameKey(e.name)) && !(e.email && takenMail.has(e.email)); });
 }
 function splitFullName(full) {
   const i = full.indexOf(' ');
@@ -4000,8 +4028,10 @@ function onRosterPick() {
   manual.style.display = v === '__other' ? '' : 'none';
   let first = '', last = '';
   if (v !== '' && v !== '__other') {
-    const p = splitFullName(rosterAvail[parseInt(v, 10)] || '');
+    const e = rosterAvail[parseInt(v, 10)] || { name: '' };
+    const p = splitFullName(e.name);
     first = p.first; last = p.last;
+    if (e.email && byId('uf-username')) byId('uf-username').value = e.email;   // Adresse aus der Liste vorausfüllen
   }
   byId('uf-firstname').value = first;
   byId('uf-lastname').value = last;
@@ -4013,7 +4043,7 @@ function renderActivationCode() {
   byId('roster-code-off').style.display = activationCode ? '' : 'none';
 }
 function openRoster() {
-  byId('roster-text').value = rosterCache.join('\n');
+  byId('roster-text').value = rosterCache.map(function (e) { return e.name + (e.email ? '; ' + e.email : ''); }).join('\n');
   byId('roster-msg').textContent = '';
   renderActivationCode();
   openSheet('sheet-roster');
@@ -4085,7 +4115,7 @@ function openUserForm(mode, username) {
     // Name aus der Monteurliste wählen; „Anderer Name“ blendet die Freitextfelder ein.
     html += '<div class="auth-field"><label for="uf-roster">' + t('roster_label') + '</label>' +
       '<select class="note-input" id="uf-roster" onchange="onRosterPick()"><option value="">' + t('roster_pick') + '</option>' +
-      rosterAvail.map(function (n, i) { return '<option value="' + i + '">' + escHtml(n) + '</option>'; }).join('') +
+      rosterAvail.map(function (e, i) { return '<option value="' + i + '">' + escHtml(e.name) + '</option>'; }).join('') +
       '<option value="__other">' + t('roster_other') + '</option></select></div>' +
       '<div id="uf-name-manual" style="display:none;">' + nameFields + '</div>';
   }
@@ -4117,7 +4147,9 @@ async function submitUserForm() {
     const username = val('uf-username').toLowerCase();
     if (byId('uf-roster') && byId('uf-roster').value === '') { msg.textContent = t('roster_choose'); return; }
     // normale Benutzer melden sich mit ihrer E-Mail-Adresse an, ein Admin darf auch einen kurzen Benutzernamen haben
-    if (val('uf-role') === 'admin' ? !isLoginId(username) : !isEmail(username)) { msg.textContent = t(val('uf-role') === 'admin' ? 'auth_username_invalid' : 'auth_email_invalid'); return; }
+    if (val('uf-role') === 'admin') { if (!isLoginId(username)) { msg.textContent = t('auth_username_invalid'); return; } }
+    else if (!isEmail(username)) { msg.textContent = t('auth_email_invalid'); return; }
+    else if (!isUserEmail(username)) { msg.textContent = t('auth_email_domain'); return; }
     if (val('uf-password').length < 8) { msg.textContent = t('auth_pw_short'); return; }
     body = { action: 'createUser', username, password: val('uf-password'), firstName: val('uf-firstname'), lastName: val('uf-lastname'), weeklyNorm: parseFloat(val('uf-norm')) || 40, role: val('uf-role') };
   } else if (userFormMode === 'edit') {

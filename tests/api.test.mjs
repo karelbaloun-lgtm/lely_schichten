@@ -12,7 +12,7 @@ class MemStore {
 const SETUP_KEY = 'test-setup-key';
 function makeApi() {
   const stores = { accounts: new MemStore(), sessions: new MemStore(), userdata: new MemStore() };
-  const handler = createHandler(() => stores, { setupKeyHash: sha256(SETUP_KEY) });
+  const handler = createHandler(() => stores, { setupKeyHash: sha256(SETUP_KEY), allowedEmailDomain: 'firma.de' });
   async function call(body, token) {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers.Authorization = 'Bearer ' + token;
@@ -248,8 +248,8 @@ await test('roster: admin sets/gets, sanitized + deduplicated; users and anonymo
   assert.deepEqual((await api.call({ action: 'getRoster' }, api.admin)).body.roster, []);
   const set = await api.call({ action: 'setRoster', roster: ['  Jan   Novak ', 'jan novak', '', 'Petr Svoboda', 42, null] }, api.admin);
   assert.equal(set.status, 200);
-  assert.deepEqual(set.body.roster, ['Jan Novak', 'Petr Svoboda', '42']);
-  assert.deepEqual((await api.call({ action: 'getRoster' }, api.admin)).body.roster, ['Jan Novak', 'Petr Svoboda', '42']);
+  assert.deepEqual(set.body.roster, [{ name: 'Jan Novak' }, { name: 'Petr Svoboda' }, { name: '42' }]);
+  assert.deepEqual((await api.call({ action: 'getRoster' }, api.admin)).body.roster, [{ name: 'Jan Novak' }, { name: 'Petr Svoboda' }, { name: '42' }]);
   assert.equal((await api.call({ action: 'getRoster' }, api.user)).status, 403);
   assert.equal((await api.call({ action: 'setRoster', roster: ['x'] }, api.user)).status, 403);
   assert.equal((await api.call({ action: 'getRoster' })).status, 401);
@@ -321,18 +321,73 @@ await test('E-Mail als Anmeldename: createUser verlangt E-Mail für Benutzer, Ad
   const api = await withAdmin();
   assert.equal((await api.call({ action: 'createUser', username: 'jan', password: 'initial-pass1', firstName: 'Jan' }, api.admin)).body.error, 'invalid_email');
   assert.equal((await api.call({ action: 'createUser', username: 'jan', password: 'initial-pass1', role: 'user' }, api.admin)).status, 400);
-  const mail = await api.call({ action: 'createUser', username: '  Jan.Novak@Eder-GmbH.de ', password: 'initial-pass1', firstName: 'Jan', lastName: 'Novak' }, api.admin);
+  const mail = await api.call({ action: 'createUser', username: '  Jan.Novak@Firma.DE ', password: 'initial-pass1', firstName: 'Jan', lastName: 'Novak' }, api.admin);
   assert.equal(mail.status, 200);
-  assert.equal(mail.body.user.username, 'jan.novak@eder-gmbh.de');
-  assert.equal((await api.call({ action: 'createUser', username: 'JAN.NOVAK@eder-gmbh.de', password: 'another-pass1' }, api.admin)).status, 409); // gleiche Adresse, andere Schreibweise
-  const l = await api.call({ action: 'login', username: 'JAN.novak@EDER-gmbh.de', password: 'initial-pass1' });
+  assert.equal(mail.body.user.username, 'jan.novak@firma.de');
+  assert.equal((await api.call({ action: 'createUser', username: 'JAN.NOVAK@firma.de', password: 'another-pass1' }, api.admin)).status, 409); // gleiche Adresse, andere Schreibweise
+  const l = await api.call({ action: 'login', username: 'JAN.novak@FIRMA.de', password: 'initial-pass1' });
   assert.equal(l.status, 200);
-  assert.equal(l.body.user.username, 'jan.novak@eder-gmbh.de');
-  assert.equal((await api.call({ action: 'getData', user: 'jan.novak@eder-gmbh.de' }, api.admin)).status, 200);
+  assert.equal(l.body.user.username, 'jan.novak@firma.de');
+  assert.equal((await api.call({ action: 'getData', user: 'jan.novak@firma.de' }, api.admin)).status, 200);
   const admin2 = await api.call({ action: 'createUser', username: 'chef', password: 'initial-pass1', role: 'admin' }, api.admin);
   assert.equal(admin2.status, 200);
   assert.equal((await api.call({ action: 'login', username: 'chef', password: 'initial-pass1' })).status, 200);
   assert.equal((await api.call({ action: 'createUser', username: '../etc@x.de', password: 'initial-pass1' }, api.admin)).status, 400);
+});
+
+await test('Monteurliste mit E-Mail-Adressen: Parser, Domäne, maskierter Hinweis, feste Adresse bei Aktivierung', async () => {
+  // eigener Handler mit der echten Standard-Domäne
+  const stores = { accounts: new MemStore(), sessions: new MemStore(), userdata: new MemStore() };
+  const handler = createHandler(() => stores, { setupKeyHash: sha256(SETUP_KEY) });
+  const call = async (body, token) => {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    const res = await handler(new Request('http://x/api', { method: 'POST', headers, body: JSON.stringify(body) }));
+    return { status: res.status, body: await res.json() };
+  };
+  const admin = (await call({ action: 'setup', setupKey: SETUP_KEY, username: 'karel', password: 'password123', firstName: 'Karel', lastName: 'Baloun' })).body.token;
+  const set = await call({ action: 'setRoster', roster: [
+    'Jan Novák; Jan.Novak@Eder-GmbH.de',
+    'Petr van Berg <petr.vanberg@eder-gmbh.de>',
+    'eva.svobodova@eder-gmbh.de',
+    'Cizí Adresa; cizi@gmail.com',
+    'Bez Adresy',
+    { name: 'Objekt Zápis', email: 'objekt.zapis@eder-gmbh.de' },
+    'Duplicita Mail; jan.novak@eder-gmbh.de'
+  ] }, admin);
+  assert.deepEqual(set.body.roster, [
+    { name: 'Jan Novák', email: 'jan.novak@eder-gmbh.de' },
+    { name: 'Petr van Berg', email: 'petr.vanberg@eder-gmbh.de' },
+    { name: 'Eva Svobodova', email: 'eva.svobodova@eder-gmbh.de' },
+    { name: 'Cizí Adresa' },              // Adresse außerhalb der Domäne wird nicht übernommen
+    { name: 'Bez Adresy' },
+    { name: 'Objekt Zápis', email: 'objekt.zapis@eder-gmbh.de' },
+    { name: 'Duplicita Mail' }             // gleiche Adresse schon vergeben → nur der Name bleibt
+  ]);
+  const code = (await call({ action: 'setActivation', mode: 'generate' }, admin)).body.activationCode;
+  const info = await call({ action: 'activationInfo', code });
+  assert.equal(info.status, 200);
+  assert.deepEqual(info.body.entries[0], { name: 'Jan Novák', emailHint: 'j***@eder-gmbh.de' });
+  assert.deepEqual(info.body.entries[3], { name: 'Cizí Adresa' });
+  assert.ok(!JSON.stringify(info.body).includes('jan.novak@'), 'echte Adresse darf nicht an den Client gehen');
+  // feste Adresse: ein abweichender Wunsch wird ignoriert
+  const a1 = await call({ action: 'activate', code, name: 'Jan Novák', username: 'cizi@gmail.com', password: 'secret-pass1' });
+  assert.equal(a1.status, 200);
+  assert.equal(a1.body.user.username, 'jan.novak@eder-gmbh.de');
+  // ohne hinterlegte Adresse: Domäne wird erzwungen
+  assert.equal((await call({ action: 'activate', code, name: 'Bez Adresy', username: 'bez@gmail.com', password: 'secret-pass1' })).body.error, 'invalid_email_domain');
+  assert.equal((await call({ action: 'activate', code, name: 'Bez Adresy', username: 'bez', password: 'secret-pass1' })).body.error, 'invalid_email');
+  assert.equal((await call({ action: 'activate', code, name: 'Bez Adresy', username: 'Bez.Adresy@EDER-gmbh.de', password: 'secret-pass1' })).status, 200);
+  // Admin-Anlage: Domäne für Benutzer erzwungen, Admin davon ausgenommen
+  assert.equal((await call({ action: 'createUser', username: 'x@gmail.com', password: 'initial-pass1' }, admin)).body.error, 'invalid_email_domain');
+  assert.equal((await call({ action: 'createUser', username: 'x@eder-gmbh.de', password: 'initial-pass1' }, admin)).status, 200);
+  assert.equal((await call({ action: 'createUser', username: 'chef', password: 'initial-pass1', role: 'admin' }, admin)).status, 200);
+  // Eintrag verschwindet aus der Auswahl, sobald die Adresse als Konto existiert
+  const after = (await call({ action: 'activationInfo', code })).body.names;
+  assert.ok(!after.includes('Jan Novák') && !after.includes('Bez Adresy'));
+  // alte Listen (reine Textzeilen im Speicher) werden weiter gelesen
+  await stores.userdata.setJSON('_roster', { names: ['Alt Eintrag'], lastModified: 1 });
+  assert.deepEqual((await call({ action: 'getRoster' }, admin)).body.roster, [{ name: 'Alt Eintrag' }]);
 });
 
 await test('malformed requests', async () => {
