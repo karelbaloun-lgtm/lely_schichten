@@ -70,12 +70,31 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 }
 /* iPhone/Safari: Felder < 16 px lösen beim Antippen einen Zoom aus; native Innenschatten/Rundungen entfernen. */
 @supports (-webkit-touch-callout: none) {
-  input, select, textarea, .note-input, .setting-input, .name-input, .pause-input { font-size: 16px; }
+  input, select, textarea, .note-input, .setting-input, .name-input, .pause-input, .search-input { font-size: 16px; }
 }
 input.note-input, textarea.note-input, input.setting-input, input.name-input, input.pause-input { -webkit-appearance: none; appearance: none; }
 
-.month-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--bg); overflow-x: auto; scrollbar-width: none; }
+.month-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .month-bar::-webkit-scrollbar { display: none; }
+/* Kundensuche: 🔍-Knopf rechts im Monatsstreifen, klappt eine Suchleiste darunter auf. */
+.month-row { border-bottom: 1px solid var(--border); background: var(--bg); }
+.month-line { display: flex; align-items: center; }
+.month-search-btn { flex: none; width: 36px; height: 36px; margin: 0 14px 0 0; border-radius: 50%; border: 1px solid var(--border2); background: var(--s1); color: var(--muted); font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
+.month-search-btn.active { border-color: var(--brand); color: var(--brand); }
+.search-bar { display: none; gap: 8px; padding: 0 14px 10px 20px; }
+.search-input { flex: 1; min-width: 0; background: var(--s2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: var(--text); font-family: var(--sans); font-size: 15px; -webkit-appearance: none; appearance: none; }
+.search-input:focus { outline: none; border-color: var(--brand); }
+.search-go { flex: none; width: 46px; border: none; border-radius: 12px; background: linear-gradient(145deg, var(--brand) 0%, var(--brand-dark) 100%); color: #fff; font-size: 16px; cursor: pointer; touch-action: manipulation; }
+.sr-summary { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+.sr-summary b { color: var(--text); }
+.sr-row { display: grid; grid-template-columns: 76px 1fr auto; gap: 0 12px; align-items: center; padding: 12px 14px; background: var(--s2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; touch-action: manipulation; }
+.sr-row:active { border-color: var(--brand); }
+.sr-date { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.35; }
+.sr-date b { display: block; font-size: 15px; font-weight: 500; color: var(--text); }
+.sr-main { min-width: 0; }
+.sr-cust { font-weight: 600; overflow-wrap: anywhere; }
+.sr-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.sr-h { font-family: var(--mono); font-size: 14px; font-weight: 600; text-align: right; white-space: nowrap; }
 .month-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-family: var(--mono); cursor: pointer; border: 1px solid var(--border); color: var(--muted); transition: all 0.15s; touch-action: manipulation; white-space: nowrap; }
 .month-chip.active { background: linear-gradient(135deg, rgba(226,0,26,0.18) 0%, rgba(151,12,34,0.12) 100%); border-color: rgba(226,0,26,0.7); color: var(--brand); font-weight: 500; box-shadow: 0 0 0 1px rgba(226,0,26,0.15); }
 
@@ -386,7 +405,16 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
     </div>
   </header>
 
-  <div class="month-bar" id="month-bar"></div>
+  <div class="month-row">
+    <div class="month-line">
+      <div class="month-bar" id="month-bar"></div>
+      <button class="month-search-btn" id="search-toggle" type="button" onclick="toggleSearch()">🔍</button>
+    </div>
+    <form class="search-bar" id="search-bar" onsubmit="runSearch(); return false;">
+      <input class="search-input" id="search-input" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" list="customer-history">
+      <button class="search-go" type="submit" id="search-go">🔍</button>
+    </form>
+  </div>
 
   <div class="timeline" id="timeline">
     <div id="timeline-content"></div>
@@ -597,6 +625,15 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
     <button class="btn-main secondary" onclick="closeSheet('sheet-user-form')" data-i18n="btn_abbrechen">Abbrechen</button>
     <button class="btn-main primary" onclick="submitUserForm()" data-i18n="btn_speichern">Speichern</button>
   </div>
+</div>
+
+<div class="sheet" id="sheet-search">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title" data-i18n="sheet_search_title">Suchergebnis</div>
+    <button class="sheet-close" onclick="closeSheet('sheet-search')">✕</button>
+  </div>
+  <div class="sheet-body" id="search-body"></div>
 </div>
 
 <div class="sheet" id="sheet-roster">
@@ -1220,7 +1257,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // Muss bei JEDEM Deploy auf das aktuelle Datum aktualisiert werden (Format
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
-const LAST_UPDATED = '09.10.2026';
+const LAST_UPDATED = '12.10.2026';
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -1263,6 +1300,8 @@ const I18N = {
     confirm_adopt_legacy: 'Auf diesem Gerät sind noch {0} Einträge aus der Zeit vor der Anmeldung gespeichert. In dein Konto übernehmen?',
     profile_locked_hint: 'Wird vom Administrator festgelegt',
     sheet_users_title: 'Benutzer', btn_new_user: '＋ Neuer Benutzer', btn_export_users: '📄 Liste (TXT)',
+    search_placeholder: 'Kunde / Objekt suchen …', sheet_search_title: 'Suchergebnis', search_none: 'Nichts gefunden',
+    search_summary: '{0} Einsätze an {1} Tagen · {2} vor Ort', search_travel: 'Anfahrt',
     roster_edit: '👷 Monteurliste bearbeiten', sheet_roster_title: 'Monteurliste',
     roster_hint: 'Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
     roster_label: 'Monteur', roster_pick: '— Monteur wählen —', roster_other: '✏️ Anderer Name …',
@@ -1417,6 +1456,8 @@ const I18N = {
     confirm_adopt_legacy: 'V tomto zařízení je ještě uloženo {0} záznamů z doby před přihlášením. Převzít je do tvého účtu?',
     profile_locked_hint: 'Nastavuje administrátor',
     sheet_users_title: 'Uživatelé', btn_new_user: '＋ Nový uživatel', btn_export_users: '📄 Seznam (TXT)',
+    search_placeholder: 'Hledat zákazníka / objekt …', sheet_search_title: 'Výsledky hledání', search_none: 'Nic nenalezeno',
+    search_summary: '{0} zakázek za {1} dnů · {2} na místě', search_travel: 'Cesta',
     roster_edit: '👷 Upravit seznam montérů', sheet_roster_title: 'Seznam montérů',
     roster_hint: 'Jedno jméno na řádek (Jméno Příjmení). Kdo už má účet, z výběru automaticky zmizí.',
     roster_label: 'Montér', roster_pick: '— Vyber montéra —', roster_other: '✏️ Jiné jméno …',
@@ -1828,6 +1869,77 @@ function renderCustomerHistory() {
   dl.innerHTML = customerHistoryOptions().map(function (n) {
     return '<option value="' + n.replace(/"/g, '&quot;') + '"></option>';
   }).join('');
+}
+
+// ─── Kundensuche: wann war ich bei welchem Kunden, wie lange? ────────────────
+// Durchsucht das Feld "Kunde/Objekt" aller Einsätze (ohne Groß-/Kleinschreibung
+// und Akzente, alle Suchwörter müssen vorkommen). Dauer vor Ort = Installation
+// (Von–Bis) abzüglich Pause; die Anfahrt wird separat angezeigt.
+function searchNorm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
+function searchCustomerHits(query) {
+  const tokens = searchNorm(query).split(/\s+/).filter(Boolean);
+  if (!tokens.length) return [];
+  const hits = [];
+  shifts.forEach(function (sh) {
+    if (sh.type !== 'work') return;
+    (sh.legs || []).forEach(function (leg) {
+      const name = (leg.note || '').trim();
+      if (!name) return;
+      const hay = searchNorm(name);
+      if (!tokens.every(function (tk) { return hay.indexOf(tk) !== -1; })) return;
+      const onsite = Math.max(0, segmentHours(leg.installStart, leg.installEnd) - (leg.pause || 0) / 60);
+      hits.push({
+        id: sh.id, date: sh.date, customer: name,
+        start: leg.installStart || '', end: leg.installEnd || '',
+        hours: onsite, travel: segmentHours(leg.arrivalStart, leg.arrivalEnd)
+      });
+    });
+  });
+  hits.sort(function (a, b) { return b.date.localeCompare(a.date); });
+  return hits;
+}
+function toggleSearch() {
+  const bar = byId('search-bar'), btn = byId('search-toggle');
+  const open = bar.style.display === 'none' || bar.style.display === '';
+  bar.style.display = open ? 'flex' : 'none';
+  btn.classList.toggle('active', open);
+  const inp = byId('search-input');
+  inp.placeholder = t('search_placeholder');
+  if (open) inp.focus(); else inp.value = '';
+}
+function runSearch() {
+  const q = byId('search-input').value.trim();
+  if (!q) return;
+  const hits = searchCustomerHits(q);
+  let html;
+  if (!hits.length) {
+    html = '<div class="empty-state">' + t('search_none') + '</div>';
+  } else {
+    const total = hits.reduce(function (sum, h) { return sum + h.hours; }, 0);
+    const days = new Set(hits.map(function (h) { return h.date; })).size;
+    html = '<div class="sr-summary">' + tf('search_summary', '<b>' + hits.length + '</b>', '<b>' + days + '</b>', '<b>' + fmtH(total) + '</b>') + '</div>' +
+      hits.map(function (h) {
+        const d = parseISODate(h.date);
+        const times = h.start && h.end ? h.start + '–' + h.end : '';
+        const travel = h.travel > 0 ? t('search_travel') + ' ' + fmtH(h.travel) : '';
+        return '<div class="sr-row" onclick="openSearchHit(\'' + h.id + '\')">' +
+          '<div class="sr-date">' + curDAYS()[d.getDay()] + '<b>' + fmtDayMonth(h.date) + '</b>' + d.getFullYear() + '</div>' +
+          '<div class="sr-main"><div class="sr-cust">' + escHtml(h.customer) + '</div>' +
+          '<div class="sr-sub">' + [times, travel].filter(Boolean).join(' · ') + '</div></div>' +
+          '<div class="sr-h">' + fmtH(h.hours) + '</div></div>';
+      }).join('');
+  }
+  byId('search-body').innerHTML = html;
+  openSheet('sheet-search');
+}
+function openSearchHit(id) {
+  const sh = shifts.find(function (x) { return x.id === id; });
+  closeSheet('sheet-search');
+  if (!sh) return;
+  activeMonth = monthKey(sh.date);
+  renderMonthBar();
+  renderTimeline();
+  openDetail(id);
 }
 
 let detailId = null;
