@@ -72,23 +72,37 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 }
 /* iPhone/Safari: Felder < 16 px lösen beim Antippen einen Zoom aus; native Innenschatten/Rundungen entfernen. */
 @supports (-webkit-touch-callout: none) {
-  input, select, textarea, .note-input, .setting-input, .name-input, .pause-input, .search-input { font-size: 16px; }
+  input, select, textarea, .note-input, .setting-input, .name-input, .pause-input, .cust-filter { font-size: 16px; }
 }
 input.note-input, textarea.note-input, input.setting-input, input.name-input, input.pause-input { -webkit-appearance: none; appearance: none; }
 
 .month-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .month-bar::-webkit-scrollbar { display: none; }
-/* Kundensuche: 🔍-Knopf rechts im Monatsstreifen, klappt eine Suchleiste darunter auf. */
 .month-row { border-bottom: 1px solid var(--border); background: var(--bg); }
-.month-line { display: flex; align-items: center; }
-.month-search-btn { flex: none; width: 36px; height: 36px; margin: 0 14px 0 0; border-radius: 50%; border: 1px solid var(--border2); background: var(--s1); color: var(--muted); font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
-.month-search-btn.active { border-color: var(--brand); color: var(--brand); }
-/* Kleines Feld (~5 Zeichen), schiebt sich von der Lupe nach links auf; Auswahl aus dem Vorschlag startet die Suche. */
-.search-form { display: none; flex: none; width: 100px; margin: 0 6px 0 0; }
-.search-form.open { display: block; animation: search-expand 0.22s ease-out; }
-@keyframes search-expand { from { width: 0; opacity: 0; } to { width: 100px; opacity: 1; } }
-.search-input { width: 100%; min-width: 0; height: 36px; background: var(--s2); border: 1px solid var(--border2); border-radius: 18px; padding: 0 12px; color: var(--text); font-family: var(--sans); font-size: 15px; -webkit-appearance: none; appearance: none; }
-.search-input:focus { outline: none; border-color: var(--brand); }
+/* Kunden-Übersicht: ersetzt Monatsstreifen + Zeitleiste, solange "Kunden" aktiv ist. */
+.customers-page { display: none; grid-row: 2 / 4; flex-direction: column; min-height: 0; background: var(--bg); }
+.app.view-customers .month-row, .app.view-customers .timeline { display: none; }
+.app.view-customers .customers-page { display: flex; }
+.app.view-customers .bottom-nav { grid-row: 4; }
+.cust-head { flex: none; padding: 12px 20px 8px; border-bottom: 1px solid var(--border); }
+.cust-filter-wrap { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--border2); background: var(--s1); color: var(--muted); }
+.cust-filter-wrap:focus-within { border-color: var(--brand); }
+.cust-filter { flex: 1; min-width: 0; height: 100%; border: none; background: transparent; color: var(--text); font-family: var(--sans); font-size: 15px; outline: none; -webkit-appearance: none; appearance: none; }
+.cust-detail-head { display: flex; align-items: center; gap: 10px; padding-top: 10px; padding-bottom: 10px; }
+.cust-back { flex: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border2); background: var(--s1); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
+.cust-detail-name { font-size: 17px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.cust-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; padding: 12px 20px 24px; }
+.cust-list { background: var(--s1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.cust-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+.cust-row:last-child { border-bottom: none; }
+.cust-row:active { background: var(--s2); }
+.cust-name { font-size: 14px; font-weight: 500; line-height: 1.3; overflow-wrap: anywhere; }
+.cust-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.cust-hours { font-family: var(--mono); font-size: 14px; font-weight: 500; white-space: nowrap; }
+.cust-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.cust-tile { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+.cust-tile b { display: block; font-size: 15px; font-weight: 600; }
+.cust-tile span { font-size: 11px; color: var(--muted); }
 .sr-summary { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
 .sr-summary b { color: var(--text); }
 .sr-row { display: grid; grid-template-columns: 76px 1fr auto; gap: 0 12px; align-items: center; padding: 12px 14px; background: var(--s2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; touch-action: manipulation; }
@@ -414,21 +428,27 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </header>
 
   <div class="month-row">
-    <div class="month-line">
-      <div class="month-bar" id="month-bar"></div>
-      <form class="search-form" id="search-form" onsubmit="runSearch(); return false;">
-        <input class="search-input" id="search-input" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" list="customer-history" oninput="searchInputChanged(event)" onchange="searchInputChanged(event, true)">
-      </form>
-      <button class="month-search-btn" id="search-toggle" type="button" onclick="searchBtn()" aria-label="Search"><svg class="ic" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
-    </div>
+    <div class="month-bar" id="month-bar"></div>
   </div>
 
   <div class="timeline" id="timeline">
     <div id="timeline-content"></div>
   </div>
 
+  <div class="customers-page" id="customers-page">
+    <div class="cust-head" id="cust-list-head">
+      <div class="cust-filter-wrap"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="cust-filter" id="cust-filter" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" oninput="custFilterChanged()"></div>
+    </div>
+    <div class="cust-head cust-detail-head" id="cust-detail-head" style="display:none;">
+      <button class="cust-back" type="button" onclick="custBack()" aria-label="Back"><svg class="ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+      <div class="cust-detail-name" id="cust-detail-name"></div>
+    </div>
+    <div class="cust-body" id="cust-body"></div>
+  </div>
+
   <nav class="bottom-nav">
     <button class="nav-btn" onclick="openExport('share')"><span class="icon"><svg class="ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></span><span data-i18n="nav_teilen">Teilen</span></button>
+    <button class="nav-btn" id="nav-customers" onclick="toggleCustomers()"><span class="icon"><svg class="ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span data-i18n="nav_kunden">Kunden</span></button>
     <div class="fab">
       <button class="fab-btn" onclick="toggleFab()" id="fab-btn">＋</button>
       <div class="fab-menu" id="fab-menu">
@@ -632,15 +652,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
     <button class="btn-main secondary" onclick="closeSheet('sheet-user-form')" data-i18n="btn_abbrechen">Abbrechen</button>
     <button class="btn-main primary" onclick="submitUserForm()" data-i18n="btn_speichern">Speichern</button>
   </div>
-</div>
-
-<div class="sheet" id="sheet-search">
-  <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <div class="sheet-title" data-i18n="sheet_search_title">Suchergebnis</div>
-    <button class="sheet-close" onclick="closeSheet('sheet-search')">✕</button>
-  </div>
-  <div class="sheet-body" id="search-body"></div>
 </div>
 
 <div class="sheet" id="sheet-roster">
@@ -1308,7 +1319,8 @@ const I18N = {
     profile_locked_hint: 'Wird vom Administrator festgelegt',
     sheet_users_title: 'Benutzer', btn_new_user: '＋ Neuer Benutzer', btn_export_users: '📄 Liste (TXT)',
     search_placeholder: 'Kunde', sheet_search_title: 'Suchergebnis', search_none: 'Nichts gefunden',
-    search_summary: '{0} Einsätze an {1} Tagen · {2} vor Ort', search_travel: 'Anfahrt',
+    search_summary: '{0} Einsätze an {1} Tagen · {2} vor Ort', search_travel: 'Anfahrt', nav_kunden: 'Kunden', cust_filter_ph: 'Kunde filtern', cust_empty: 'Noch keine Kunden eingetragen.',
+    cust_visit_1: 'Besuch', cust_visit_2: 'Besuche', cust_visit_5: 'Besuche', cust_visits: 'Besuche', cust_onsite: 'vor Ort', cust_last: 'zuletzt', cust_last_short: 'zuletzt',
     roster_edit: '👷 Monteurliste bearbeiten', sheet_roster_title: 'Monteurliste',
     roster_hint: 'Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
     roster_label: 'Monteur', roster_pick: '— Monteur wählen —', roster_other: '✏️ Anderer Name …',
@@ -1464,7 +1476,8 @@ const I18N = {
     profile_locked_hint: 'Nastavuje administrátor',
     sheet_users_title: 'Uživatelé', btn_new_user: '＋ Nový uživatel', btn_export_users: '📄 Seznam (TXT)',
     search_placeholder: 'Zákazník', sheet_search_title: 'Výsledky hledání', search_none: 'Nic nenalezeno',
-    search_summary: '{0} zakázek za {1} dnů · {2} na místě', search_travel: 'Cesta',
+    search_summary: '{0} zakázek za {1} dnů · {2} na místě', search_travel: 'Cesta', nav_kunden: 'Zákazníci', cust_filter_ph: 'Filtrovat zákazníka', cust_empty: 'Zatím žádní zákazníci.',
+    cust_visit_1: 'návštěva', cust_visit_2: 'návštěvy', cust_visit_5: 'návštěv', cust_visits: 'návštěv', cust_onsite: 'na místě', cust_last: 'naposledy', cust_last_short: 'naposledy',
     roster_edit: '👷 Upravit seznam montérů', sheet_roster_title: 'Seznam montérů',
     roster_hint: 'Jedno jméno na řádek (Jméno Příjmení). Kdo už má účet, z výběru automaticky zmizí.',
     roster_label: 'Montér', roster_pick: '— Vyber montéra —', roster_other: '✏️ Jiné jméno …',
@@ -1851,7 +1864,7 @@ function renderTimeline() {
   }).filter(h => h).join('');
 }
 
-function renderAll() { renderMonthBar(); renderTimeline(); renderCustomerHistory(); }
+function renderAll() { renderMonthBar(); renderTimeline(); renderCustomerHistory(); renderCustomers(); }
 
 // ─── Kunden-Verlauf (Autocomplete aus bisher eingetragenen Kunden) ─────────
 // Reihenfolge = zuletzt benutzt zuerst (nicht "zuerst je eingegeben zuerst")
@@ -1877,96 +1890,121 @@ function renderCustomerHistory() {
   }).join('');
 }
 
-// ─── Kundensuche: wann war ich bei welchem Kunden, wie lange? ────────────────
-// Durchsucht das Feld "Kunde/Objekt" aller Einsätze (ohne Groß-/Kleinschreibung
-// und Akzente, alle Suchwörter müssen vorkommen). Dauer vor Ort = Installation
-// (Von–Bis) abzüglich Pause; die Anfahrt wird separat angezeigt.
-function searchNorm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
-function searchCustomerHits(query) {
-  const tokens = searchNorm(query).split(/\s+/).filter(Boolean);
-  if (!tokens.length) return [];
-  const hits = [];
+// ─── Kunden-Übersicht: wann war ich bei welchem Kunden, wie lange? ─────────
+// Gruppiert alle Einsätze nach dem Feld "Kunde/Objekt" (ohne Groß-/Kleinschreibung
+// und Akzente). Dauer vor Ort = Installation (Von–Bis) abzüglich Pause; die
+// Anfahrt wird separat angezeigt.
+function searchNorm(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+function customerVisits() {
+  const visits = [];
   shifts.forEach(function (sh) {
     if (sh.type !== 'work') return;
     (sh.legs || []).forEach(function (leg) {
       const name = (leg.note || '').trim();
       if (!name) return;
-      const hay = searchNorm(name);
-      if (!tokens.every(function (tk) { return hay.indexOf(tk) !== -1; })) return;
-      const onsite = Math.max(0, segmentHours(leg.installStart, leg.installEnd) - (leg.pause || 0) / 60);
-      hits.push({
-        id: sh.id, date: sh.date, customer: name,
+      visits.push({
+        id: sh.id, date: sh.date, customer: name, key: searchNorm(name),
         start: leg.installStart || '', end: leg.installEnd || '',
-        hours: onsite, travel: segmentHours(leg.arrivalStart, leg.arrivalEnd)
+        hours: Math.max(0, segmentHours(leg.installStart, leg.installEnd) - (leg.pause || 0) / 60),
+        travel: segmentHours(leg.arrivalStart, leg.arrivalEnd)
       });
     });
   });
-  hits.sort(function (a, b) { return b.date.localeCompare(a.date); });
-  return hits;
+  return visits;
 }
-function searchOpen() { return byId('search-form').classList.contains('open'); }
-function openSearch() {
-  byId('search-form').classList.add('open');
-  byId('search-toggle').classList.add('active');
-  const inp = byId('search-input');
-  inp.placeholder = t('search_placeholder');
-  inp.focus();
+function customerGroups() {
+  const map = {};
+  customerVisits().forEach(function (v) {
+    const g = map[v.key] || (map[v.key] = { key: v.key, name: v.customer, last: '', hours: 0, visits: [], spellings: {} });
+    g.visits.push(v);
+    g.hours += v.hours;
+    if (v.date > g.last) g.last = v.date;
+    const sp = v.customer.replace(/\s+/g, ' ');
+    g.spellings[sp] = (g.spellings[sp] || 0) + 1;
+  });
+  const list = Object.keys(map).map(function (k) { return map[k]; });
+  list.forEach(function (g) {
+    g.visits.sort(function (a, b) { return b.date.localeCompare(a.date); });
+    // angezeigter Name = am häufigsten verwendete Schreibweise (bei Gleichstand die neueste)
+    let best = -1;
+    g.visits.forEach(function (v) {
+      const sp = v.customer.replace(/\s+/g, ' ');
+      if (g.spellings[sp] > best) { best = g.spellings[sp]; g.name = sp; }
+    });
+  });
+  list.sort(function (a, b) { return b.last.localeCompare(a.last); });
+  return list;
 }
-function closeSearch() {
-  byId('search-form').classList.remove('open');
-  byId('search-toggle').classList.remove('active');
-  byId('search-input').value = '';
-  byId('search-input').blur();
+let custState = { detail: null };
+let custShown = [];
+function inCustomers() { return document.querySelector('.app').classList.contains('view-customers'); }
+function visitsLabel(n) {
+  if (curLang() === 'cs') return n + ' ' + (n === 1 ? t('cust_visit_1') : n >= 2 && n <= 4 ? t('cust_visit_2') : t('cust_visit_5'));
+  return n + ' ' + (n === 1 ? t('cust_visit_1') : t('cust_visit_5'));
 }
-// 🔍: zu → aufklappen; offen + Text → suchen; offen + leer → zuklappen.
-function searchBtn() {
-  if (!searchOpen()) { openSearch(); return; }
-  if (byId('search-input').value.trim()) runSearch(); else closeSearch();
+function fmtDateShort(iso) {
+  const y = parseISODate(iso).getFullYear();
+  return fmtDayMonth(iso) + (y !== new Date().getFullYear() ? y : '');
 }
-// Wird ein Vorschlag aus der Kundenliste gewählt (Eingabe = genau ein bekannter
-// Kunde und nicht getippt), startet die Suche sofort.
-function searchInputChanged(e, isChange) {
-  const v = byId('search-input').value.trim();
-  if (!v) return;
-  const picked = isChange || !e.inputType || e.inputType === 'insertReplacementText';
-  if (!picked) return;
-  const known = customerHistoryOptions();
-  if (known.some(function (n) { return searchNorm(n) === searchNorm(v); })) runSearch();
-}
-function runSearch() {
-  const q = byId('search-input').value.trim();
-  if (!q) return;
-  byId('search-input').blur();   // Tastatur einklappen, damit die Ergebnisse sichtbar sind
-  const hits = searchCustomerHits(q);
-  let html;
-  if (!hits.length) {
-    html = '<div class="empty-state">' + t('search_none') + '</div>';
+function setView(view) {
+  const on = view === 'customers';
+  document.querySelector('.app').classList.toggle('view-customers', on);
+  byId('nav-customers').classList.toggle('active', on);
+  if (on) {
+    custState.detail = null;
+    byId('cust-filter').value = '';
+    byId('cust-filter').placeholder = t('cust_filter_ph');
+    renderCustomers();
   } else {
-    const total = hits.reduce(function (sum, h) { return sum + h.hours; }, 0);
-    const days = new Set(hits.map(function (h) { return h.date; })).size;
-    html = '<div class="sr-summary">' + tf('search_summary', '<b>' + hits.length + '</b>', '<b>' + days + '</b>', '<b>' + fmtH(total) + '</b>') + '</div>' +
-      hits.map(function (h) {
-        const d = parseISODate(h.date);
-        const times = h.start && h.end ? h.start + '–' + h.end : '';
-        const travel = h.travel > 0 ? t('search_travel') + ' ' + fmtH(h.travel) : '';
-        return '<div class="sr-row" onclick="openSearchHit(\'' + h.id + '\')">' +
-          '<div class="sr-date">' + curDAYS()[d.getDay()] + '<b>' + fmtDayMonth(h.date) + '</b>' + d.getFullYear() + '</div>' +
-          '<div class="sr-main"><div class="sr-cust">' + escHtml(h.customer) + '</div>' +
-          '<div class="sr-sub">' + [times, travel].filter(Boolean).join(' · ') + '</div></div>' +
-          '<div class="sr-h">' + fmtH(h.hours) + '</div></div>';
-      }).join('');
+    renderTimeline();
   }
-  byId('search-body').innerHTML = html;
-  openSheet('sheet-search');
 }
-function openSearchHit(id) {
-  const sh = shifts.find(function (x) { return x.id === id; });
-  closeSheet('sheet-search');
-  if (!sh) return;
-  activeMonth = monthKey(sh.date);
-  renderMonthBar();
-  renderTimeline();
-  openDetail(id);
+function toggleCustomers() { setView(inCustomers() ? 'timeline' : 'customers'); }
+function custFilterChanged() { renderCustomers(); }
+function openCustomer(i) {
+  if (!custShown[i]) return;
+  custState.detail = custShown[i].key;
+  byId('cust-body').scrollTop = 0;
+  renderCustomers();
+}
+function custBack() { custState.detail = null; renderCustomers(); }
+function openCustomerVisit(id) { openDetail(id); }
+function renderCustomers() {
+  if (!inCustomers()) return;
+  byId('cust-filter').placeholder = t('cust_filter_ph');
+  const groups = customerGroups();
+  const body = byId('cust-body');
+  const detail = custState.detail ? groups.find(function (g) { return g.key === custState.detail; }) : null;
+  if (custState.detail && !detail) custState.detail = null;
+  byId('cust-list-head').style.display = detail ? 'none' : '';
+  byId('cust-detail-head').style.display = detail ? 'flex' : 'none';
+  if (detail) {
+    byId('cust-detail-name').textContent = detail.name;
+    body.innerHTML = '<div class="cust-tiles">' +
+      '<div class="cust-tile"><b>' + detail.visits.length + '</b><span>' + t('cust_visits') + '</span></div>' +
+      '<div class="cust-tile"><b>' + fmtH(detail.hours) + '</b><span>' + t('cust_onsite') + '</span></div>' +
+      '<div class="cust-tile"><b>' + fmtDateShort(detail.last) + '</b><span>' + t('cust_last') + '</span></div></div>' +
+      '<div class="cust-list">' + detail.visits.map(function (v) {
+        const d = parseISODate(v.date);
+        const times = v.start && v.end ? v.start + '–' + v.end : '—';
+        const travel = v.travel > 0 ? ' · ' + t('search_travel') + ' ' + fmtH(v.travel) : '';
+        return '<div class="cust-row" onclick="openCustomerVisit(\'' + v.id + '\')"><div>' +
+          '<div class="cust-name">' + curDAYS()[d.getDay()] + ' ' + d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear() + '</div>' +
+          '<div class="cust-meta">' + times + travel + '</div></div>' +
+          '<div class="cust-hours">' + fmtH(v.hours) + '</div></div>';
+      }).join('') + '</div>';
+    return;
+  }
+  const tokens = searchNorm(byId('cust-filter').value).split(' ').filter(Boolean);
+  custShown = groups.filter(function (g) { return tokens.every(function (tk) { return g.key.indexOf(tk) !== -1; }); });
+  if (!groups.length) { body.innerHTML = '<div class="empty-state">' + t('cust_empty') + '</div>'; return; }
+  if (!custShown.length) { body.innerHTML = '<div class="empty-state">' + t('search_none') + '</div>'; return; }
+  body.innerHTML = '<div class="cust-list">' + custShown.map(function (g, i) {
+    return '<div class="cust-row" onclick="openCustomer(' + i + ')"><div>' +
+      '<div class="cust-name">' + escHtml(g.name) + '</div>' +
+      '<div class="cust-meta">' + visitsLabel(g.visits.length) + ' · ' + t('cust_last_short') + ' ' + fmtDateShort(g.last) + '</div></div>' +
+      '<div class="cust-hours">' + fmtH(g.hours) + '</div></div>';
+  }).join('') + '</div>';
 }
 
 let detailId = null;
