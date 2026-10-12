@@ -230,11 +230,11 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .field { margin-bottom: 16px; }
 .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 7px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
 .seg-control { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: var(--s2); border-radius: 12px; padding: 6px; }
-.seg-btn { padding: 11px 8px; border-radius: 8px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; background: none; color: var(--muted); transition: all 0.15s; font-family: var(--sans); touch-action: manipulation; }
+.seg-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 11px 8px; border-radius: 8px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; background: none; color: var(--muted); transition: all 0.15s; font-family: var(--sans); touch-action: manipulation; }
 .seg-btn.active { background: var(--s1); color: var(--text); border: 1px solid var(--border2); }
 .date-tile { background: var(--s2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; gap: 14px; cursor: pointer; touch-action: manipulation; transition: border-color 0.15s; }
 .date-tile:active { border-color: var(--brand); }
-.date-tile-icon { font-size: 22px; }
+.date-tile-icon { display: flex; color: var(--brand-text); }
 .date-tile-val { font-family: var(--mono); font-size: 16px; color: var(--text); flex: 1; }
 
 .segment-group { margin-bottom: 14px; background: var(--s2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
@@ -268,7 +268,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 
 .hotel-toggle { width: 100%; padding: 14px 16px; border-radius: 12px; background: var(--s2); border: 1px solid var(--border); color: var(--text); font-family: var(--sans); font-size: 14px; cursor: pointer; touch-action: manipulation; display: flex; align-items: center; gap: 12px; transition: background 0.15s, border-color 0.15s; text-align: left; }
 .hotel-toggle.active { background: var(--brand-dim); border-color: var(--brand); }
-.hotel-toggle .ht-icon { font-size: 22px; flex-shrink: 0; }
+.hotel-toggle .ht-icon { display: flex; color: var(--brand-text); flex-shrink: 0; }
 .hotel-toggle .ht-text { flex: 1; font-weight: 500; }
 
 .sheet-actions { display: flex; gap: 10px; padding: 16px 24px; flex-shrink: 0; border-top: 1px solid var(--border); }
@@ -497,7 +497,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
   <div class="sheet-body" id="edit-body"></div>
   <div class="sheet-actions">
-    <button class="btn-main secondary" id="edit-delete-btn" onclick="deleteCurrentShift()" style="display:none;flex:none;width:52px;padding:0;">🗑</button>
+    <button class="btn-main secondary" id="edit-delete-btn" onclick="deleteCurrentShift()" style="display:none;flex:none;width:52px;padding:0;align-items:center;justify-content:center;" aria-label="Delete"><svg class="ic" style="margin:0 auto" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg></button>
     <button class="btn-main secondary" onclick="closeSheet('sheet-edit')" data-i18n="btn_abbrechen">Abbrechen</button>
     <button class="btn-main primary" onclick="saveShift()" data-i18n="btn_speichern">Speichern</button>
   </div>
@@ -1416,9 +1416,9 @@ const I18N = {
     detail_art: 'Art', detail_typ_arbeit: 'Arbeit', detail_typ_krank: 'Krank', detail_typ_urlaub: 'Urlaub',
     detail_kunde: 'Kunde', detail_anfahrt: 'Anfahrt', detail_installation: 'Installation',
     detail_pause: 'Pause', detail_min: 'Min.', detail_notiz: 'Notiz', detail_abfahrt: 'Abfahrt',
-    detail_uebernachtung: 'Übernachtung', detail_hotel: '🏨 Hotel', detail_heimfahrt: '🚗 Heimfahrt',
+    detail_uebernachtung: 'Übernachtung', detail_hotel: 'Hotel', detail_heimfahrt: 'Heimfahrt',
     detail_bezahlte_stunden: 'Bezahlte Stunden',
-    field_art: 'Art', seg_arbeit: '🔨 Arbeit', seg_krank: '🤒 Krank', seg_urlaub: '🌴 Urlaub',
+    field_art: 'Art', seg_arbeit: 'Arbeit', seg_krank: 'Krank', seg_urlaub: 'Urlaub',
     field_datum: 'Datum', field_zeitraum: 'Zeitraum', field_bis: 'bis',
     btn_weiteren_kunden: '＋ Weiteren Kunden hinzufügen',
     segment_abfahrt: 'Abfahrt', daily_limit_label: 'Bezahlte Zeit heute',
@@ -1574,9 +1574,9 @@ const I18N = {
     detail_art: 'Typ', detail_typ_arbeit: 'Práce', detail_typ_krank: 'Nemoc', detail_typ_urlaub: 'Dovolená',
     detail_kunde: 'Zákazník', detail_anfahrt: 'Příjezd', detail_installation: 'Instalace',
     detail_pause: 'Přestávka', detail_min: 'min', detail_notiz: 'Poznámka', detail_abfahrt: 'Odjezd',
-    detail_uebernachtung: 'Nocleh', detail_hotel: '🏨 Hotel', detail_heimfahrt: '🚗 Domů',
+    detail_uebernachtung: 'Nocleh', detail_hotel: 'Hotel', detail_heimfahrt: 'Domů',
     detail_bezahlte_stunden: 'Placené hodiny',
-    field_art: 'Typ', seg_arbeit: '🔨 Práce', seg_krank: '🤒 Nemoc', seg_urlaub: '🌴 Dovolená',
+    field_art: 'Typ', seg_arbeit: 'Práce', seg_krank: 'Nemoc', seg_urlaub: 'Dovolená',
     field_datum: 'Datum', field_zeitraum: 'Rozsah', field_bis: 'do',
     btn_weiteren_kunden: '＋ Přidat dalšího zákazníka',
     segment_abfahrt: 'Odjezd', daily_limit_label: 'Placený čas dnes',
@@ -2265,6 +2265,19 @@ function updateDailyLimitIndicator() {
 }
 
 // ─── Bearbeiten-Sheet ───────────────────────────────────────────────────
+// Linien-Icons für das Schicht-Formular.
+const FORM_ICONS = {
+  tool: '<path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5"/>',
+  thermometer: '<path d="M10 13.5a4 4 0 1 0 4 0v-8.5a2 2 0 0 0 -4 0v8.5"/><path d="M10 9l4 0"/>',
+  sun: '<path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"/>',
+  calendar: '<path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/>',
+  car: '<path d="M5 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M5 17h-2v-6l2 -5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0h-6m-6 -6h15m-6 0v-5"/>',
+  bed: '<path d="M3 7v11m0 -4h18m0 4v-8a2 2 0 0 0 -2 -2h-8v6"/><path d="M7 10m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>',
+  trash: '<path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>'
+};
+function formIcon(name, size) {
+  return '<svg class="ic" viewBox="0 0 24 24" width="' + size + '" height="' + size + '" aria-hidden="true">' + FORM_ICONS[name] + '</svg>';
+}
 let editId = null;
 let currentType = 'work';
 let currentStay = 'home';
@@ -2275,22 +2288,22 @@ function editBodyHtml() {
     <div class="field">
       <label>${t('field_art')}</label>
       <div class="seg-control">
-        <button class="seg-btn" data-type="work" onclick="setType('work')">${t('seg_arbeit')}</button>
-        <button class="seg-btn" data-type="sick" onclick="setType('sick')">${t('seg_krank')}</button>
-        <button class="seg-btn" data-type="vacation" onclick="setType('vacation')">${t('seg_urlaub')}</button>
+        <button class="seg-btn" data-type="work" onclick="setType('work')">${formIcon('tool', 16)}<span>${t('seg_arbeit')}</span></button>
+        <button class="seg-btn" data-type="sick" onclick="setType('sick')">${formIcon('thermometer', 16)}<span>${t('seg_krank')}</span></button>
+        <button class="seg-btn" data-type="vacation" onclick="setType('vacation')">${formIcon('sun', 16)}<span>${t('seg_urlaub')}</span></button>
       </div>
     </div>
     <div class="field">
       <label>${t('field_datum')}</label>
       <input type="date" id="f-date" style="display:none">
       <div class="date-tile" onclick="openCal()">
-        <span class="date-tile-icon">📅</span>
+        <span class="date-tile-icon">${formIcon('calendar', 22)}</span>
         <span class="date-tile-val" id="date-tile-val">—</span>
       </div>
     </div>
     <div class="field" id="range-toggle-field" style="display:none">
       <button type="button" class="hotel-toggle" id="range-toggle-btn" onclick="toggleRangeMode()">
-        <span class="ht-icon">📆</span>
+        <span class="ht-icon">${formIcon('calendar', 22)}</span>
         <div class="ht-text"><div>${t('field_zeitraum')}</div></div>
       </button>
     </div>
@@ -2298,7 +2311,7 @@ function editBodyHtml() {
       <label>${t('field_bis')}</label>
       <input type="date" id="f-date-end" style="display:none">
       <div class="date-tile" onclick="openCal('end')">
-        <span class="date-tile-icon">📅</span>
+        <span class="date-tile-icon">${formIcon('calendar', 22)}</span>
         <span class="date-tile-val" id="date-tile-end-val">—</span>
       </div>
     </div>
@@ -2319,7 +2332,7 @@ function editBodyHtml() {
       <div class="field">
         <label>${t('field_uebernachtung')}</label>
         <button class="hotel-toggle" id="stay-btn" onclick="toggleStay()">
-          <span class="ht-icon" id="stay-icon">🚗</span>
+          <span class="ht-icon" id="stay-icon">${formIcon('car', 22)}</span>
           <div class="ht-text"><div id="stay-label">${t('stay_heimfahrt_plain')}</div></div>
         </button>
       </div>
@@ -2335,7 +2348,7 @@ function legHtml(leg, idx, total) {
     <div class="segment-group leg-group" data-leg-idx="${idx}">
       <div class="leg-header">
         <span class="leg-header-title">${t('leg_kunde')} ${idx + 1}</span>
-        ${total > 1 ? `<button type="button" class="leg-remove" onclick="removeLeg(${idx})">🗑</button>` : ''}
+        ${total > 1 ? `<button type="button" class="leg-remove" onclick="removeLeg(${idx})">${formIcon('trash', 18)}</button>` : ''}
       </div>
       <div class="leg-sublabel">${t('leg_anfahrt')}</div>
       <div class="time-row"><input type="time" class="time-input leg-arrival-start" value="${leg.arrivalStart || ''}"><input type="time" class="time-input leg-arrival-end" value="${leg.arrivalEnd || ''}"></div>
@@ -2450,7 +2463,7 @@ function toggleStay() { currentStay = currentStay === 'home' ? 'hotel' : 'home';
 function updateStayBtn() {
   const btn = document.getElementById('stay-btn');
   btn.classList.toggle('active', currentStay === 'hotel');
-  document.getElementById('stay-icon').textContent = currentStay === 'hotel' ? '🏨' : '🚗';
+  document.getElementById('stay-icon').innerHTML = formIcon(currentStay === 'hotel' ? 'bed' : 'car', 22);
   document.getElementById('stay-label').textContent = currentStay === 'hotel' ? t('stay_hotel_plain') : t('stay_heimfahrt_plain');
 }
 
