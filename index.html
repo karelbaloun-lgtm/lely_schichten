@@ -1317,7 +1317,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // ob sein Gerät wirklich die neueste Version geladen hat.
 const LAST_UPDATED = '12.10.2026';
 // Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
-const APP_VERSION = 39;
+const APP_VERSION = 40;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -3168,6 +3168,8 @@ function renderDiag() {
   const cs = getComputedStyle(probe);
   const safe = [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft].map(function (v) { return Math.round(parseFloat(v) || 0); }).join('/');
   document.body.removeChild(probe);
+  const unitProbe = function (u) { const d = document.createElement('div'); d.style.cssText = 'position:fixed;visibility:hidden;left:0;top:0;width:1px;height:100' + u + ';'; document.body.appendChild(d); const h = Math.round(d.getBoundingClientRect().height); document.body.removeChild(d); return h; };
+  const units = ['vh', 'svh', 'lvh', 'dvh'].map(function (u) { return u + ' ' + unitProbe(u); }).join(', ');
   const vv = window.visualViewport;
   const app = document.querySelector('.app').getBoundingClientRect();
   const standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
@@ -3176,7 +3178,7 @@ function renderDiag() {
     ' · doc ' + document.documentElement.clientWidth + '×' + document.documentElement.clientHeight + ' (scroll ' + document.documentElement.scrollWidth + ')' +
     ' · screen ' + screen.width + '×' + screen.height + ' · dpr ' + devicePixelRatio +
     ' · app ' + Math.round(app.width) + '×' + Math.round(app.height) + '@' + Math.round(app.left) + ',' + Math.round(app.top) +
-    ' · safe ' + safe + ' · sab ' + (document.documentElement.style.getPropertyValue('--sab').indexOf('env') >= 0 ? 'env' : '0') + ' · ' + (standalone ? 'App' : 'Browser');
+    ' · units ' + units + ' · outer ' + outerWidth + '×' + outerHeight + ' · availH ' + screen.availHeight + ' · vvTop ' + (vv ? Math.round(vv.offsetTop) + '/' + Math.round(vv.pageTop) : '–') + ' · safe ' + safe + ' · sab ' + (document.documentElement.style.getPropertyValue('--sab').indexOf('env') >= 0 ? 'env' : '0') + ' · ' + (standalone ? 'App' : 'Browser');
 }
 // Zeigt zusätzlich die Version des gespeicherten App-Speichers, falls sie von dieser Seite abweicht
 // (= das Gerät hat noch eine ältere Version im Speicher und wartet auf das Update).
