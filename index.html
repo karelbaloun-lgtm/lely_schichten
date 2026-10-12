@@ -81,10 +81,12 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .month-line { display: flex; align-items: center; }
 .month-search-btn { flex: none; width: 36px; height: 36px; margin: 0 14px 0 0; border-radius: 50%; border: 1px solid var(--border2); background: var(--s1); color: var(--muted); font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
 .month-search-btn.active { border-color: var(--brand); color: var(--brand); }
-.search-bar { display: none; gap: 8px; padding: 0 14px 10px 20px; }
-.search-input { flex: 1; min-width: 0; background: var(--s2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: var(--text); font-family: var(--sans); font-size: 15px; -webkit-appearance: none; appearance: none; }
+/* Kleines Feld (~5 Zeichen), schiebt sich von der Lupe nach links auf; Auswahl aus dem Vorschlag startet die Suche. */
+.search-form { display: none; flex: none; width: 100px; margin: 0 6px 0 0; }
+.search-form.open { display: block; animation: search-expand 0.22s ease-out; }
+@keyframes search-expand { from { width: 0; opacity: 0; } to { width: 100px; opacity: 1; } }
+.search-input { width: 100%; min-width: 0; height: 36px; background: var(--s2); border: 1px solid var(--border2); border-radius: 18px; padding: 0 12px; color: var(--text); font-family: var(--sans); font-size: 15px; -webkit-appearance: none; appearance: none; }
 .search-input:focus { outline: none; border-color: var(--brand); }
-.search-go { flex: none; width: 46px; border: none; border-radius: 12px; background: linear-gradient(145deg, var(--brand) 0%, var(--brand-dark) 100%); color: #fff; font-size: 16px; cursor: pointer; touch-action: manipulation; }
 .sr-summary { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
 .sr-summary b { color: var(--text); }
 .sr-row { display: grid; grid-template-columns: 76px 1fr auto; gap: 0 12px; align-items: center; padding: 12px 14px; background: var(--s2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; touch-action: manipulation; }
@@ -408,12 +410,11 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   <div class="month-row">
     <div class="month-line">
       <div class="month-bar" id="month-bar"></div>
-      <button class="month-search-btn" id="search-toggle" type="button" onclick="toggleSearch()">🔍</button>
+      <form class="search-form" id="search-form" onsubmit="runSearch(); return false;">
+        <input class="search-input" id="search-input" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" list="customer-history" oninput="searchInputChanged(event)" onchange="searchInputChanged(event, true)">
+      </form>
+      <button class="month-search-btn" id="search-toggle" type="button" onclick="searchBtn()">🔍</button>
     </div>
-    <form class="search-bar" id="search-bar" onsubmit="runSearch(); return false;">
-      <input class="search-input" id="search-input" type="search" enterkeyhint="search" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" list="customer-history">
-      <button class="search-go" type="submit" id="search-go">🔍</button>
-    </form>
   </div>
 
   <div class="timeline" id="timeline">
@@ -1300,7 +1301,7 @@ const I18N = {
     confirm_adopt_legacy: 'Auf diesem Gerät sind noch {0} Einträge aus der Zeit vor der Anmeldung gespeichert. In dein Konto übernehmen?',
     profile_locked_hint: 'Wird vom Administrator festgelegt',
     sheet_users_title: 'Benutzer', btn_new_user: '＋ Neuer Benutzer', btn_export_users: '📄 Liste (TXT)',
-    search_placeholder: 'Kunde / Objekt suchen …', sheet_search_title: 'Suchergebnis', search_none: 'Nichts gefunden',
+    search_placeholder: 'Kunde', sheet_search_title: 'Suchergebnis', search_none: 'Nichts gefunden',
     search_summary: '{0} Einsätze an {1} Tagen · {2} vor Ort', search_travel: 'Anfahrt',
     roster_edit: '👷 Monteurliste bearbeiten', sheet_roster_title: 'Monteurliste',
     roster_hint: 'Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
@@ -1456,7 +1457,7 @@ const I18N = {
     confirm_adopt_legacy: 'V tomto zařízení je ještě uloženo {0} záznamů z doby před přihlášením. Převzít je do tvého účtu?',
     profile_locked_hint: 'Nastavuje administrátor',
     sheet_users_title: 'Uživatelé', btn_new_user: '＋ Nový uživatel', btn_export_users: '📄 Seznam (TXT)',
-    search_placeholder: 'Hledat zákazníka / objekt …', sheet_search_title: 'Výsledky hledání', search_none: 'Nic nenalezeno',
+    search_placeholder: 'Zákazník', sheet_search_title: 'Výsledky hledání', search_none: 'Nic nenalezeno',
     search_summary: '{0} zakázek za {1} dnů · {2} na místě', search_travel: 'Cesta',
     roster_edit: '👷 Upravit seznam montérů', sheet_roster_title: 'Seznam montérů',
     roster_hint: 'Jedno jméno na řádek (Jméno Příjmení). Kdo už má účet, z výběru automaticky zmizí.',
@@ -1898,18 +1899,39 @@ function searchCustomerHits(query) {
   hits.sort(function (a, b) { return b.date.localeCompare(a.date); });
   return hits;
 }
-function toggleSearch() {
-  const bar = byId('search-bar'), btn = byId('search-toggle');
-  const open = bar.style.display === 'none' || bar.style.display === '';
-  bar.style.display = open ? 'flex' : 'none';
-  btn.classList.toggle('active', open);
+function searchOpen() { return byId('search-form').classList.contains('open'); }
+function openSearch() {
+  byId('search-form').classList.add('open');
+  byId('search-toggle').classList.add('active');
   const inp = byId('search-input');
   inp.placeholder = t('search_placeholder');
-  if (open) inp.focus(); else inp.value = '';
+  inp.focus();
+}
+function closeSearch() {
+  byId('search-form').classList.remove('open');
+  byId('search-toggle').classList.remove('active');
+  byId('search-input').value = '';
+  byId('search-input').blur();
+}
+// 🔍: zu → aufklappen; offen + Text → suchen; offen + leer → zuklappen.
+function searchBtn() {
+  if (!searchOpen()) { openSearch(); return; }
+  if (byId('search-input').value.trim()) runSearch(); else closeSearch();
+}
+// Wird ein Vorschlag aus der Kundenliste gewählt (Eingabe = genau ein bekannter
+// Kunde und nicht getippt), startet die Suche sofort.
+function searchInputChanged(e, isChange) {
+  const v = byId('search-input').value.trim();
+  if (!v) return;
+  const picked = isChange || !e.inputType || e.inputType === 'insertReplacementText';
+  if (!picked) return;
+  const known = customerHistoryOptions();
+  if (known.some(function (n) { return searchNorm(n) === searchNorm(v); })) runSearch();
 }
 function runSearch() {
   const q = byId('search-input').value.trim();
   if (!q) return;
+  byId('search-input').blur();   // Tastatur einklappen, damit die Ergebnisse sichtbar sind
   const hits = searchCustomerHits(q);
   let html;
   if (!hits.length) {
