@@ -1,6 +1,6 @@
 // Service Worker für Lely Schichten — Netzwerk zuerst (aktuelle Version, wenn
 // online), sonst aus dem Cache (funktioniert offline nach dem ersten Besuch).
-const CACHE_VERSION = 'lely-schichten-v34';
+const CACHE_VERSION = 'lely-schichten-v35';
 const CORE_FILES = [
   './',
   './index.html',
@@ -46,6 +46,14 @@ self.addEventListener('fetch', function (event) {
   if (event.request.method !== 'GET') return;
   event.respondWith(
     fetch(event.request).then(function (response) {
+      // Chybová odpověď serveru (např. 503 "Site not available", když je web na Netlify
+      // pozastavený kvůli kreditům) se NESMÍ uložit do cache ani zobrazit místo aplikace:
+      // radši vrátíme poslední funkční verzi z cache (aplikace pak běží offline dál).
+      if (!response.ok && response.type !== 'opaque') {
+        return caches.match(event.request).then(function (cached) {
+          return cached || (event.request.mode === 'navigate' ? caches.match('./index.html') : null) || response;
+        });
+      }
       const copy = response.clone();
       caches.open(CACHE_VERSION).then(function (cache) { cache.put(event.request, copy); });
       return response;
