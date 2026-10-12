@@ -692,7 +692,12 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
   <div class="sheet-body">
     <div class="auth-hint" data-i18n="roster_hint">Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.</div>
-    <textarea class="note-input" id="roster-text" rows="10" placeholder="Jan Novák; jan.novak@eder-gmbh.de" style="width:100%;resize:vertical;" autocomplete="off" autocapitalize="words" spellcheck="false"></textarea>
+    <textarea class="note-input" id="roster-text" rows="10" placeholder="Jan Novák; jan.novak@eder-gmbh.de&#10;van Berg, Petr; petr.vanberg@eder-gmbh.de" style="width:100%;resize:vertical;" autocomplete="off" autocapitalize="words" spellcheck="false"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn-main secondary" style="flex:1;" type="button" onclick="byId('roster-file').click()" data-i18n="btn_roster_load">TXT laden</button>
+      <button class="btn-main secondary" style="flex:1;" type="button" onclick="saveRosterToFile()" data-i18n="btn_roster_save">Als TXT speichern</button>
+      <input type="file" id="roster-file" accept=".txt,.csv,text/plain" style="display:none" onchange="loadRosterFile(this)">
+    </div>
     <div class="auth-msg" id="roster-msg"></div>
     <div class="setting-label" data-i18n="roster_code_label">Aktivierungscode</div>
     <div id="roster-code" style="font-family:var(--mono,monospace);font-size:24px;font-weight:700;letter-spacing:.12em;margin:6px 0;user-select:all;"></div>
@@ -1355,7 +1360,7 @@ const I18N = {
     search_summary: '{0} Einsätze an {1} Tagen · {2} vor Ort', search_travel: 'Anfahrt', nav_kunden: 'Kunden', cust_filter_ph: 'Kunde filtern', sum_line_diet: 'Auslöse', sum_line_ot: 'Überstunden', sum_line_vac: 'Urlaub', sum_line_sick: 'Krank', cust_empty: 'Noch keine Kunden eingetragen.',
     cust_visit_1: 'Besuch', cust_visit_2: 'Besuche', cust_visit_5: 'Besuche', cust_visits: 'Besuche', cust_onsite: 'vor Ort', cust_last: 'zuletzt', cust_last_short: 'zuletzt',
     roster_edit: 'Monteurliste bearbeiten', sheet_roster_title: 'Monteurliste',
-    roster_hint: 'Ein Monteur pro Zeile: Vorname Nachname; E-Mail (die Adresse ist optional, gilt dann als Anmeldename). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
+    roster_hint: 'Ein Monteur pro Zeile: Vorname Nachname; E-Mail (die Adresse ist optional und gilt dann als Anmeldename). Auch „Nachname, Vorname“ geht, Zeilen mit # werden ignoriert. Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
     roster_label: 'Monteur', roster_pick: '— Monteur wählen —', roster_other: 'Anderer Name …',
     roster_choose: '⚠ Bitte einen Monteur wählen', t_roster_saved: '✓ Liste gespeichert',
     auth_local_start: 'Nur auf diesem Gerät nutzen (ohne Anmeldung)', auth_local_back: 'Zurück — ohne Anmeldung weiterarbeiten',
@@ -1410,6 +1415,10 @@ const I18N = {
     help_ios_3: 'Nach unten scrollen und <b>„Zum Home-Bildschirm“</b> antippen.',
     help_ios_4: '<b>Hinzufügen</b> bestätigen.',
     label_vorname: 'Vorname', label_nachname: 'Nachname',
+    label_name: 'Name', name_placeholder: 'Vorname Nachname', setting_name_sub: 'Vorname Nachname (für den Export)',
+    auth_name_both: '⚠ Bitte Vor- und Nachname eingeben, z. B. „Jan Novák“ (erstes Wort = Vorname; sonst „Nachname, Vorname“)',
+    btn_roster_load: 'TXT laden', btn_roster_save: 'Als TXT speichern',
+    roster_file_hint1: 'pro Monteur eine Zeile: Vorname Nachname; E-Mail (E-Mail ist optional)', roster_file_hint2: 'Auch möglich: Nachname, Vorname. Zeilen mit # werden ignoriert.',
     stay_heimfahrt_plain: 'Heimfahrt', stay_hotel_plain: 'Hotel',
     confirm_pause_title: 'Pause zu kurz?',
     btn_bestaetigen: 'BESTÄTIGEN', btn_ueberspringen: 'ÜBERSPRINGEN',
@@ -1516,7 +1525,7 @@ const I18N = {
     search_summary: '{0} zakázek za {1} dnů · {2} na místě', search_travel: 'Cesta', nav_kunden: 'Zákazníci', cust_filter_ph: 'Filtrovat zákazníka', sum_line_diet: 'Diety', sum_line_ot: 'přesčas', sum_line_vac: 'Dovolená', sum_line_sick: 'Nemoc', cust_empty: 'Zatím žádní zákazníci.',
     cust_visit_1: 'návštěva', cust_visit_2: 'návštěvy', cust_visit_5: 'návštěv', cust_visits: 'návštěv', cust_onsite: 'na místě', cust_last: 'naposledy', cust_last_short: 'naposledy',
     roster_edit: 'Upravit seznam montérů', sheet_roster_title: 'Seznam montérů',
-    roster_hint: 'Jeden montér na řádek: Jméno Příjmení; e-mail (adresa je nepovinná, pak slouží jako přihlašovací jméno). Kdo už má účet, z výběru automaticky zmizí.',
+    roster_hint: 'Jeden montér na řádek: Jméno Příjmení; e-mail (adresa je nepovinná a pak slouží jako přihlašovací jméno). Lze i „Příjmení, Jméno“, řádky s # se ignorují. Kdo už má účet, z výběru automaticky zmizí.',
     roster_label: 'Montér', roster_pick: '— Vyber montéra —', roster_other: 'Jiné jméno …',
     roster_choose: '⚠ Vyber prosím montéra', t_roster_saved: '✓ Seznam uložen',
     auth_local_start: 'Používat jen v tomto telefonu (bez přihlášení)', auth_local_back: 'Zpět — pokračovat bez přihlášení',
@@ -1571,6 +1580,10 @@ const I18N = {
     help_ios_3: 'Sjeď dolů a klepni na <b>„Na plochu“</b>.',
     help_ios_4: 'Potvrď <b>Přidat</b>.',
     label_vorname: 'Jméno', label_nachname: 'Příjmení',
+    label_name: 'Jméno a příjmení', name_placeholder: 'Jméno Příjmení', setting_name_sub: 'Jméno Příjmení (pro export)',
+    auth_name_both: '⚠ Zadej jméno i příjmení, např. „Jan Novák“ (první slovo = jméno; jinak „Příjmení, Jméno“)',
+    btn_roster_load: 'Načíst TXT', btn_roster_save: 'Uložit jako TXT',
+    roster_file_hint1: 'jeden montér na řádek: Jméno Příjmení; e-mail (e-mail je nepovinný)', roster_file_hint2: 'Lze i: Příjmení, Jméno. Řádky s # se ignorují.',
     stay_heimfahrt_plain: 'Domů', stay_hotel_plain: 'Hotel',
     confirm_pause_title: 'Přestávka je krátká?',
     btn_bestaetigen: 'POTVRDIT', btn_ueberspringen: 'PŘESKOČIT',
@@ -3073,12 +3086,8 @@ function renderSettings() {
       </div>
     </div>
     <div class="setting-row">
-      <div><div class="setting-label">${t('label_vorname')}</div><div class="setting-sub">${locked ? t('profile_locked_hint') : t('setting_export_sub')}</div></div>
-      <input class="name-input" type="text" id="cfg-firstname" value="${escHtml(config.firstName)}"${locked ? ' disabled' : ''} onchange="updateProfileField('firstName', this.value.trim())">
-    </div>
-    <div class="setting-row">
-      <div><div class="setting-label">${t('label_nachname')}</div><div class="setting-sub">${t('setting_export_sub')}</div></div>
-      <input class="name-input" type="text" id="cfg-lastname" value="${escHtml(config.lastName)}"${locked ? ' disabled' : ''} onchange="updateProfileField('lastName', this.value.trim())">
+      <div><div class="setting-label">${t('label_name')}</div><div class="setting-sub">${locked ? t('profile_locked_hint') : t('setting_name_sub')}</div></div>
+      <input class="name-input" style="width:210px;" type="text" id="cfg-name" value="${escHtml(personFull(config.firstName, config.lastName))}" placeholder="${t('name_placeholder')}" autocapitalize="words"${locked ? ' disabled' : ''} onchange="updateProfileName(this.value)">
     </div>
     <div class="setting-row">
       <div><div class="setting-label">${t('setting_wochennorm')}</div><div class="setting-sub">${t('setting_wochennorm_sub')}</div></div>
@@ -3367,11 +3376,11 @@ let authNeedsSetup = false;
 let authBusy = false;
 let authPrefillUser = '';
 
-function authField(id, labelKey, type, autocomplete, value, inputmode) {
+function authField(id, labelKey, type, autocomplete, value, inputmode, capitalize) {
   const im = inputmode || (autocomplete === 'username' ? 'email' : '');
   return '<div class="auth-field"><label for="' + id + '">' + t(labelKey) + '</label>' +
     '<input class="note-input" id="' + id + '" type="' + type + '" autocomplete="' + autocomplete + '"' + (im ? ' inputmode="' + im + '"' : '') +
-    ' autocapitalize="none" autocorrect="off" spellcheck="false" value="' + escHtml(value || '') + '"></div>';
+    ' autocapitalize="' + (capitalize || 'none') + '" autocorrect="off" spellcheck="false" value="' + escHtml(value || '') + '"></div>';
 }
 // Anmeldename: E-Mail (normale Benutzer) oder kurzer Benutzername (Admin) — gleiche Regeln wie auf dem Server.
 const EMAIL_RE = /^[a-z0-9][a-z0-9._-]{0,63}@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/;
@@ -3379,6 +3388,15 @@ function isEmail(v) { return typeof v === 'string' && v.length <= 100 && EMAIL_R
 // Normale Benutzer: nur Adressen der Firmendomäne (der Server erzwingt dasselbe).
 const ALLOWED_EMAIL_DOMAIN = 'eder-gmbh.de';
 function isUserEmail(v) { return isEmail(v) && v.endsWith('@' + ALLOWED_EMAIL_DOMAIN); }
+// Name in einem Feld: "Vorname Nachname" (erstes Wort = Vorname, Rest = Nachname) oder "Nachname, Vorname".
+function splitPersonName(full) {
+  const t = String(full || '').replace(/\s+/g, ' ').trim();
+  const c = t.indexOf(',');
+  if (c >= 0) return { first: t.slice(c + 1).trim(), last: t.slice(0, c).trim() };
+  const i = t.indexOf(' ');
+  return i < 0 ? { first: t, last: '' } : { first: t.slice(0, i), last: t.slice(i + 1).trim() };
+}
+function personFull(first, last) { return ((first || '') + ' ' + (last || '')).replace(/\s+/g, ' ').trim(); }
 function isLoginId(v) { return /^[a-z0-9][a-z0-9._-]{2,31}$/.test(v) || isEmail(v); }
 function setAuthMsg(text, info) {
   const el = byId('auth-msg');
@@ -3411,8 +3429,7 @@ function renderAuthMode(msg, info) {
     html = authField('auth-setupkey', 'auth_setup_key', 'text', 'off') +
            authField('auth-username', 'auth_username', 'text', 'username') +
            authField('auth-password', 'auth_new_password', 'password', 'new-password') +
-           authField('auth-firstname', 'label_vorname', 'text', 'given-name') +
-           authField('auth-lastname', 'label_nachname', 'text', 'family-name');
+           authField('auth-name', 'label_name', 'text', 'name', '', '', 'words');
   } else if (authMode === 'activate') {
     title = t('auth_title_activate');
     if (activateStep === 1) {
@@ -3523,9 +3540,10 @@ async function doSetup() {
   const username = authValue('auth-username').trim().toLowerCase();
   const password = authValue('auth-password');
   const setupKey = authValue('auth-setupkey').trim();
-  const firstName = authValue('auth-firstname').trim();
-  const lastName = authValue('auth-lastname').trim();
-  if (!username || !password || !setupKey || !firstName || !lastName) { setAuthMsg(t('auth_fill_all')); return; }
+  const person = splitPersonName(authValue('auth-name'));
+  const firstName = person.first, lastName = person.last;
+  if (!username || !password || !setupKey || !authValue('auth-name').trim()) { setAuthMsg(t('auth_fill_all')); return; }
+  if (!firstName || !lastName) { setAuthMsg(t('auth_name_both')); return; }
   setAuthMsg(t('auth_busy'), true);
   const res = await apiCall({ action: 'setup', setupKey, username, password, firstName, lastName, weeklyNorm: 40 }, { noAuth: true }).catch(function () { return null; });
   if (res && res.ok) { onAuthenticated(res.body); return; }
@@ -3963,6 +3981,25 @@ function renderAccountUi() {
 }
 // Name und Wochennorm ändert nur der Admin (über den Server, für das gerade
 // geöffnete Konto).
+// Name aus dem einen Feld (Vorname Nachname) übernehmen; beides wird für den Export gebraucht.
+async function updateProfileName(value) {
+  const p = splitPersonName(value);
+  if (!p.first || !p.last) { toast(t('auth_name_both')); renderSettings(); return; }
+  if (localMode && !auth) {
+    config.firstName = p.first; config.lastName = p.last;
+    saveConfigLocalOnly(); renderAll(); renderSettings();
+    return;
+  }
+  if (!isAdmin()) return;
+  const prev = { first: config.firstName, last: config.lastName };
+  config.firstName = p.first; config.lastName = p.last;
+  saveConfigLocalOnly(); renderAll();
+  const res = await apiCall({ action: 'updateUser', username: dataOwner, firstName: p.first, lastName: p.last }).catch(function () { return null; });
+  if (res && res.ok) { applyProfile(res.body.user.profile); renderSettings(); return; }
+  config.firstName = prev.first; config.lastName = prev.last;
+  saveConfigLocalOnly(); renderAll(); renderSettings();
+  toast(t('t_profile_not_saved'));
+}
 async function updateProfileField(key, value) {
   if (localMode && !auth) {   // ohne Konto gibt es kein Server-Profil: lokal speichern
     config[key] = value;
@@ -4014,10 +4051,6 @@ function availableRoster() {
   const takenMail = new Set(usersCache.map(function (u) { return u.username; }));
   return rosterCache.filter(function (e) { return !taken.has(nameKey(e.name)) && !(e.email && takenMail.has(e.email)); });
 }
-function splitFullName(full) {
-  const i = full.indexOf(' ');
-  return i < 0 ? { first: full, last: '' } : { first: full.slice(0, i), last: full.slice(i + 1).trim() };
-}
 function suggestUsernameFor(first) {
   const base = first.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9._-]/g, '');
   return base.length >= 3 ? base : '';
@@ -4029,12 +4062,11 @@ function onRosterPick() {
   let first = '', last = '';
   if (v !== '' && v !== '__other') {
     const e = rosterAvail[parseInt(v, 10)] || { name: '' };
-    const p = splitFullName(e.name);
+    const p = splitPersonName(e.name);
     first = p.first; last = p.last;
     if (e.email && byId('uf-username')) byId('uf-username').value = e.email;   // Adresse aus der Liste vorausfüllen
   }
-  byId('uf-firstname').value = first;
-  byId('uf-lastname').value = last;
+  byId('uf-name').value = personFull(first, last);
 }
 let activationCode = '';
 function renderActivationCode() {
@@ -4055,6 +4087,26 @@ async function setActivationCode(mode) {
   activationCode = res.body.activationCode || '';
   renderActivationCode();
   toast(t('t_code_changed'));
+}
+// Liste aus einer TXT-Datei in das Textfeld laden (gespeichert wird erst mit "Speichern").
+function loadRosterFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function () {
+    let text;
+    try { text = new TextDecoder('utf-8', { fatal: true }).decode(reader.result); }
+    catch (e) { text = new TextDecoder('windows-1250').decode(reader.result); }   // ältere Notepad-Dateien (ANSI)
+    byId('roster-text').value = text.replace(/\r\n?/g, '\n').replace(/^\uFEFF/, '').trim();
+    byId('roster-msg').textContent = '';
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+function saveRosterToFile() {
+  const header = ['# Monteurliste — ' + t('roster_file_hint1'), '# ' + t('roster_file_hint2'), ''];
+  const body = rosterCache.map(function (e) { return e.name + (e.email ? '; ' + e.email : ''); });
+  triggerDownload(new Blob(['\uFEFF' + header.concat(body).join('\r\n') + '\r\n'], { type: 'text/plain;charset=utf-8' }), 'Lely_Schichten_Monteurliste.txt');
 }
 async function saveRoster() {
   const lines = byId('roster-text').value.split(/\r?\n/);
@@ -4106,8 +4158,7 @@ function openUserForm(mode, username) {
   userFormTarget = username || null;
   const u = usersCache.find(function (x) { return x.username === username; }) || { profile: { firstName: '', lastName: '', weeklyNorm: 40 }, role: 'user' };
   let html = '';
-  const nameFields = authField('uf-firstname', 'label_vorname', 'text', 'off', u.profile.firstName) +
-    authField('uf-lastname', 'label_nachname', 'text', 'off', u.profile.lastName);
+  const nameFields = authField('uf-name', 'label_name', 'text', 'off', personFull(u.profile.firstName, u.profile.lastName), '', 'words');
   rosterAvail = mode === 'create' ? availableRoster() : [];
   suggestedUsername = '';
   const useRoster = rosterAvail.length > 0;
@@ -4142,6 +4193,8 @@ function openUserForm(mode, username) {
 async function submitUserForm() {
   const msg = byId('user-form-msg');
   const val = function (id) { const el = byId(id); return el ? el.value.trim() : ''; };
+  const person = splitPersonName(val('uf-name'));
+  if (userFormMode !== 'reset' && (!person.first || !person.last)) { msg.textContent = t('auth_name_both'); return; }
   let body;
   if (userFormMode === 'create') {
     const username = val('uf-username').toLowerCase();
@@ -4151,9 +4204,9 @@ async function submitUserForm() {
     else if (!isEmail(username)) { msg.textContent = t('auth_email_invalid'); return; }
     else if (!isUserEmail(username)) { msg.textContent = t('auth_email_domain'); return; }
     if (val('uf-password').length < 8) { msg.textContent = t('auth_pw_short'); return; }
-    body = { action: 'createUser', username, password: val('uf-password'), firstName: val('uf-firstname'), lastName: val('uf-lastname'), weeklyNorm: parseFloat(val('uf-norm')) || 40, role: val('uf-role') };
+    body = { action: 'createUser', username, password: val('uf-password'), firstName: person.first, lastName: person.last, weeklyNorm: parseFloat(val('uf-norm')) || 40, role: val('uf-role') };
   } else if (userFormMode === 'edit') {
-    body = { action: 'updateUser', username: userFormTarget, firstName: val('uf-firstname'), lastName: val('uf-lastname'), weeklyNorm: parseFloat(val('uf-norm')) || 40, role: val('uf-role') };
+    body = { action: 'updateUser', username: userFormTarget, firstName: person.first, lastName: person.last, weeklyNorm: parseFloat(val('uf-norm')) || 40, role: val('uf-role') };
   } else {
     if (val('uf-password').length < 8) { msg.textContent = t('auth_pw_short'); return; }
     body = { action: 'resetPassword', username: userFormTarget, newPassword: val('uf-password') };

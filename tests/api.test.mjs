@@ -1,6 +1,6 @@
 // Spuštění: node tests/api.test.mjs
 import assert from 'node:assert/strict';
-import { createHandler, sha256, hashPassword, verifyPassword, sanitizeConfig, sanitizeShifts, validUsername } from '../lib/api-core.mjs';
+import { createHandler, splitPersonName, displayName, sha256, hashPassword, verifyPassword, sanitizeConfig, sanitizeShifts, validUsername } from '../lib/api-core.mjs';
 
 class MemStore {
   constructor() { this.m = new Map(); }
@@ -388,6 +388,33 @@ await test('Monteurliste mit E-Mail-Adressen: Parser, Domäne, maskierter Hinwei
   // alte Listen (reine Textzeilen im Speicher) werden weiter gelesen
   await stores.userdata.setJSON('_roster', { names: ['Alt Eintrag'], lastModified: 1 });
   assert.deepEqual((await call({ action: 'getRoster' }, admin)).body.roster, [{ name: 'Alt Eintrag' }]);
+});
+
+await test('Name in einem Feld: "Vorname Nachname" oder "Nachname, Vorname"; Kommentarzeilen; Aktivierung teilt korrekt', async () => {
+  assert.deepEqual(splitPersonName('Jan Novák'), { first: 'Jan', last: 'Novák' });
+  assert.deepEqual(splitPersonName('  Petr   van  Berg '), { first: 'Petr', last: 'van Berg' });
+  assert.deepEqual(splitPersonName('van Berg, Petr'), { first: 'Petr', last: 'van Berg' });
+  assert.deepEqual(splitPersonName('Novák, Jan Karel'), { first: 'Jan Karel', last: 'Novák' });
+  assert.deepEqual(splitPersonName('Einname'), { first: 'Einname', last: '' });
+  assert.equal(displayName('van Berg, Petr'), 'Petr van Berg');
+  const api = await withAdmin();
+  const set = await api.call({ action: 'setRoster', roster: [
+    '# Kommentar', '   # noch ein Kommentar',
+    'van Berg, Petr; petr.vanberg@firma.de',
+    'Novák, Jan Karel',
+    'Petr van Berg',                  // gleicher Mensch wie oben → Duplikat
+    'Jan Karel Novák'                 // gleicher Mensch wie "Novák, Jan Karel" → Duplikat
+  ] }, api.admin);
+  assert.deepEqual(set.body.roster, [{ name: 'van Berg, Petr', email: 'petr.vanberg@firma.de' }, { name: 'Novák, Jan Karel' }]);
+  const code = (await api.call({ action: 'setActivation', mode: 'generate' }, api.admin)).body.activationCode;
+  const info = await api.call({ action: 'activationInfo', code });
+  assert.deepEqual(info.body.names, ['Petr van Berg', 'Jan Karel Novák']);   // immer "Vorname Nachname"
+  const a = await api.call({ action: 'activate', code, name: 'Petr van Berg', password: 'secret-pass1' });
+  assert.equal(a.status, 200);
+  assert.deepEqual([a.body.user.profile.firstName, a.body.user.profile.lastName], ['Petr', 'van Berg']);
+  const b = await api.call({ action: 'activate', code, name: 'Jan Karel Novák', username: 'jk@firma.de', password: 'secret-pass1' });
+  assert.deepEqual([b.body.user.profile.firstName, b.body.user.profile.lastName], ['Jan Karel', 'Novák']);
+  assert.deepEqual((await api.call({ action: 'activationInfo', code })).body.names, []);   // beide haben jetzt ein Konto
 });
 
 await test('malformed requests', async () => {
