@@ -402,7 +402,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .user-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--s2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; }
 .user-main { min-width: 0; }
 .user-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.user-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.user-sub { font-size: 12px; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
 .user-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .user-act { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border2); background: var(--s1); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
 .user-act.danger { color: var(--red); }
@@ -1324,7 +1324,7 @@ const I18N = {
     auth_title_login: 'Anmelden', auth_title_setup: 'Ersteinrichtung',
     auth_title_changepw: 'Passwort ändern', auth_title_forcepw: 'Neues Passwort festlegen',
     auth_force_hint: 'Dein Passwort wurde vom Administrator gesetzt. Bitte wähle jetzt ein eigenes.',
-    auth_username: 'Benutzername', auth_password: 'Passwort', auth_old_password: 'Aktuelles Passwort',
+    auth_username: 'Benutzername oder E-Mail', auth_email: 'E-Mail (Firmenadresse)', auth_password: 'Passwort', auth_old_password: 'Aktuelles Passwort',
     auth_new_password: 'Neues Passwort (min. 8 Zeichen)', auth_new_password2: 'Neues Passwort wiederholen',
     auth_setup_key: 'Einrichtungsschlüssel',
     btn_login: 'Anmelden', btn_setup: 'Einrichten',
@@ -1339,7 +1339,8 @@ const I18N = {
     auth_already_set_up: 'Die Ersteinrichtung ist bereits abgeschlossen — bitte anmelden.',
     auth_pw_mismatch: '⚠ Die neuen Passwörter stimmen nicht überein',
     auth_pw_short: '⚠ Passwort: mindestens 8 Zeichen',
-    auth_username_invalid: '⚠ Benutzername: 3–32 Zeichen (a–z, 0–9, . _ -)',
+    auth_username_invalid: '⚠ Benutzername (3–32 Zeichen: a–z, 0–9, . _ -) oder E-Mail-Adresse',
+    auth_email_invalid: '⚠ Bitte eine gültige E-Mail-Adresse eingeben',
     auth_setup_key_wrong: '⚠ Einrichtungsschlüssel falsch',
     t_password_changed: '✓ Passwort geändert',
     account_signed_in: 'Angemeldet als', role_admin: 'Administrator', role_user: 'Benutzer',
@@ -1360,7 +1361,7 @@ const I18N = {
     local_mode_title: 'Ohne Anmeldung', local_mode_sub: 'Daten nur auf diesem Gerät — keine Sicherung auf dem Server.', btn_login_sync: 'Anmelden & synchronisieren',
     auth_title_activate: 'Erste Anmeldung', auth_link_activate: 'Erste Anmeldung (mit Code)',
     auth_activate_hint1: 'Gib den Aktivierungscode ein, den du erhalten hast.',
-    auth_activate_hint2: 'Wähle deinen Namen und lege Benutzername und Passwort fest.',
+    auth_activate_hint2: 'Wähle deinen Namen und gib deine Firmen-E-Mail-Adresse und ein Passwort an. Mit der E-Mail meldest du dich künftig an.',
     auth_code: 'Aktivierungscode', btn_weiter: 'Weiter', btn_activate: 'Aktivieren',
     auth_code_wrong: '⚠ Code falsch',
     auth_no_names: 'Es ist kein freier Name mehr in der Liste. Bitte melde dich bei deinem Vorgesetzten.',
@@ -1375,7 +1376,7 @@ const I18N = {
     user_initial_password: 'Anfangspasswort (min. 8 Zeichen)', user_role: 'Rolle',
     user_pw_hint: 'Der Benutzer muss es bei der ersten Anmeldung ändern.',
     t_user_created: '✓ Benutzer angelegt', t_user_deleted: '✓ Benutzer gelöscht', t_user_pw_reset: '✓ Passwort zurückgesetzt',
-    t_user_exists: '⚠ Benutzername existiert bereits', t_user_last_admin: '⚠ Der letzte Administrator kann nicht herabgestuft werden',
+    t_user_exists: '⚠ Dieses Konto (Benutzername/E-Mail) existiert bereits', t_user_last_admin: '⚠ Der letzte Administrator kann nicht herabgestuft werden',
     t_profile_not_saved: '⚠ Nicht gespeichert (keine Verbindung)',
     confirm_delete_user: 'Benutzer „{0}“ und ALLE seine Daten endgültig löschen?',
     viewing_prefix: 'Daten von', viewing_back: 'zurück',
@@ -1482,7 +1483,7 @@ const I18N = {
     auth_title_login: 'Přihlášení', auth_title_setup: 'První nastavení',
     auth_title_changepw: 'Změna hesla', auth_title_forcepw: 'Nastav si nové heslo',
     auth_force_hint: 'Heslo ti nastavil administrátor. Zvol si prosím vlastní.',
-    auth_username: 'Uživatelské jméno', auth_password: 'Heslo', auth_old_password: 'Současné heslo',
+    auth_username: 'Uživatelské jméno nebo e-mail', auth_email: 'E-mail (firemní adresa)', auth_password: 'Heslo', auth_old_password: 'Současné heslo',
     auth_new_password: 'Nové heslo (min. 8 znaků)', auth_new_password2: 'Nové heslo znovu',
     auth_setup_key: 'Instalační klíč',
     btn_login: 'Přihlásit', btn_setup: 'Nastavit',
@@ -1497,7 +1498,8 @@ const I18N = {
     auth_already_set_up: 'První nastavení už proběhlo — přihlas se prosím.',
     auth_pw_mismatch: '⚠ Nová hesla se neshodují',
     auth_pw_short: '⚠ Heslo: alespoň 8 znaků',
-    auth_username_invalid: '⚠ Uživatelské jméno: 3–32 znaků (a–z, 0–9, . _ -)',
+    auth_username_invalid: '⚠ Uživatelské jméno (3–32 znaků: a–z, 0–9, . _ -) nebo e-mail',
+    auth_email_invalid: '⚠ Zadej platnou e-mailovou adresu',
     auth_setup_key_wrong: '⚠ Špatný instalační klíč',
     t_password_changed: '✓ Heslo změněno',
     account_signed_in: 'Přihlášen jako', role_admin: 'Administrátor', role_user: 'Uživatel',
@@ -1518,7 +1520,7 @@ const I18N = {
     local_mode_title: 'Bez přihlášení', local_mode_sub: 'Data jen v tomto zařízení — bez zálohy na serveru.', btn_login_sync: 'Přihlásit a synchronizovat',
     auth_title_activate: 'První přihlášení', auth_link_activate: 'První přihlášení (s kódem)',
     auth_activate_hint1: 'Zadej aktivační kód, který jsi dostal.',
-    auth_activate_hint2: 'Vyber své jméno a zvol uživatelské jméno a heslo.',
+    auth_activate_hint2: 'Vyber své jméno a zadej firemní e-mail a heslo. E-mailem se budeš příště přihlašovat.',
     auth_code: 'Aktivační kód', btn_weiter: 'Dál', btn_activate: 'Aktivovat',
     auth_code_wrong: '⚠ Špatný kód',
     auth_no_names: 'V seznamu už není žádné volné jméno. Ozvi se prosím svému nadřízenému.',
@@ -1533,7 +1535,7 @@ const I18N = {
     user_initial_password: 'Počáteční heslo (min. 8 znaků)', user_role: 'Role',
     user_pw_hint: 'Uživatel si ho musí při prvním přihlášení změnit.',
     t_user_created: '✓ Uživatel vytvořen', t_user_deleted: '✓ Uživatel smazán', t_user_pw_reset: '✓ Heslo obnoveno',
-    t_user_exists: '⚠ Uživatelské jméno už existuje', t_user_last_admin: '⚠ Posledního administrátora nelze degradovat',
+    t_user_exists: '⚠ Tento účet (jméno/e-mail) už existuje', t_user_last_admin: '⚠ Posledního administrátora nelze degradovat',
     t_profile_not_saved: '⚠ Neuloženo (bez připojení)',
     confirm_delete_user: 'Smazat uživatele „{0}“ a VŠECHNA jeho data natrvalo?',
     viewing_prefix: 'Data uživatele', viewing_back: 'zpět',
@@ -3361,11 +3363,16 @@ let authNeedsSetup = false;
 let authBusy = false;
 let authPrefillUser = '';
 
-function authField(id, labelKey, type, autocomplete, value) {
+function authField(id, labelKey, type, autocomplete, value, inputmode) {
+  const im = inputmode || (autocomplete === 'username' ? 'email' : '');
   return '<div class="auth-field"><label for="' + id + '">' + t(labelKey) + '</label>' +
-    '<input class="note-input" id="' + id + '" type="' + type + '" autocomplete="' + autocomplete + '"' +
+    '<input class="note-input" id="' + id + '" type="' + type + '" autocomplete="' + autocomplete + '"' + (im ? ' inputmode="' + im + '"' : '') +
     ' autocapitalize="none" autocorrect="off" spellcheck="false" value="' + escHtml(value || '') + '"></div>';
 }
+// Anmeldename: E-Mail (normale Benutzer) oder kurzer Benutzername (Admin) — gleiche Regeln wie auf dem Server.
+const EMAIL_RE = /^[a-z0-9][a-z0-9._-]{0,63}@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/;
+function isEmail(v) { return typeof v === 'string' && v.length <= 100 && EMAIL_RE.test(v); }
+function isLoginId(v) { return /^[a-z0-9][a-z0-9._-]{2,31}$/.test(v) || isEmail(v); }
 function setAuthMsg(text, info) {
   const el = byId('auth-msg');
   el.textContent = text || '';
@@ -3410,7 +3417,7 @@ function renderAuthMode(msg, info) {
         html = '<div class="auth-field"><label for="auth-name">' + t('roster_label') + '</label>' +
           '<select class="note-input" id="auth-name" onchange="activatePick()"><option value="">' + t('roster_pick') + '</option>' +
           activateNames.map(function (n, i) { return '<option value="' + i + '">' + escHtml(n) + '</option>'; }).join('') + '</select></div>' +
-          authField('auth-username', 'auth_username', 'text', 'username') +
+          authField('auth-username', 'auth_email', 'text', 'username') +
           authField('auth-password', 'auth_new_password', 'password', 'new-password') +
           authField('auth-password2', 'auth_new_password2', 'password', 'new-password');
       }
@@ -3485,6 +3492,7 @@ function authErrorText(res) {
   if (res.status === 429) return tf('auth_locked', Math.max(1, Math.ceil(((res.body && res.body.retryAfterSec) || 900) / 60)));
   if (code === 'invalid_credentials') return t('auth_invalid');
   if (code === 'invalid_username') return t('auth_username_invalid');
+  if (code === 'invalid_email') return t('auth_email_invalid');
   if (code === 'invalid_password') return t('auth_pw_short');
   if (code === 'bad_setup_key') return t('auth_setup_key_wrong');
   if (code === 'bad_code') return t('auth_code_wrong');
@@ -3514,16 +3522,8 @@ async function doSetup() {
   if (res && res.body && res.body.error === 'already_set_up') { authNeedsSetup = false; showAuthOverlay('login', t('auth_already_set_up')); return; }
   setAuthMsg(authErrorText(res));
 }
-function activatePick() {
-  const v = byId('auth-name').value;
-  const un = byId('auth-username');
-  if (v === '') return;
-  const first = splitFullName(activateNames[parseInt(v, 10)] || '').first;
-  if (un.value === '' || un.value === suggestedUsername) {
-    suggestedUsername = suggestUsernameFor(first);
-    un.value = suggestedUsername;
-  }
-}
+// (kein Namensvorschlag mehr: der Anmeldename ist die E-Mail-Adresse)
+function activatePick() {}
 async function doActivate() {
   if (activateStep === 1) {
     const code = authValue('auth-code').trim();
@@ -3542,6 +3542,7 @@ async function doActivate() {
   const username = authValue('auth-username').trim().toLowerCase();
   const password = authValue('auth-password');
   if (idx === '' || !username || !password || !authValue('auth-password2')) { setAuthMsg(t('auth_fill_all')); return; }
+  if (!isEmail(username)) { setAuthMsg(t('auth_email_invalid')); return; }
   if (password !== authValue('auth-password2')) { setAuthMsg(t('auth_pw_mismatch')); return; }
   if (password.length < 8) { setAuthMsg(t('auth_pw_short')); return; }
   setAuthMsg(t('auth_busy'), true);
@@ -4004,11 +4005,6 @@ function onRosterPick() {
   }
   byId('uf-firstname').value = first;
   byId('uf-lastname').value = last;
-  const un = byId('uf-username');
-  if (un && first && (un.value === '' || un.value === suggestedUsername)) {
-    suggestedUsername = suggestUsernameFor(first);
-    un.value = suggestedUsername;
-  }
 }
 let activationCode = '';
 function renderActivationCode() {
@@ -4060,11 +4056,12 @@ function exportUserList() {
   const pad = function (s, n) { s = String(s); return s + ' '.repeat(Math.max(1, n - s.length)); };
   const today = new Date().toISOString().slice(0, 10);
   const lines = ['Lely Schichten – Benutzerliste', 'Stand: ' + today, 'Hinweis: enthält keine Passwörter.', ''];
-  lines.push(pad('Benutzername', 20) + pad('Name', 28) + pad('Rolle', 15) + pad('Norm h/Wo', 11) + 'Angelegt');
+  const uw = Math.max(20, usersCache.reduce(function (m, u) { return Math.max(m, u.username.length); }, 0) + 2);
+  lines.push(pad('Benutzername / E-Mail', uw) + pad('Name', 28) + pad('Rolle', 15) + pad('Norm h/Wo', 11) + 'Angelegt');
   usersCache.forEach(function (u) {
     const p = u.profile || {};
     const name = ((p.firstName || '') + ' ' + (p.lastName || '')).trim();
-    lines.push(pad(u.username, 20) + pad(name, 28) + pad(u.role === 'admin' ? 'Administrator' : 'Benutzer', 15) +
+    lines.push(pad(u.username, uw) + pad(name, 28) + pad(u.role === 'admin' ? 'Administrator' : 'Benutzer', 15) +
       pad(p.weeklyNorm || '', 11) + (u.createdAt ? new Date(u.createdAt).toISOString().slice(0, 10) : '') +
       (u.mustChangePassword ? '  (Passwort noch nicht geändert)' : ''));
   });
@@ -4119,7 +4116,8 @@ async function submitUserForm() {
   if (userFormMode === 'create') {
     const username = val('uf-username').toLowerCase();
     if (byId('uf-roster') && byId('uf-roster').value === '') { msg.textContent = t('roster_choose'); return; }
-    if (!/^[a-z0-9][a-z0-9._-]{2,31}$/.test(username)) { msg.textContent = t('auth_username_invalid'); return; }
+    // normale Benutzer melden sich mit ihrer E-Mail-Adresse an, ein Admin darf auch einen kurzen Benutzernamen haben
+    if (val('uf-role') === 'admin' ? !isLoginId(username) : !isEmail(username)) { msg.textContent = t(val('uf-role') === 'admin' ? 'auth_username_invalid' : 'auth_email_invalid'); return; }
     if (val('uf-password').length < 8) { msg.textContent = t('auth_pw_short'); return; }
     body = { action: 'createUser', username, password: val('uf-password'), firstName: val('uf-firstname'), lastName: val('uf-lastname'), weeklyNorm: parseFloat(val('uf-norm')) || 40, role: val('uf-role') };
   } else if (userFormMode === 'edit') {

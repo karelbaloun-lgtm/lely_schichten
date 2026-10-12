@@ -42,6 +42,15 @@ await test('validUsername', () => {
   assert.ok(!validUsername('Karel'));
   assert.ok(!validUsername('../etc'));
   assert.ok(!validUsername('a b c'));
+  assert.ok(validUsername('jan.novak@eder-gmbh.de'));
+  assert.ok(validUsername('j-n_1@sub.firma.co.uk'));
+  assert.ok(!validUsername('jan@'));
+  assert.ok(!validUsername('@firma.de'));
+  assert.ok(!validUsername('jan@firma'));
+  assert.ok(!validUsername('jan@@firma.de'));
+  assert.ok(!validUsername('Jan@Firma.de'));
+  assert.ok(!validUsername('a b@firma.de'));
+  assert.ok(!validUsername('jan@firma.d'));
 });
 await test('sanitizeConfig drops everything but language/hotelAddressHistory', () => {
   const c = sanitizeConfig({ language: 'cs', firstName: 'Hacker', weeklyNorm: 99, hotelAddressHistory: { 'Hotel A': '2026-01-01', bad: 5 }, evil: 1 });
@@ -93,9 +102,9 @@ async function withAdmin() {
   return api;
 }
 async function withUser(api) {
-  const c = await api.call({ action: 'createUser', username: 'jan', password: 'initial-pass1', firstName: 'Jan', lastName: 'Novak', weeklyNorm: 38 }, api.admin);
+  const c = await api.call({ action: 'createUser', username: 'jan@firma.de', password: 'initial-pass1', firstName: 'Jan', lastName: 'Novak', weeklyNorm: 38 }, api.admin);
   assert.equal(c.status, 200);
-  const l = await api.call({ action: 'login', username: 'jan', password: 'initial-pass1' });
+  const l = await api.call({ action: 'login', username: 'jan@firma.de', password: 'initial-pass1' });
   api.user = l.body.token;
   return l.body;
 }
@@ -137,7 +146,7 @@ await test('admin creates user; user must change password flag; duplicate reject
   assert.equal(l.user.role, 'user');
   assert.equal(l.user.mustChangePassword, true);
   assert.equal(l.user.profile.lastName, 'Novak');
-  assert.equal((await api.call({ action: 'createUser', username: 'jan', password: 'another-pass1' }, api.admin)).status, 409);
+  assert.equal((await api.call({ action: 'createUser', username: 'jan@firma.de', password: 'another-pass1' }, api.admin)).status, 409);
 });
 await test('user cannot use admin actions', async () => {
   const api = await withAdmin(); await withUser(api);
@@ -155,7 +164,7 @@ await test('user cannot read or write another user\'s data; admin can', async ()
   const api = await withAdmin(); await withUser(api);
   assert.equal((await api.call({ action: 'getData', user: 'karel' }, api.user)).status, 403);
   assert.equal((await api.call({ action: 'putData', user: 'karel', shifts: [], config: {}, baseLastModified: null }, api.user)).status, 403);
-  const put = await api.call({ action: 'putData', user: 'jan', shifts: [shift('a', '2026-03-02')], config: {}, baseLastModified: null }, api.admin);
+  const put = await api.call({ action: 'putData', user: 'jan@firma.de', shifts: [shift('a', '2026-03-02')], config: {}, baseLastModified: null }, api.admin);
   assert.equal(put.status, 200);
   const got = await api.call({ action: 'getData' }, api.user);
   assert.equal(got.body.shifts.length, 1);
@@ -199,14 +208,14 @@ await test('changePassword: wrong old pw refused, success rotates sessions and c
   assert.equal(r.body.user.mustChangePassword, false);
   assert.equal((await api.call({ action: 'me' }, api.user)).status, 401);       // starý token
   assert.equal((await api.call({ action: 'me' }, r.body.token)).status, 200);   // nový token
-  assert.equal((await api.call({ action: 'login', username: 'jan', password: 'brand-new-pass1' })).status, 200);
-  assert.equal((await api.call({ action: 'login', username: 'jan', password: 'initial-pass1' })).status, 401);
+  assert.equal((await api.call({ action: 'login', username: 'jan@firma.de', password: 'brand-new-pass1' })).status, 200);
+  assert.equal((await api.call({ action: 'login', username: 'jan@firma.de', password: 'initial-pass1' })).status, 401);
 });
 await test('resetPassword by admin invalidates user sessions and forces change', async () => {
   const api = await withAdmin(); await withUser(api);
-  assert.equal((await api.call({ action: 'resetPassword', username: 'jan', newPassword: 'reset-pass-77' }, api.admin)).status, 200);
+  assert.equal((await api.call({ action: 'resetPassword', username: 'jan@firma.de', newPassword: 'reset-pass-77' }, api.admin)).status, 200);
   assert.equal((await api.call({ action: 'me' }, api.user)).status, 401);
-  const l = await api.call({ action: 'login', username: 'jan', password: 'reset-pass-77' });
+  const l = await api.call({ action: 'login', username: 'jan@firma.de', password: 'reset-pass-77' });
   assert.equal(l.status, 200);
   assert.equal(l.body.user.mustChangePassword, true);
 });
@@ -219,14 +228,14 @@ await test('listUsers never leaks hashes; updateUser changes profile; deleteUser
   assert.equal(list.body.users.length, 2);
   assert.ok(!JSON.stringify(list.body).includes('passwordHash'));
   assert.ok(!JSON.stringify(list.body).includes('scrypt'));
-  const upd = await api.call({ action: 'updateUser', username: 'jan', lastName: 'Novotny', weeklyNorm: 35 }, api.admin);
+  const upd = await api.call({ action: 'updateUser', username: 'jan@firma.de', lastName: 'Novotny', weeklyNorm: 35 }, api.admin);
   assert.equal(upd.body.user.profile.lastName, 'Novotny');
   assert.equal(upd.body.user.profile.weeklyNorm, 35);
   assert.equal(upd.body.user.profile.firstName, 'Jan');
-  assert.equal((await api.call({ action: 'deleteUser', username: 'jan' }, api.admin)).status, 200);
+  assert.equal((await api.call({ action: 'deleteUser', username: 'jan@firma.de' }, api.admin)).status, 200);
   assert.equal((await api.call({ action: 'me' }, api.user)).status, 401);
-  assert.equal(await api.stores.userdata.get('jan'), null);
-  assert.equal((await api.call({ action: 'login', username: 'jan', password: 'initial-pass1' })).status, 401);
+  assert.equal(await api.stores.userdata.get('jan@firma.de'), null);
+  assert.equal((await api.call({ action: 'login', username: 'jan@firma.de', password: 'initial-pass1' })).status, 401);
 });
 await test('admin cannot delete self or demote the last admin', async () => {
   const api = await withAdmin();
@@ -267,21 +276,23 @@ await test('activation: off by default, code gates the name list, activate creat
   assert.equal(info.status, 200);
   assert.deepEqual(info.body.names, ['Jan Novák', 'Petr van Berg']); // Karel už účet má
   // špatné jméno / už obsazené / špatné heslo / špatné uživatelské jméno
-  assert.equal((await api.call({ action: 'activate', code, name: 'Karel Baloun', username: 'karel2', password: 'secret-pass1' })).body.error, 'name_unavailable');
+  assert.equal((await api.call({ action: 'activate', code, name: 'Karel Baloun', username: 'karel2@firma.de', password: 'secret-pass1' })).body.error, 'name_unavailable');
   assert.equal((await api.call({ action: 'activate', code, name: 'Nobody', username: 'nobody', password: 'secret-pass1' })).body.error, 'name_unavailable');
-  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'jan', password: 'short' })).body.error, 'invalid_password');
-  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'a', password: 'secret-pass1' })).body.error, 'invalid_username');
-  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'karel', password: 'secret-pass1' })).body.error, 'exists');
-  const ok = await api.call({ action: 'activate', code, name: 'jan  novák', username: 'jan', password: 'secret-pass1' });
+  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'jan@firma.de', password: 'short' })).body.error, 'invalid_password');
+  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'a', password: 'secret-pass1' })).body.error, 'invalid_email');
+  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'jan', password: 'secret-pass1' })).body.error, 'invalid_email'); // einfacher Benutzername reicht nicht
+  const ok = await api.call({ action: 'activate', code, name: 'jan  novák', username: 'jan@firma.de', password: 'secret-pass1' });
   assert.equal(ok.status, 200);
+  // dieselbe Adresse (auch in anderer Schreibweise) kann nicht ein zweites Mal verwendet werden
+  assert.equal((await api.call({ action: 'activate', code, name: 'Petr van Berg', username: 'Jan@Firma.DE', password: 'secret-pass1' })).body.error, 'exists');
   assert.equal(ok.body.user.role, 'user');
   assert.equal(ok.body.user.mustChangePassword, false);
   assert.equal(ok.body.user.profile.firstName, 'Jan');
   assert.equal(ok.body.user.profile.lastName, 'Novák');
-  assert.equal((await api.call({ action: 'me' }, ok.body.token)).body.user.username, 'jan');
+  assert.equal((await api.call({ action: 'me' }, ok.body.token)).body.user.username, 'jan@firma.de');
   // jméno zmizelo; druhá aktivace stejného jména selže
   assert.deepEqual((await api.call({ action: 'activationInfo', code })).body.names, ['Petr van Berg']);
-  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'jan2', password: 'secret-pass1' })).body.error, 'name_unavailable');
+  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'jan2@firma.de', password: 'secret-pass1' })).body.error, 'name_unavailable');
   // uživatel s právy user nemůže kód spravovat
   assert.equal((await api.call({ action: 'setActivation', mode: 'off' }, ok.body.token)).status, 403);
   assert.equal((await api.call({ action: 'getRoster' }, ok.body.token)).status, 403);
@@ -302,10 +313,28 @@ await test('activation: 10 wrong codes lock guessing for everyone (even the righ
   const r = await api.call({ action: 'activationInfo', code });
   assert.equal(r.status, 429);
   assert.ok(r.body.retryAfterSec > 0);
-  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'jan', password: 'secret-pass1' })).status, 429);
+  assert.equal((await api.call({ action: 'activate', code, name: 'Jan Novák', username: 'jan@firma.de', password: 'secret-pass1' })).status, 429);
 });
 
 // ─── tvrdost vstupů ────────────────────────────────────────────────────────
+await test('E-Mail als Anmeldename: createUser verlangt E-Mail für Benutzer, Admin darf Benutzernamen; Login ohne Beachtung der Groß-/Kleinschreibung', async () => {
+  const api = await withAdmin();
+  assert.equal((await api.call({ action: 'createUser', username: 'jan', password: 'initial-pass1', firstName: 'Jan' }, api.admin)).body.error, 'invalid_email');
+  assert.equal((await api.call({ action: 'createUser', username: 'jan', password: 'initial-pass1', role: 'user' }, api.admin)).status, 400);
+  const mail = await api.call({ action: 'createUser', username: '  Jan.Novak@Eder-GmbH.de ', password: 'initial-pass1', firstName: 'Jan', lastName: 'Novak' }, api.admin);
+  assert.equal(mail.status, 200);
+  assert.equal(mail.body.user.username, 'jan.novak@eder-gmbh.de');
+  assert.equal((await api.call({ action: 'createUser', username: 'JAN.NOVAK@eder-gmbh.de', password: 'another-pass1' }, api.admin)).status, 409); // gleiche Adresse, andere Schreibweise
+  const l = await api.call({ action: 'login', username: 'JAN.novak@EDER-gmbh.de', password: 'initial-pass1' });
+  assert.equal(l.status, 200);
+  assert.equal(l.body.user.username, 'jan.novak@eder-gmbh.de');
+  assert.equal((await api.call({ action: 'getData', user: 'jan.novak@eder-gmbh.de' }, api.admin)).status, 200);
+  const admin2 = await api.call({ action: 'createUser', username: 'chef', password: 'initial-pass1', role: 'admin' }, api.admin);
+  assert.equal(admin2.status, 200);
+  assert.equal((await api.call({ action: 'login', username: 'chef', password: 'initial-pass1' })).status, 200);
+  assert.equal((await api.call({ action: 'createUser', username: '../etc@x.de', password: 'initial-pass1' }, api.admin)).status, 400);
+});
+
 await test('malformed requests', async () => {
   const api = await withAdmin();
   const raw = async (init) => (await api.handler(new Request('http://x/api', init))).status;
