@@ -60,7 +60,7 @@
 /* Schriftwahl (Einstellungen): "lely" = Noto Sans + Ubuntu für Überschriften, "system" = Schrift des Geräts. */
 :root[data-font="lely"] { --sans: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --font-head: 'Ubuntu', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: pan-x pan-y; }
 .ic { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
 .topbar, .bottom-nav, .month-bar, .week-header, .day-card { -webkit-user-select: none; user-select: none; }
 html, body { height: 100%; overscroll-behavior: none; }
@@ -1313,6 +1313,8 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
 const LAST_UPDATED = '12.10.2026';
+// Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
+const APP_VERSION = 37;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -1487,7 +1489,7 @@ const I18N = {
     t_dateien_heruntergeladen_1: '✓ ', t_dateien_heruntergeladen_2: ' Dateien heruntergeladen',
     confirm_delete_entry: 'Diesen Eintrag löschen?', confirm_delete_really: 'Wirklich löschen?',
     copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Alle Rechte vorbehalten',
-    letzte_aktualisierung: 'Letzte Aktualisierung: ',
+    letzte_aktualisierung: 'Letzte Aktualisierung: ', version_cache: 'Speicher',
     week_kw: 'KW'
   },
   cs: {
@@ -1652,7 +1654,7 @@ const I18N = {
     t_dateien_heruntergeladen_1: '✓ Staženo ', t_dateien_heruntergeladen_2: ' souborů',
     confirm_delete_entry: 'Smazat tento záznam?', confirm_delete_really: 'Opravdu smazat?',
     copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Všechna práva vyhrazena',
-    letzte_aktualisierung: 'Poslední aktualizace: ',
+    letzte_aktualisierung: 'Poslední aktualizace: ', version_cache: 'paměť',
     week_kw: 'T'
   }
 };
@@ -3005,6 +3007,8 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       });
     }
     if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg);
+    // Beim Zurückkehren in die App aktiv nach einer neuen Version suchen (iOS tut das sonst nur selten).
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') reg.update().catch(function () {}); });
     watchInstalling();
     reg.addEventListener('updatefound', watchInstalling);
   }).catch(function () {});
@@ -3015,6 +3019,13 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.location.reload();
   });
 }
+// Die App ist ein fester Rahmen: die Seite selbst darf nie seitlich/nach oben verschoben bleiben
+// (kann auf dem iPhone nach Eingabe-Zoom oder Tastatur passieren).
+function resetPageScroll() { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); }
+window.addEventListener('scroll', resetPageScroll, { passive: true });
+window.addEventListener('resize', resetPageScroll);
+window.addEventListener('orientationchange', resetPageScroll);
+window.addEventListener('pageshow', resetPageScroll);
 let pendingUpdateReg = null;
 function showUpdateBanner(reg) {
   pendingUpdateReg = reg;
@@ -3127,8 +3138,19 @@ function renderSettings() {
     <div style="margin-top:10px;">
       <button class="btn-main secondary" style="width:100%;" onclick="openSheet('sheet-help')">${t('btn_zum_startbildschirm')}</button>
     </div>
-    <div style="margin-top:20px;text-align:center;font-size:11px;color:var(--muted);">${t('letzte_aktualisierung')}${LAST_UPDATED}</div>
+    <div style="margin-top:20px;text-align:center;font-size:11px;color:var(--muted);">${t('letzte_aktualisierung')}${LAST_UPDATED} · <span id="app-version">v${APP_VERSION}</span></div>
     <div style="margin-top:8px;text-align:center;font-size:11px;color:var(--muted);">${t('copyright')}</div>`;
+  checkCacheVersion();
+}
+// Zeigt zusätzlich die Version des gespeicherten App-Speichers, falls sie von dieser Seite abweicht
+// (= das Gerät hat noch eine ältere Version im Speicher und wartet auf das Update).
+function checkCacheVersion() {
+  const el = byId('app-version');
+  if (!el || !window.caches) return;
+  caches.keys().then(function (keys) {
+    const nums = keys.map(function (k) { const m = /^lely-schichten-v(\d+)$/.exec(k); return m ? parseInt(m[1], 10) : 0; }).filter(Boolean).sort(function (a, b) { return b - a; });
+    if (nums.length && nums[0] !== APP_VERSION) el.textContent += ' (' + t('version_cache') + ' v' + nums[0] + ')';
+  }).catch(function () {});
 }
 // ─── Backup/Restore ──────────────────────────────────────────────────────
 // Vollständige Sicherung (im Gegensatz zum wochenweisen Import/Export):

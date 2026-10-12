@@ -417,6 +417,16 @@ await test('Name in einem Feld: "Vorname Nachname" oder "Nachname, Vorname"; Kom
   assert.deepEqual((await api.call({ action: 'activationInfo', code })).body.names, []);   // beide haben jetzt ein Konto
 });
 
+await test('Versionsnummer: APP_VERSION in der App = Zahl in CACHE_VERSION von sw.js', async () => {
+  const { readFileSync, existsSync } = await import('node:fs');
+  if (!existsSync(new URL('../lely-schichten.html', import.meta.url)) || !existsSync(new URL('../sw.js', import.meta.url))) return;   // z. B. im Deploy-Repo
+  const html = readFileSync(new URL('../lely-schichten.html', import.meta.url), 'utf8');
+  const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+  const a = /const APP_VERSION = (\d+);/.exec(html), b = /CACHE_VERSION = 'lely-schichten-v(\d+)'/.exec(sw);
+  assert.ok(a && b, 'Version nicht gefunden');
+  assert.equal(a[1], b[1], 'APP_VERSION und CACHE_VERSION müssen gleich sein');
+});
+
 await test('malformed requests', async () => {
   const api = await withAdmin();
   const raw = async (init) => (await api.handler(new Request('http://x/api', init))).status;
