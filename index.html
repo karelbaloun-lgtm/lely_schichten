@@ -86,6 +86,7 @@ input, button, select, textarea { font-family: inherit; }
 @media (max-width: 430px) {
   .topbar-row1 { gap: 6px; padding-left: 14px; padding-right: 14px; }
   .topbar-settings { width: 34px; height: 34px; font-size: 16px; }
+  .topbar-settings::before { content: ''; position: absolute; inset: -4px; }
 }
 /* iPhone/Safari: Felder < 16 px lösen beim Antippen einen Zoom aus; native Innenschatten/Rundungen entfernen. */
 @supports (-webkit-touch-callout: none) {
@@ -99,7 +100,7 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .month-sum { display: flex; align-items: center; gap: 10px; padding: 0 14px 8px 20px; font-size: 12px; color: var(--muted); cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
 .month-sum:empty { display: none; }
 .ms-parts { display: flex; flex-wrap: wrap; gap: 2px 14px; flex: 1; min-width: 0; }
-.ms-icon { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border2); background: var(--s1); color: var(--text); display: flex; align-items: center; justify-content: center; }
+.ms-icon { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border2); background: var(--s1); color: var(--text); display: flex; align-items: center; justify-content: center; }
 .month-sum b { color: var(--text); font-weight: 600; }
 .month-sum .ot { color: var(--amber-text); font-weight: 600; }
 /* Kunden-Übersicht: ersetzt Monatsstreifen + Zeitleiste, solange "Kunden" aktiv ist. */
@@ -112,7 +113,7 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .cust-filter-wrap:focus-within { border-color: var(--brand); }
 .cust-filter { flex: 1; min-width: 0; height: 100%; border: none; background: transparent; color: var(--text); font-family: var(--sans); font-size: 15px; outline: none; -webkit-appearance: none; appearance: none; }
 .cust-detail-head { display: flex; align-items: center; gap: 10px; padding-top: 10px; padding-bottom: 10px; }
-.cust-back { flex: none; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border2); background: var(--s1); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
+.cust-back { flex: none; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border2); background: var(--s1); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
 .cust-detail-name { font-size: 17px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .cust-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; padding: 12px 20px 24px; }
 .cust-list { background: var(--s1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
@@ -136,7 +137,7 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .sr-cust { font-weight: 600; overflow-wrap: anywhere; }
 .sr-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .sr-h { font-family: var(--mono); font-size: 14px; font-weight: 600; text-align: right; white-space: nowrap; }
-.month-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-family: var(--sans); cursor: pointer; border: 1px solid var(--border); color: var(--muted); transition: all 0.15s; touch-action: manipulation; white-space: nowrap; }
+.month-chip { flex-shrink: 0; padding: 0 16px; min-height: 40px; display: flex; align-items: center; border-radius: 20px; font-size: 13px; font-family: var(--sans); cursor: pointer; border: 1px solid var(--border); color: var(--muted); transition: all 0.15s; touch-action: manipulation; white-space: nowrap; }
 .month-chip.active { background: linear-gradient(135deg, rgba(226,0,26,0.18) 0%, rgba(151,12,34,0.12) 100%); border-color: rgba(226,0,26,0.7); color: var(--brand-text); font-weight: 500; box-shadow: 0 0 0 1px rgba(226,0,26,0.15); }
 
 .timeline { overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; padding: 16px 20px 24px; scrollbar-width: thin; scrollbar-color: var(--s3) transparent; }
@@ -144,7 +145,7 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .timeline::-webkit-scrollbar-thumb { background: var(--s3); border-radius: 2px; }
 
 .week-block { margin-bottom: 8px; }
-.week-header { display: flex; align-items: center; gap: 12px; padding: 10px 0 8px; cursor: pointer; touch-action: manipulation; user-select: none; }
+.week-header { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 10px 0 8px; cursor: pointer; touch-action: manipulation; user-select: none; }
 .week-num { font-size: 11px; font-weight: 600; font-family: var(--sans); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; width: 44px; }
 .week-bar-wrap { flex: 1; position: relative; }
 .week-bar-bg { height: 5px; background: var(--s2); border-radius: 3px; overflow: visible; }
@@ -203,7 +204,7 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
    jetzt (mit Stagger-Delay) auf jedem .fab-item einzeln ab, siehe unten. */
 .fab-menu { position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
 .fab-menu.open { pointer-events: all; }
-.fab-item { display: flex; align-items: center; gap: 10px; background: var(--s2); border: 1px solid var(--border2); border-radius: 12px; padding: 10px 16px; white-space: nowrap; cursor: pointer; touch-action: manipulation; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+.fab-item { display: flex; align-items: center; gap: 10px; background: var(--s2); border: 1px solid var(--border2); border-radius: 12px; padding: 12px 16px; white-space: nowrap; cursor: pointer; touch-action: manipulation; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
   opacity: 0; transform: translateY(16px) scale(0.88);
   transition: opacity 0.28s, transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.12s;
 }
@@ -226,7 +227,7 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--dim); margin: 12px auto 0; flex-shrink: 0; }
 .sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px 12px; flex-shrink: 0; }
 .sheet-title { font-size: 18px; font-weight: 600; }
-.sheet-close { width: 32px; height: 32px; border-radius: 8px; background: var(--s2); border: 1px solid var(--border); color: var(--muted); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+.sheet-close { width: 40px; height: 40px; border-radius: 8px; background: var(--s2); border: 1px solid var(--border); color: var(--muted); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
 .sheet-body { overflow-y: auto; padding: 0 24px 24px; flex: 1; }
 
 .field { margin-bottom: 16px; }
@@ -243,7 +244,7 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .segment-group-label { font-size: 12px; color: var(--muted); margin-bottom: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .leg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .leg-header-title { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-.leg-remove { background: none; border: none; color: var(--red); font-size: 15px; cursor: pointer; touch-action: manipulation; padding: 4px 6px; }
+.leg-remove { background: none; border: none; color: var(--red); font-size: 15px; cursor: pointer; touch-action: manipulation; width: 40px; height: 40px; margin: -8px -8px -8px 0; display: flex; align-items: center; justify-content: center; }
 .leg-sublabel { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin: 10px 0 6px; }
 .leg-sublabel:first-of-type { margin-top: 0; }
 .add-leg-btn { width: 100%; padding: 12px; border-radius: 12px; background: var(--s2); border: 1px dashed var(--border2); color: var(--brand); font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 14px; touch-action: manipulation; font-family: var(--sans); }
@@ -311,7 +312,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .setting-row:last-child { border-bottom: none; }
 .setting-label { font-size: 14px; }
 .setting-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.setting-input { background: var(--s2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: var(--text); font-family: var(--mono); font-size: 15px; width: 110px; text-align: right; }
+.setting-input { background: var(--s2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-family: var(--mono); font-size: 15px; width: 110px; text-align: right; }
 .setting-input:focus { outline: none; border-color: var(--brand); }
 .help-section { margin-bottom: 24px; }
 .help-heading { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
@@ -321,12 +322,12 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .help-sub { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
 .help-list code { background: var(--s2); border-radius: 4px; padding: 1px 5px; font-family: var(--mono); font-size: 12px; }
 .help-note { font-size: 13px; color: var(--muted); background: var(--s2); border-radius: 10px; padding: 12px 14px; line-height: 1.5; }
-.name-input { background: var(--s2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; color: var(--text); font-family: var(--sans); font-size: 15px; width: 160px; text-align: right; }
+.name-input { background: var(--s2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; color: var(--text); font-family: var(--sans); font-size: 15px; width: 160px; text-align: right; }
 
 .theme-seg { display: flex; gap: 4px; background: var(--s2); border-radius: 10px; padding: 4px; border: 1px solid var(--border); }
-.theme-btn { width: 36px; height: 36px; border-radius: 7px; border: 1px solid transparent; background: none; cursor: pointer; font-size: 17px; line-height: 1; touch-action: manipulation; }
+.theme-btn { width: 40px; height: 40px; border-radius: 7px; border: 1px solid transparent; background: none; cursor: pointer; font-size: 17px; line-height: 1; touch-action: manipulation; }
 .theme-btn.active { background: var(--s1); border-color: var(--border2); }
-.font-btn { height: 36px; padding: 0 14px; border-radius: 7px; border: 1px solid transparent; background: none; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text); touch-action: manipulation; }
+.font-btn { height: 40px; padding: 0 14px; border-radius: 7px; border: 1px solid transparent; background: none; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text); touch-action: manipulation; }
 .font-btn.active { background: var(--s1); border-color: var(--border2); }
 .topbar-title, .auth-brand, .sheet-title, .auth-title, .cust-detail-name, .summary-amount, .empty-state .big { font-family: var(--font-head); font-weight: 500; font-synthesis: none; }
 
@@ -334,7 +335,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .cal-overlay.open { opacity: 1; pointer-events: all; }
 .cal-box { background: var(--s1); border: 1px solid var(--border2); border-radius: 20px; padding: 20px; width: 340px; max-width: 95vw; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
 .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.cal-nav { width: 36px; height: 36px; border-radius: 9px; background: var(--s2); border: 1px solid var(--border); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+.cal-nav { width: 40px; height: 40px; border-radius: 9px; background: var(--s2); border: 1px solid var(--border); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
 .cal-month-label { font-weight: 600; font-size: 15px; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
 .cal-dow { text-align: center; font-size: 10px; color: var(--muted); padding: 4px 0 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -393,7 +394,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .auth-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
 .auth-msg { min-height: 18px; font-size: 13px; color: var(--red); margin: 6px 0 10px; line-height: 1.4; }
 .auth-msg.info { color: var(--muted); }
-.auth-link { display: block; width: 100%; background: none; border: none; color: var(--brand); font-size: 13px; padding: 12px 0 0; cursor: pointer; font-family: var(--sans); touch-action: manipulation; }
+.auth-link { display: block; width: 100%; background: none; border: none; color: var(--brand); font-size: 13px; padding: 12px 0; min-height: 44px; cursor: pointer; font-family: var(--sans); touch-action: manipulation; }
 .auth-lang { justify-content: center; margin-top: 16px; display: flex; }
 .auth-body button:disabled { opacity: .55; }
 .name-input:disabled, .setting-input:disabled { opacity: .55; }
@@ -403,12 +404,15 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .user-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .user-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.user-act { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border2); background: var(--s1); font-size: 16px; cursor: pointer; touch-action: manipulation; }
+.user-act { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border2); background: var(--s1); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; }
+.user-act.danger { color: var(--red); }
+.pw-pending { display: inline-flex; vertical-align: -2px; }
+.sub-eye { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
 
 /* Dezenter Hinweis: schmaler orangefarbener Rahmen (kein Vollton-Balken), per ✕ wegklickbar. */
 .update-banner { display: none; position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 360px; padding: 8px 12px 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; z-index: 270; box-shadow: 0 4px 14px rgba(0,0,0,0.18); background: var(--s1); color: var(--text); border: 1.5px solid var(--amber); cursor: pointer; align-items: center; justify-content: space-between; gap: 10px; }
 .update-banner.open { display: flex; }
-.update-banner-x { flex-shrink: 0; width: 24px; height: 24px; border: none; background: transparent; color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer; touch-action: manipulation; }
+.update-banner-x { flex-shrink: 0; width: 36px; height: 36px; margin: -8px -6px -8px 0; border: none; background: transparent; color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer; touch-action: manipulation; }
 
 :root[data-theme="light"] {
   --bg: #f2f2f7; --s1: #ffffff; --s2: #ebebf0; --s3: #e0e0e8;
@@ -1349,7 +1353,7 @@ const I18N = {
     cust_visit_1: 'Besuch', cust_visit_2: 'Besuche', cust_visit_5: 'Besuche', cust_visits: 'Besuche', cust_onsite: 'vor Ort', cust_last: 'zuletzt', cust_last_short: 'zuletzt',
     roster_edit: 'Monteurliste bearbeiten', sheet_roster_title: 'Monteurliste',
     roster_hint: 'Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
-    roster_label: 'Monteur', roster_pick: '— Monteur wählen —', roster_other: '✏️ Anderer Name …',
+    roster_label: 'Monteur', roster_pick: '— Monteur wählen —', roster_other: 'Anderer Name …',
     roster_choose: '⚠ Bitte einen Monteur wählen', t_roster_saved: '✓ Liste gespeichert',
     auth_local_start: 'Nur auf diesem Gerät nutzen (ohne Anmeldung)', auth_local_back: 'Zurück — ohne Anmeldung weiterarbeiten',
     confirm_local_start: 'Ohne Anmeldung werden die Daten NUR auf diesem Gerät gespeichert — ohne Sicherung auf dem Server und ohne Synchronisierung. Gehen sie hier verloren, sind sie weg. Trotzdem ohne Anmeldung fortfahren?',
@@ -1366,7 +1370,7 @@ const I18N = {
     btn_code_new: 'Neuen Code erzeugen', btn_code_off: 'Ausschalten', t_code_changed: '✓ Code aktualisiert',
     confirm_code_new: 'Einen neuen Code erzeugen? Der bisherige Code wird damit ungültig.',
     users_loading: 'Lade …', users_error: '⚠ Benutzer konnten nicht geladen werden',
-    user_act_open: 'Daten ansehen/bearbeiten', user_act_reset: 'Passwort zurücksetzen',
+    user_pw_pending: 'Passwort noch nicht geändert', user_act_open: 'Daten ansehen/bearbeiten', user_act_reset: 'Passwort zurücksetzen',
     user_form_create: 'Neuer Benutzer', user_form_edit: 'Benutzer bearbeiten', user_form_reset: 'Passwort zurücksetzen',
     user_initial_password: 'Anfangspasswort (min. 8 Zeichen)', user_role: 'Rolle',
     user_pw_hint: 'Der Benutzer muss es bei der ersten Anmeldung ändern.',
@@ -1507,7 +1511,7 @@ const I18N = {
     cust_visit_1: 'návštěva', cust_visit_2: 'návštěvy', cust_visit_5: 'návštěv', cust_visits: 'návštěv', cust_onsite: 'na místě', cust_last: 'naposledy', cust_last_short: 'naposledy',
     roster_edit: 'Upravit seznam montérů', sheet_roster_title: 'Seznam montérů',
     roster_hint: 'Jedno jméno na řádek (Jméno Příjmení). Kdo už má účet, z výběru automaticky zmizí.',
-    roster_label: 'Montér', roster_pick: '— Vyber montéra —', roster_other: '✏️ Jiné jméno …',
+    roster_label: 'Montér', roster_pick: '— Vyber montéra —', roster_other: 'Jiné jméno …',
     roster_choose: '⚠ Vyber prosím montéra', t_roster_saved: '✓ Seznam uložen',
     auth_local_start: 'Používat jen v tomto telefonu (bez přihlášení)', auth_local_back: 'Zpět — pokračovat bez přihlášení',
     confirm_local_start: 'Bez přihlášení se data ukládají POUZE v tomto zařízení — bez zálohy na serveru a bez synchronizace. Když se tu ztratí, jsou pryč. Opravdu pokračovat bez přihlášení?',
@@ -1524,7 +1528,7 @@ const I18N = {
     btn_code_new: 'Vytvořit nový kód', btn_code_off: 'Vypnout', t_code_changed: '✓ Kód aktualizován',
     confirm_code_new: 'Vytvořit nový kód? Dosavadní kód tím přestane platit.',
     users_loading: 'Načítám …', users_error: '⚠ Uživatele se nepodařilo načíst',
-    user_act_open: 'Zobrazit/upravit data', user_act_reset: 'Obnovit heslo',
+    user_pw_pending: 'Heslo zatím nezměněno', user_act_open: 'Zobrazit/upravit data', user_act_reset: 'Obnovit heslo',
     user_form_create: 'Nový uživatel', user_form_edit: 'Upravit uživatele', user_form_reset: 'Obnovit heslo',
     user_initial_password: 'Počáteční heslo (min. 8 znaků)', user_role: 'Role',
     user_pw_hint: 'Uživatel si ho musí při prvním přihlášení změnit.',
@@ -2275,6 +2279,10 @@ const FORM_ICONS = {
   calendar: '<path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/>',
   car: '<path d="M5 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M5 17h-2v-6l2 -5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0h-6m-6 -6h15m-6 0v-5"/>',
   bed: '<path d="M3 7v11m0 -4h18m0 4v-8a2 2 0 0 0 -2 -2h-8v6"/><path d="M7 10m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>',
+  eye: '<path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/>',
+  pencil: '<path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/>',
+  key: '<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1 -7.778 7.778 5.5 5.5 0 0 1 7.777 -7.777zm0 0l3.5 -3.5m0 0l3 3l3.5 -3.5l-3 -3m-3.5 3.5l3.5 -3.5"/>',
+  clock: '<path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 7v5l3 3"/>',
   trash: '<path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/>'
 };
 function formIcon(name, size) {
@@ -3919,7 +3927,7 @@ function renderAccountUi() {
   if (!sub) return;
   if (viewingOther()) {
     const name = ((config.firstName || '') + ' ' + (config.lastName || '')).trim() || dataOwner;
-    sub.textContent = '👁 ' + t('viewing_prefix') + ' ' + name + ' · ' + t('viewing_back') + ' ✕';
+    sub.innerHTML = '<span class="sub-eye">' + formIcon('eye', 14) + '</span>' + escHtml(t('viewing_prefix') + ' ' + name + ' · ' + t('viewing_back') + ' ✕');
     sub.style.display = '';
   } else {
     sub.style.display = 'none';
@@ -4035,12 +4043,12 @@ function renderUsersList() {
     const name = ((u.profile.firstName || '') + ' ' + (u.profile.lastName || '')).trim() || u.username;
     const me = auth && u.username === auth.username;
     return '<div class="user-row"><div class="user-main"><div class="user-name">' + escHtml(name) + '</div>' +
-      '<div class="user-sub">' + escHtml(u.username) + ' · ' + roleLabel(u.role) + (u.mustChangePassword ? ' · ⏳' : '') + '</div></div>' +
+      '<div class="user-sub">' + escHtml(u.username) + ' · ' + roleLabel(u.role) + (u.mustChangePassword ? ' · <span class="pw-pending" title="' + t('user_pw_pending') + '">' + formIcon('clock', 13) + '</span>' : '') + '</div></div>' +
       '<div class="user-actions">' +
-      '<button class="user-act" title="' + t('user_act_open') + '" onclick="viewUserData(\'' + u.username + '\')">📂</button>' +
-      '<button class="user-act" title="' + t('btn_bearbeiten') + '" onclick="openUserForm(\'edit\',\'' + u.username + '\')">✏️</button>' +
-      '<button class="user-act" title="' + t('user_act_reset') + '" onclick="openUserForm(\'reset\',\'' + u.username + '\')">🔑</button>' +
-      (me ? '' : '<button class="user-act" title="' + t('btn_loeschen') + '" onclick="deleteUserPrompt(\'' + u.username + '\')">🗑</button>') +
+      '<button class="user-act" title="' + t('user_act_open') + '" aria-label="' + t('user_act_open') + '" onclick="viewUserData(\'' + u.username + '\')">' + formIcon('eye', 18) + '</button>' +
+      '<button class="user-act" title="' + t('btn_bearbeiten') + '" aria-label="' + t('btn_bearbeiten') + '" onclick="openUserForm(\'edit\',\'' + u.username + '\')">' + formIcon('pencil', 18) + '</button>' +
+      '<button class="user-act" title="' + t('user_act_reset') + '" aria-label="' + t('user_act_reset') + '" onclick="openUserForm(\'reset\',\'' + u.username + '\')">' + formIcon('key', 18) + '</button>' +
+      (me ? '' : '<button class="user-act danger" title="' + t('btn_loeschen') + '" aria-label="' + t('btn_loeschen') + '" onclick="deleteUserPrompt(\'' + u.username + '\')">' + formIcon('trash', 18) + '</button>') +
       '</div></div>';
   }).join('') + '<button class="auth-link" onclick="openRoster()">' + t('roster_edit') + '</button>';
 }
