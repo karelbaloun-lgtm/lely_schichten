@@ -54,6 +54,7 @@
   --sans:      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --mono:      var(--sans);
   --font-head: var(--sans);
+  --sab: env(safe-area-inset-bottom, 0px);
   --r:         16px;
   --sheet-h:   92%;
 }
@@ -70,7 +71,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 input, button, select, textarea { font-family: inherit; }
 
 /* Fester Rahmen = immer genau der sichtbare Bereich (iPhone-Safari, Chrome, Samsung Internet) — vh/dvh werden dort unterschiedlich berechnet und ließen die untere Leiste verschwinden bzw. Leerraum entstehen. */
-.app { display: grid; grid-template-rows: auto auto 1fr auto; position: fixed; top: 0; bottom: 0; left: 0; right: 0; width: 100%; max-width: 900px; margin: 0 auto; }
+.app { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; position: fixed; top: 0; bottom: 0; left: 0; right: 0; width: 100%; max-width: 900px; margin: 0 auto; }
 
 .topbar { display: flex; flex-direction: column; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); box-shadow: 0 2px 10px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 10; padding-top: env(safe-area-inset-top); }
 /* Nur auf breiten Bildschirmen reicht die rote Leiste über das ganze Fenster; auf dem Handy führte die 100vw-Berechnung zu einem seitlichen Versatz (iPhone). */
@@ -98,7 +99,7 @@ input, button, select, textarea { font-family: inherit; }
 }
 input.note-input, textarea.note-input, input.setting-input, input.name-input, input.pause-input { -webkit-appearance: none; appearance: none; }
 
-.month-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.month-bar { min-width: 0; display: flex; align-items: center; gap: 8px; padding: 10px 20px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .month-bar::-webkit-scrollbar { display: none; }
 .month-row { border-bottom: 1px solid var(--border); background: var(--bg); }
 .month-sum { display: flex; align-items: center; gap: 10px; padding: 0 14px 8px 20px; font-size: 12px; color: var(--muted); cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
@@ -194,7 +195,7 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .empty-state { text-align: center; padding: 60px 24px; color: var(--muted); font-size: 14px; line-height: 1.7; }
 .empty-state .big { font-family: var(--sans); font-weight: 700; font-size: 24px; color: var(--dim); display: block; margin-bottom: 8px; }
 
-.bottom-nav { display: flex; align-items: stretch; border-top: 1px solid var(--border); background: var(--bg); padding-bottom: env(safe-area-inset-bottom); }
+.bottom-nav { display: flex; align-items: stretch; border-top: 1px solid var(--border); background: var(--bg); padding-bottom: var(--sab); }
 .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 8px; font-size: 11px; color: var(--muted); cursor: pointer; touch-action: manipulation; transition: color 0.15s, background 0.15s; border: none; background: none; font-family: var(--sans); border-radius: 14px; margin: 6px 4px; }
 .nav-btn .icon { font-size: 20px; line-height: 1; display: flex; }
 .nav-btn.active { color: var(--brand-text); background: var(--brand-dim); }
@@ -226,7 +227,7 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 
 .sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
 .sheet-overlay.open { opacity: 1; pointer-events: all; }
-.sheet { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 900px; background: var(--s1); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border2); max-height: var(--sheet-h); display: flex; flex-direction: column; transition: transform 0.35s cubic-bezier(.32,0,.67,0); z-index: 101; padding-bottom: env(safe-area-inset-bottom); }
+.sheet { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 900px; background: var(--s1); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border2); max-height: var(--sheet-h); display: flex; flex-direction: column; transition: transform 0.35s cubic-bezier(.32,0,.67,0); z-index: 101; padding-bottom: var(--sab); }
 .sheet.open { transform: translateX(-50%) translateY(0); }
 .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--dim); margin: 12px auto 0; flex-shrink: 0; }
 .sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px 12px; flex-shrink: 0; }
@@ -414,7 +415,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .sub-eye { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
 
 /* Dezenter Hinweis: schmaler orangefarbener Rahmen (kein Vollton-Balken), per ✕ wegklickbar. */
-.update-banner { display: none; position: fixed; bottom: calc(76px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 360px; padding: 8px 12px 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; z-index: 270; box-shadow: 0 4px 14px rgba(0,0,0,0.18); background: var(--s1); color: var(--text); border: 1.5px solid var(--amber); cursor: pointer; align-items: center; justify-content: space-between; gap: 10px; }
+.update-banner { display: none; position: fixed; bottom: calc(76px + var(--sab)); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 360px; padding: 8px 12px 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; z-index: 270; box-shadow: 0 4px 14px rgba(0,0,0,0.18); background: var(--s1); color: var(--text); border: 1.5px solid var(--amber); cursor: pointer; align-items: center; justify-content: space-between; gap: 10px; }
 .update-banner.open { display: flex; }
 .update-banner-x { flex-shrink: 0; width: 36px; height: 36px; margin: -8px -6px -8px 0; border: none; background: transparent; color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer; touch-action: manipulation; }
 
@@ -1316,7 +1317,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // ob sein Gerät wirklich die neueste Version geladen hat.
 const LAST_UPDATED = '12.10.2026';
 // Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
-const APP_VERSION = 38;
+const APP_VERSION = 39;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -3023,6 +3024,17 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 // Die App ist ein fester Rahmen: die Seite selbst darf nie seitlich/nach oben verschoben bleiben
 // (kann auf dem iPhone nach Eingabe-Zoom oder Tastatur passieren).
+function adaptSafeBottom() {
+  const standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  const portrait = innerHeight >= innerWidth;
+  const screenH = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+  const missing = screenH - innerHeight;   // Höhe, die dem Fenster zum Bildschirm fehlt
+  document.documentElement.style.setProperty('--sab', standalone && missing >= 30 ? '0px' : 'env(safe-area-inset-bottom, 0px)');
+}
+adaptSafeBottom();
+window.addEventListener('resize', adaptSafeBottom);
+window.addEventListener('orientationchange', adaptSafeBottom);
+window.addEventListener('pageshow', adaptSafeBottom);
 function resetPageScroll() { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); }
 window.addEventListener('scroll', resetPageScroll, { passive: true });
 window.addEventListener('resize', resetPageScroll);
@@ -3164,7 +3176,7 @@ function renderDiag() {
     ' · doc ' + document.documentElement.clientWidth + '×' + document.documentElement.clientHeight + ' (scroll ' + document.documentElement.scrollWidth + ')' +
     ' · screen ' + screen.width + '×' + screen.height + ' · dpr ' + devicePixelRatio +
     ' · app ' + Math.round(app.width) + '×' + Math.round(app.height) + '@' + Math.round(app.left) + ',' + Math.round(app.top) +
-    ' · safe ' + safe + ' · ' + (standalone ? 'App' : 'Browser');
+    ' · safe ' + safe + ' · sab ' + (document.documentElement.style.getPropertyValue('--sab').indexOf('env') >= 0 ? 'env' : '0') + ' · ' + (standalone ? 'App' : 'Browser');
 }
 // Zeigt zusätzlich die Version des gespeicherten App-Speichers, falls sie von dieser Seite abweicht
 // (= das Gerät hat noch eine ältere Version im Speicher und wartet auf das Update).
