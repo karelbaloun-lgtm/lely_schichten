@@ -96,8 +96,10 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .month-bar { display: flex; align-items: center; gap: 8px; padding: 10px 20px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .month-bar::-webkit-scrollbar { display: none; }
 .month-row { border-bottom: 1px solid var(--border); background: var(--bg); }
-.month-sum { display: flex; flex-wrap: wrap; gap: 2px 14px; padding: 0 20px 10px; font-size: 12px; color: var(--muted); cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+.month-sum { display: flex; align-items: center; gap: 10px; padding: 0 14px 8px 20px; font-size: 12px; color: var(--muted); cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
 .month-sum:empty { display: none; }
+.ms-parts { display: flex; flex-wrap: wrap; gap: 2px 14px; flex: 1; min-width: 0; }
+.ms-icon { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border2); background: var(--s1); color: var(--text); display: flex; align-items: center; justify-content: center; }
 .month-sum b { color: var(--text); font-weight: 600; }
 .month-sum .ot { color: var(--amber-text); font-weight: 600; }
 /* Kunden-Übersicht: ersetzt Monatsstreifen + Zeitleiste, solange "Kunden" aktiv ist. */
@@ -473,7 +475,6 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 
   <nav class="bottom-nav">
     <button class="nav-btn" onclick="openExport('share')"><span class="icon"><svg class="ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M6 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M18 6m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M8.7 10.7l6.6 -3.4"/><path d="M8.7 13.3l6.6 3.4"/></svg></span><span data-i18n="nav_teilen">Teilen</span></button>
-    <button class="nav-btn" id="nav-customers" onclick="toggleCustomers()"><span class="icon"><svg class="ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg></span><span data-i18n="nav_kunden">Kunden</span></button>
     <div class="fab">
       <button class="fab-btn" onclick="toggleFab()" id="fab-btn">＋</button>
       <div class="fab-menu" id="fab-menu">
@@ -483,7 +484,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
         <div class="fab-item" onclick="fabAction('work')"><span class="fi-icon"><svg class="ic" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 10h3v-3l-3.5 -3.5a6 6 0 0 1 8 8l6 6a2 2 0 0 1 -3 3l-6 -6a6 6 0 0 1 -8 -8l3.5 3.5"/></svg></span> <span data-i18n="fab_schicht">Schicht</span></div>
       </div>
     </div>
-    <button class="nav-btn" id="nav-summary" onclick="openSummary()"><span class="icon"><svg class="ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M4 20h14"/></svg></span><span data-i18n="nav_uebersicht">Übersicht</span></button>
+    <button class="nav-btn" id="nav-customers" onclick="toggleCustomers()"><span class="icon"><svg class="ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg></span><span data-i18n="nav_kunden">Kunden</span></button>
   </nav>
 </div>
 
@@ -1344,7 +1345,7 @@ const I18N = {
     profile_locked_hint: 'Wird vom Administrator festgelegt',
     sheet_users_title: 'Benutzer', btn_new_user: '＋ Neuer Benutzer', btn_export_users: 'Liste (TXT)',
     search_placeholder: 'Kunde', sheet_search_title: 'Suchergebnis', search_none: 'Nichts gefunden',
-    search_summary: '{0} Einsätze an {1} Tagen · {2} vor Ort', search_travel: 'Anfahrt', nav_kunden: 'Kunden', cust_filter_ph: 'Kunde filtern', sum_line_ot: 'Überstunden', sum_line_vac: 'Urlaub', sum_line_sick: 'Krank', cust_empty: 'Noch keine Kunden eingetragen.',
+    search_summary: '{0} Einsätze an {1} Tagen · {2} vor Ort', search_travel: 'Anfahrt', nav_kunden: 'Kunden', cust_filter_ph: 'Kunde filtern', sum_line_diet: 'Auslöse', sum_line_ot: 'Überstunden', sum_line_vac: 'Urlaub', sum_line_sick: 'Krank', cust_empty: 'Noch keine Kunden eingetragen.',
     cust_visit_1: 'Besuch', cust_visit_2: 'Besuche', cust_visit_5: 'Besuche', cust_visits: 'Besuche', cust_onsite: 'vor Ort', cust_last: 'zuletzt', cust_last_short: 'zuletzt',
     roster_edit: 'Monteurliste bearbeiten', sheet_roster_title: 'Monteurliste',
     roster_hint: 'Ein Name pro Zeile (Vorname Nachname). Wer schon ein Konto hat, verschwindet automatisch aus der Auswahl.',
@@ -1502,7 +1503,7 @@ const I18N = {
     profile_locked_hint: 'Nastavuje administrátor',
     sheet_users_title: 'Uživatelé', btn_new_user: '＋ Nový uživatel', btn_export_users: 'Seznam (TXT)',
     search_placeholder: 'Zákazník', sheet_search_title: 'Výsledky hledání', search_none: 'Nic nenalezeno',
-    search_summary: '{0} zakázek za {1} dnů · {2} na místě', search_travel: 'Cesta', nav_kunden: 'Zákazníci', cust_filter_ph: 'Filtrovat zákazníka', sum_line_ot: 'přesčas', sum_line_vac: 'Dovolená', sum_line_sick: 'Nemoc', cust_empty: 'Zatím žádní zákazníci.',
+    search_summary: '{0} zakázek za {1} dnů · {2} na místě', search_travel: 'Cesta', nav_kunden: 'Zákazníci', cust_filter_ph: 'Filtrovat zákazníka', sum_line_diet: 'Diety', sum_line_ot: 'přesčas', sum_line_vac: 'Dovolená', sum_line_sick: 'Nemoc', cust_empty: 'Zatím žádní zákazníci.',
     cust_visit_1: 'návštěva', cust_visit_2: 'návštěvy', cust_visit_5: 'návštěv', cust_visits: 'návštěv', cust_onsite: 'na místě', cust_last: 'naposledy', cust_last_short: 'naposledy',
     roster_edit: 'Upravit seznam montérů', sheet_roster_title: 'Seznam montérů',
     roster_hint: 'Jedno jméno na řádek (Jméno Příjmení). Kdo už má účet, z výběru automaticky zmizí.',
@@ -1809,10 +1810,11 @@ function renderMonthSum() {
   const sm = monthSummary(shifts, activeMonth, config.weeklyNorm);
   if (!(sm.totalHours > 0) && !sm.sickDays && !sm.vacationDays) { el.innerHTML = ''; return; }
   const parts = ['<span><b>' + fmtH(sm.totalHours) + '</b></span>'];
+  if (sm.auslöseTotal > 0) parts.push('<span>' + t('sum_line_diet') + ' <b>' + sm.auslöseTotal + ' €</b></span>');
   if (sm.overtimeHours > 0) parts.push('<span class="ot">+' + fmtH(sm.overtimeHours) + ' ' + t('sum_line_ot') + '</span>');
   if (sm.vacationDays) parts.push('<span>' + t('sum_line_vac') + ' <b>' + sm.vacationDays + '</b></span>');
   if (sm.sickDays) parts.push('<span>' + t('sum_line_sick') + ' <b>' + sm.sickDays + '</b></span>');
-  el.innerHTML = parts.join('');
+  el.innerHTML = '<div class="ms-parts">' + parts.join('') + '</div><span class="ms-icon" aria-label="' + t('nav_uebersicht') + '"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M4 20h14"/></svg></span>';
 }
 function selectMonth(m) { activeMonth = m; renderMonthBar(); renderTimeline(); }
 
