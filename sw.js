@@ -1,13 +1,17 @@
 // Service Worker für Lely Schichten — Netzwerk zuerst (aktuelle Version, wenn
 // online), sonst aus dem Cache (funktioniert offline nach dem ersten Besuch).
-const CACHE_VERSION = 'lely-schichten-v27';
+const CACHE_VERSION = 'lely-schichten-v28';
 const CORE_FILES = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './icon-512-maskable.png'
+  './icon-512-maskable.png',
+  './fonts/noto-sans-latin-400-normal.woff2',
+  './fonts/noto-sans-latin-600-normal.woff2',
+  './fonts/ubuntu-latin-400-normal.woff2',
+  './fonts/ubuntu-latin-500-normal.woff2'
 ];
 
 self.addEventListener('install', function (event) {
