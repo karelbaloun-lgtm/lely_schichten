@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Lely Schichten</title>
-<meta name="theme-color" content="#E2001A">
+<meta name="theme-color" content="#C8102E">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -55,9 +55,8 @@
   --mono:      var(--sans);
   --font-head: var(--sans);
   --r:         16px;
-  --sheet-h:   92vh;
+  --sheet-h:   92%;
 }
-@supports (height: 100dvh) { :root { --sheet-h: 92dvh; } }
 /* Schriftwahl (Einstellungen): "lely" = Noto Sans + Ubuntu für Überschriften, "system" = Schrift des Geräts. */
 :root[data-font="lely"] { --sans: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --font-head: 'Ubuntu', 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -68,9 +67,12 @@ html, body { height: 100%; overscroll-behavior: none; }
 body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; overflow: hidden; font-variant-numeric: tabular-nums; }
 input, button, select, textarea { font-family: inherit; }
 
-.app { display: grid; grid-template-rows: auto auto 1fr auto; height: 100vh; height: 100dvh; max-width: 900px; margin: 0 auto; }
+/* Fester Rahmen = immer genau der sichtbare Bereich (iPhone-Safari, Chrome, Samsung Internet) — vh/dvh werden dort unterschiedlich berechnet und ließen die untere Leiste verschwinden bzw. Leerraum entstehen. */
+.app { display: grid; grid-template-rows: auto auto 1fr auto; position: fixed; top: 0; bottom: 0; left: 0; right: 0; width: 100%; max-width: 900px; margin: 0 auto; }
 
-.topbar { display: flex; flex-direction: column; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); box-shadow: 0 2px 10px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 10; padding-top: env(safe-area-inset-top); width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); }
+.topbar { display: flex; flex-direction: column; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); box-shadow: 0 2px 10px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 10; padding-top: env(safe-area-inset-top); }
+/* Nur auf breiten Bildschirmen reicht die rote Leiste über das ganze Fenster; auf dem Handy führte die 100vw-Berechnung zu einem seitlichen Versatz (iPhone). */
+@media (min-width: 901px) { .topbar { width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); } }
 .topbar::after {
   content: '';
   position: absolute; bottom: -1px; left: 20px; right: 20px; height: 1px;
