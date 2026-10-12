@@ -55,6 +55,7 @@
   --mono:      var(--sans);
   --font-head: var(--sans);
   --sab: env(safe-area-inset-bottom, 0px);
+  --vgap: 0px;   /* nur bei html.tall: -(lvh - dvh) → alles reicht bis zum echten unteren Bildschirmrand */
   --r:         16px;
   --sheet-h:   92%;
 }
@@ -71,10 +72,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 input, button, select, textarea { font-family: inherit; }
 
 /* Fester Rahmen = immer genau der sichtbare Bereich (iPhone-Safari, Chrome, Samsung Internet) — vh/dvh werden dort unterschiedlich berechnet und ließen die untere Leiste verschwinden bzw. Leerraum entstehen. */
-.app { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; position: fixed; top: 0; bottom: 0; left: 0; right: 0; width: 100%; max-width: 900px; margin: 0 auto; }
+.app { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; position: fixed; top: 0; bottom: var(--vgap); left: 0; right: 0; width: 100%; max-width: 900px; margin: 0 auto; }
 
 .topbar { display: flex; flex-direction: column; background: linear-gradient(135deg, var(--brand), var(--brand-dark)); box-shadow: 0 2px 10px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 10; padding-top: env(safe-area-inset-top); }
 /* Nur auf breiten Bildschirmen reicht die rote Leiste über das ganze Fenster; auf dem Handy führte die 100vw-Berechnung zu einem seitlichen Versatz (iPhone). */
+html.tall { --vgap: calc(100dvh - 100lvh); }
 @media (min-width: 901px) { .topbar { width: 100vw; margin-left: calc(50% - 50vw); margin-right: calc(50% - 50vw); } }
 .topbar::after {
   content: '';
@@ -225,9 +227,9 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .fab-item:active { transform: scale(0.97) !important; }
 .fab-item .fi-icon { font-size: 18px; display: flex; color: var(--brand); }
 
-.sheet-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+.sheet-overlay { position: fixed; inset: 0; bottom: var(--vgap); background: rgba(0,0,0,0.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
 .sheet-overlay.open { opacity: 1; pointer-events: all; }
-.sheet { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 900px; background: var(--s1); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border2); max-height: var(--sheet-h); display: flex; flex-direction: column; transition: transform 0.35s cubic-bezier(.32,0,.67,0); z-index: 101; padding-bottom: var(--sab); }
+.sheet { position: fixed; bottom: var(--vgap); left: 50%; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 900px; background: var(--s1); border-radius: 24px 24px 0 0; border-top: 1px solid var(--border2); max-height: var(--sheet-h); display: flex; flex-direction: column; transition: transform 0.35s cubic-bezier(.32,0,.67,0); z-index: 101; padding-bottom: var(--sab); }
 .sheet.open { transform: translateX(-50%) translateY(0); }
 .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--dim); margin: 12px auto 0; flex-shrink: 0; }
 .sheet-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px 12px; flex-shrink: 0; }
@@ -336,7 +338,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .font-btn.active { background: var(--s1); border-color: var(--border2); }
 .topbar-title, .auth-brand, .sheet-title, .auth-title, .cust-detail-name, .summary-amount, .empty-state .big { font-family: var(--font-head); font-weight: 500; font-synthesis: none; }
 
-.cal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.cal-overlay { position: fixed; inset: 0; bottom: var(--vgap); background: rgba(0,0,0,0.7); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 .cal-overlay.open { opacity: 1; pointer-events: all; }
 .cal-box { background: var(--s1); border: 1px solid var(--border2); border-radius: 20px; padding: 20px; width: 340px; max-width: 95vw; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
 .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -353,14 +355,14 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .cal-footer { display: flex; gap: 8px; margin-top: 14px; }
 .cal-footer .btn-main { font-size: 14px; padding: 12px; }
 
-.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 250; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.confirm-overlay { position: fixed; inset: 0; bottom: var(--vgap); background: rgba(0,0,0,0.7); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); z-index: 250; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 .confirm-overlay.open { opacity: 1; pointer-events: all; }
 .confirm-box { background: var(--s1); border: 1px solid var(--border2); border-radius: 20px; padding: 24px; width: 320px; max-width: 90vw; box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
 .confirm-title { font-size: 17px; font-weight: 600; margin-bottom: 10px; }
 .confirm-text { font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 20px; }
 .confirm-actions { display: flex; gap: 10px; }
 
-.toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--s2); border: 1px solid var(--border2); border-left: 3px solid var(--brand); border-radius: 12px; padding: 12px 20px; font-size: 14px; color: var(--text); z-index: 300; opacity: 0; pointer-events: none; white-space: nowrap; transition: all 0.25s cubic-bezier(.4,0,.2,1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+.toast { position: fixed; bottom: calc(90px + var(--vgap)); left: 50%; transform: translateX(-50%) translateY(16px); background: var(--s2); border: 1px solid var(--border2); border-left: 3px solid var(--brand); border-radius: 12px; padding: 12px 20px; font-size: 14px; color: var(--text); z-index: 300; opacity: 0; pointer-events: none; white-space: nowrap; transition: all 0.25s cubic-bezier(.4,0,.2,1); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 /* Bewusst über display:none/block + @keyframes-Animation statt einer
    opacity-transition umgesetzt: eine transition braucht einen bereits
@@ -388,7 +390,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 #manual-sync-btn.sync-err { color: #ff7b7b; }
 .topbar-sub { font-size: 11px; color: rgba(255,255,255,.9); cursor: pointer; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Anmeldung (Vollbild, über allem außer Toasts) */
-.auth-overlay { display: none; position: fixed; inset: 0; z-index: 280; background: var(--bg); align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+.auth-overlay { display: none; position: fixed; inset: 0; bottom: var(--vgap); z-index: 280; background: var(--bg); align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
 .auth-overlay.open { display: flex; }
 .auth-card { width: 100%; max-width: 380px; margin: auto; }
 .auth-brand { background: linear-gradient(135deg, var(--brand), var(--brand-dark)); color: #fff; padding: 16px 20px; border-radius: 16px 16px 0 0; font-size: 18px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
@@ -415,7 +417,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .sub-eye { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
 
 /* Dezenter Hinweis: schmaler orangefarbener Rahmen (kein Vollton-Balken), per ✕ wegklickbar. */
-.update-banner { display: none; position: fixed; bottom: calc(76px + var(--sab)); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 360px; padding: 8px 12px 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; z-index: 270; box-shadow: 0 4px 14px rgba(0,0,0,0.18); background: var(--s1); color: var(--text); border: 1.5px solid var(--amber); cursor: pointer; align-items: center; justify-content: space-between; gap: 10px; }
+.update-banner { display: none; position: fixed; bottom: calc(76px + var(--sab) + var(--vgap)); left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 360px; padding: 8px 12px 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600; z-index: 270; box-shadow: 0 4px 14px rgba(0,0,0,0.18); background: var(--s1); color: var(--text); border: 1.5px solid var(--amber); cursor: pointer; align-items: center; justify-content: space-between; gap: 10px; }
 .update-banner.open { display: flex; }
 .update-banner-x { flex-shrink: 0; width: 36px; height: 36px; margin: -8px -6px -8px 0; border: none; background: transparent; color: var(--muted); font-size: 14px; line-height: 1; cursor: pointer; touch-action: manipulation; }
 
@@ -1317,7 +1319,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // ob sein Gerät wirklich die neueste Version geladen hat.
 const LAST_UPDATED = '12.10.2026';
 // Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
-const APP_VERSION = 40;
+const APP_VERSION = 41;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -1454,6 +1456,7 @@ const I18N = {
     setting_wochennorm: 'Wochennorm', setting_wochennorm_sub: 'Std./Woche, Basis für Überstunden',
     setting_erscheinungsbild: 'Erscheinungsbild', setting_erscheinungsbild_sub: 'hell / dunkel / System',
     setting_schrift: 'Schrift', setting_schrift_sub: 'Lely oder System', font_system: 'System',
+    setting_tall: 'Anzeige bis zum unteren Rand', setting_tall_sub: 'nur iPhone-App; bei Problemen ausschalten', tall_on: 'An', tall_off: 'Aus',
     setting_sprache: 'Sprache', setting_sprache_sub: 'App-Anzeige (Export bleibt immer Deutsch)',
     btn_export_excel: 'Exportieren (Excel)', btn_import: 'Importieren (XLSX, PDF)',
     btn_backup_speichern: 'Backup speichern', btn_backup_laden: 'Backup laden',
@@ -1619,6 +1622,7 @@ const I18N = {
     setting_wochennorm: 'Týdenní norma', setting_wochennorm_sub: 'hod./týden, základ pro přesčasy',
     setting_erscheinungsbild: 'Vzhled', setting_erscheinungsbild_sub: 'světlý / tmavý / systém',
     setting_schrift: 'Písmo', setting_schrift_sub: 'Lely nebo systémové', font_system: 'Systém',
+    setting_tall: 'Zobrazení až k dolnímu okraji', setting_tall_sub: 'jen aplikace na iPhonu; při potížích vypnout', tall_on: 'Zap', tall_off: 'Vyp',
     setting_sprache: 'Jazyk', setting_sprache_sub: 'zobrazení appky (export zůstává vždy německy)',
     btn_export_excel: 'Exportovat (Excel)', btn_import: 'Importovat (XLSX, PDF)',
     btn_backup_speichern: 'Uložit zálohu', btn_backup_laden: 'Načíst zálohu',
@@ -1805,6 +1809,11 @@ function applyTheme(mode) {
   document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === mode));
 }
 function setTheme(mode) { localStorage.setItem('monteur_theme', mode); applyTheme(mode); }
+function setTall(on) {
+  localStorage.setItem('monteur_tall', on ? '1' : '0');
+  adaptSafeBottom();
+  document.querySelectorAll('.tall-btn').forEach(function (b) { b.classList.toggle('active', (b.dataset.tall === '1') === !!on); });
+}
 function setFont(v) {
   v = v === 'system' ? 'system' : 'lely';
   localStorage.setItem('monteur_font', v);
@@ -3024,12 +3033,28 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 // Die App ist ein fester Rahmen: die Seite selbst darf nie seitlich/nach oben verschoben bleiben
 // (kann auf dem iPhone nach Eingabe-Zoom oder Tastatur passieren).
+// Zeigt, ob die iPhone-Web-App ein Layout-Fenster hat, das kürzer als der Bildschirm ist, obwohl das
+// "große Fenster" (lvh) bis ganz unten reicht — dann kann die Anzeige bis zum unteren Rand verlängert werden.
+let tallPossible = false;
+function viewportUnitPx(unit) {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;visibility:hidden;left:0;top:0;width:1px;height:100' + unit + ';';
+  document.body.appendChild(d);
+  const h = Math.round(d.getBoundingClientRect().height);
+  document.body.removeChild(d);
+  return h;
+}
 function adaptSafeBottom() {
+  const root = document.documentElement;
   const standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
   const portrait = innerHeight >= innerWidth;
   const screenH = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
-  const missing = screenH - innerHeight;   // Höhe, die dem Fenster zum Bildschirm fehlt
-  document.documentElement.style.setProperty('--sab', standalone && missing >= 30 ? '0px' : 'env(safe-area-inset-bottom, 0px)');
+  const missing = screenH - innerHeight;   // Höhe, die dem Layout-Fenster zum Bildschirm fehlt
+  tallPossible = standalone && missing >= 30 && viewportUnitPx('lvh') >= screenH - 2;
+  const wantTall = tallPossible && localStorage.getItem('monteur_tall') !== '0';
+  root.classList.toggle('tall', wantTall);
+  // Ohne Verlängerung ist der untere Sicherheitsabstand doppelt (Fenster endet schon vor dem Rand) — dann wegnehmen.
+  root.style.setProperty('--sab', standalone && missing >= 30 && !wantTall ? '0px' : 'env(safe-area-inset-bottom, 0px)');
 }
 adaptSafeBottom();
 window.addEventListener('resize', adaptSafeBottom);
@@ -3135,6 +3160,13 @@ function renderSettings() {
         <button class="font-btn${localStorage.getItem('monteur_font') === 'system' ? ' active' : ''}" data-font="system" onclick="setFont('system')">${t('font_system')}</button>
       </div>
     </div>
+    ${tallPossible ? `<div class="setting-row">
+      <div><div class="setting-label">${t('setting_tall')}</div><div class="setting-sub">${t('setting_tall_sub')}</div></div>
+      <div class="theme-seg">
+        <button class="font-btn tall-btn${localStorage.getItem('monteur_tall') !== '0' ? ' active' : ''}" data-tall="1" onclick="setTall(1)">${t('tall_on')}</button>
+        <button class="font-btn tall-btn${localStorage.getItem('monteur_tall') === '0' ? ' active' : ''}" data-tall="0" onclick="setTall(0)">${t('tall_off')}</button>
+      </div>
+    </div>` : ''}
     <div style="margin-top:20px;">
       <button class="btn-main secondary" style="width:100%;" onclick="openExport('download')">${t('btn_export_excel')}</button>
     </div>
@@ -3178,7 +3210,7 @@ function renderDiag() {
     ' · doc ' + document.documentElement.clientWidth + '×' + document.documentElement.clientHeight + ' (scroll ' + document.documentElement.scrollWidth + ')' +
     ' · screen ' + screen.width + '×' + screen.height + ' · dpr ' + devicePixelRatio +
     ' · app ' + Math.round(app.width) + '×' + Math.round(app.height) + '@' + Math.round(app.left) + ',' + Math.round(app.top) +
-    ' · units ' + units + ' · outer ' + outerWidth + '×' + outerHeight + ' · availH ' + screen.availHeight + ' · vvTop ' + (vv ? Math.round(vv.offsetTop) + '/' + Math.round(vv.pageTop) : '–') + ' · safe ' + safe + ' · sab ' + (document.documentElement.style.getPropertyValue('--sab').indexOf('env') >= 0 ? 'env' : '0') + ' · ' + (standalone ? 'App' : 'Browser');
+    ' · units ' + units + ' · outer ' + outerWidth + '×' + outerHeight + ' · availH ' + screen.availHeight + ' · vvTop ' + (vv ? Math.round(vv.offsetTop) + '/' + Math.round(vv.pageTop) : '–') + ' · safe ' + safe + ' · sab ' + (document.documentElement.style.getPropertyValue('--sab').indexOf('env') >= 0 ? 'env' : '0') + ' · tall ' + (document.documentElement.classList.contains('tall') ? 'on' : tallPossible ? 'off' : 'n/a') + ' · ' + (standalone ? 'App' : 'Browser');
 }
 // Zeigt zusätzlich die Version des gespeicherten App-Speichers, falls sie von dieser Seite abweicht
 // (= das Gerät hat noch eine ältere Version im Speicher und wartet auf das Update).
