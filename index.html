@@ -1315,9 +1315,9 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // Muss bei JEDEM Deploy auf das aktuelle Datum aktualisiert werden (Format
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
-const LAST_UPDATED = '12.10.2026';
+const LAST_UPDATED = '14.10.2026';
 // Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
-const APP_VERSION = 42;
+const APP_VERSION = 43;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -3335,6 +3335,7 @@ function finishWeekExport(useAddresses) {
   finalizeMultiWeekExport(pendingExportMondays, addresses);
 }
 const HR_EMAIL = 'lelycenter.kd.admin@eder-gmbh.de';
+const HR_CC_EMAIL = 's.hartl@eder-gmbh.de';   // Kopie (CC) beim Teilen per E-Mail
 function emailSubjectForWeeks(mondayList) {
   return config.lastName + ' ' + mondayList.map(function (mon) { return 'KW ' + isoWeekNumber(mon); }).join(', ');
 }
@@ -3367,7 +3368,7 @@ function finalizeMultiWeekExport(mondayList, hotelAddresses) {
         toast(t('t_dateien_heruntergeladen_1') + mondayList.length + t('t_dateien_heruntergeladen_2'));
         if (exportMode === 'share') {
           const subject = emailSubjectForWeeks(mondayList);
-          const mailto = 'mailto:' + HR_EMAIL + '?subject=' + encodeURIComponent(subject);
+          const mailto = 'mailto:' + HR_EMAIL + '?cc=' + encodeURIComponent(HR_CC_EMAIL) + '&subject=' + encodeURIComponent(subject);
           setTimeout(function () { window.location.href = mailto; }, 300);
         }
       }
