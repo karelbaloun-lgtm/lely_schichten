@@ -949,12 +949,12 @@ function buildStyleRegistry(model) {
     borderKeyToId[key] = id;
     return id;
   }
-  const xfs = [{ fontId: 0, borderId: 0, numFmtId: 0, alignH: null, alignV: null }];
+  const xfs = [{ fontId: 0, borderId: 0, numFmtId: 0, alignH: null, alignV: null, wrap: false }];
   const xfKeyToId = {};
-  function getXfId(fontId, borderId, numFmtId, alignH, alignV) {
-    const key = [fontId, borderId, numFmtId, alignH || '', alignV || ''].join('|');
+  function getXfId(fontId, borderId, numFmtId, alignH, alignV, wrap) {
+    const key = [fontId, borderId, numFmtId, alignH || '', alignV || '', wrap ? 'w' : ''].join('|');
     if (xfKeyToId[key] !== undefined) return xfKeyToId[key];
-    xfs.push({ fontId: fontId, borderId: borderId, numFmtId: numFmtId, alignH: alignH || null, alignV: alignV || null });
+    xfs.push({ fontId: fontId, borderId: borderId, numFmtId: numFmtId, alignH: alignH || null, alignV: alignV || null, wrap: !!wrap });
     const id = xfs.length - 1;
     xfKeyToId[key] = id;
     return id;
@@ -968,7 +968,7 @@ function buildStyleRegistry(model) {
     const numFmtId = c.type === 'date' ? 164 : (c.type === 'time' ? 165 : 0);
     const fontId = getFontId(font.sz, font.bold);
     const borderId = getBorderId(border);
-    cellStyleId[ref] = getXfId(fontId, borderId, numFmtId, align.h, align.v);
+    cellStyleId[ref] = getXfId(fontId, borderId, numFmtId, align.h, align.v, align.wrap);
   });
   return { fonts: fonts, borders: borders, xfs: xfs, cellStyleId: cellStyleId };
 }
@@ -984,8 +984,8 @@ function buildStylesXml(registry) {
     const applyNum = xf.numFmtId !== 0 ? ' applyNumberFormat="1"' : '';
     const applyFont = registry.fonts[xf.fontId].bold ? ' applyFont="1"' : '';
     const applyBorder = xf.borderId !== 0 ? ' applyBorder="1"' : '';
-    if (xf.alignH || xf.alignV) {
-      const alignXml = '<alignment' + (xf.alignH ? ' horizontal="' + xf.alignH + '"' : '') + (xf.alignV ? ' vertical="' + xf.alignV + '"' : '') + '/>';
+    if (xf.alignH || xf.alignV || xf.wrap) {
+      const alignXml = '<alignment' + (xf.alignH ? ' horizontal="' + xf.alignH + '"' : '') + (xf.alignV ? ' vertical="' + xf.alignV + '"' : '') + (xf.wrap ? ' wrapText="1"' : '') + '/>';
       return '<xf numFmtId="' + xf.numFmtId + '" fontId="' + xf.fontId + '" fillId="0" borderId="' + xf.borderId + '" xfId="0"' + applyNum + applyFont + applyBorder + ' applyAlignment="1">' + alignXml + '</xf>';
     }
     return '<xf numFmtId="' + xf.numFmtId + '" fontId="' + xf.fontId + '" fillId="0" borderId="' + xf.borderId + '" xfId="0"' + applyNum + applyFont + applyBorder + '/>';
@@ -1132,6 +1132,10 @@ function weekWorkdays(mondayIso) { return weekDates(mondayIso).slice(0, 5); }
 function fmtDayMonth(iso) { const d = parseISODate(iso); return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.'; }
 function fmtDayMonthShort(iso) { const d = parseISODate(iso); return String(d.getDate()).padStart(2,'0') + '.'; }
 function weekRangeLabel(mondayIso) { const days = weekWorkdays(mondayIso); return fmtDayMonth(days[0]) + '-' + fmtDayMonth(days[days.length-1]); }
+// Verbindet Bemerkung und Notiz mit " / "; leere Teile entfallen (kein überflüssiger Schrägstrich).
+function joinNotes() {
+  return Array.prototype.slice.call(arguments).map(function (x) { return String(x == null ? '' : x).trim(); }).filter(Boolean).join(' / ');
+}
 function buildWeekExportRows(shifts, mondayIso) {
   const shiftsMap = shiftsByDate(shifts);
   const rows = [];
@@ -1141,8 +1145,8 @@ function buildWeekExportRows(shifts, mondayIso) {
       if (isWorkdayHoliday(iso)) rows.push({ date: iso, bemerkung: 'Feiertag - ' + holidayName(iso) });
       return;
     }
-    if (s.type === 'sick') { rows.push({ date: iso, bemerkung: 'KRANK' }); return; }
-    if (s.type === 'vacation') { rows.push({ date: iso, bemerkung: 'URLAUB' }); return; }
+    if (s.type === 'sick') { rows.push({ date: iso, bemerkung: joinNotes('KRANK', s.note) }); return; }
+    if (s.type === 'vacation') { rows.push({ date: iso, bemerkung: joinNotes('URLAUB', s.note) }); return; }
     if (s.type === 'work') {
       const legs = s.legs || [];
       legs.forEach(function (leg, i) {
@@ -1154,7 +1158,8 @@ function buildWeekExportRows(shifts, mondayIso) {
           installPause: leg.pause || 0,
           departureStart: isLast ? (s.departureStart || '') : '',
           departureEnd: isLast ? (s.departureEnd || '') : '',
-          bemerkung: leg.note || ''
+          // Die allgemeine Notiz des Tages steht (einmal) in der letzten Zeile des Tages, hinter der Kunden-Bemerkung.
+          bemerkung: joinNotes(leg.note, isLast ? s.note : '')
         });
       });
     }
@@ -1201,6 +1206,7 @@ const EXPORT_FONT = {
 const EXPORT_ALIGN = {
   centerH: { h: 'center' },
   centerHV: { h: 'center', v: 'center' },
+  centerHWrap: { h: 'center', wrap: true },   // lange Bemerkungen brechen in der Zelle um (statt abgeschnitten zu werden)
   left: { h: 'left' }
 };
 function setExportCell(cells, ref, opts) { cells[ref] = Object.assign({}, cells[ref], opts); }
@@ -1264,7 +1270,7 @@ function buildWeekExportModel(shifts, mondayIso, person, hotelAddresses) {
     if (row.installPause) setExportCell(cells, 'G' + r, { type: 'time', value: minutesToHHMM(row.installPause), font: EXPORT_FONT.plain11 });
     if (row.departureStart) setExportCell(cells, 'H' + r, { type: 'time', value: row.departureStart, font: EXPORT_FONT.plain11 });
     if (row.departureEnd) setExportCell(cells, 'I' + r, { type: 'time', value: row.departureEnd, font: EXPORT_FONT.plain11 });
-    if (row.bemerkung) setExportCell(cells, 'K' + r, { type: 'str', value: row.bemerkung, font: EXPORT_FONT.plain11, align: EXPORT_ALIGN.centerH });
+    if (row.bemerkung) setExportCell(cells, 'K' + r, { type: 'str', value: row.bemerkung, font: EXPORT_FONT.plain11, align: EXPORT_ALIGN.centerHWrap });
     merges.push('K' + r + ':M' + r);
     rowHeights[r] = 28.5;
     r++;
@@ -1315,9 +1321,9 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // Muss bei JEDEM Deploy auf das aktuelle Datum aktualisiert werden (Format
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
-const LAST_UPDATED = '14.10.2026';
+const LAST_UPDATED = '20.10.2026';
 // Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
-const APP_VERSION = 43;
+const APP_VERSION = 44;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
