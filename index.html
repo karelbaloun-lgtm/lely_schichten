@@ -806,7 +806,8 @@ function legGrossHours(leg) { return segmentHours(leg.arrivalStart, leg.arrivalE
 function legPaidHours(leg) { const arrival=segmentHours(leg.arrivalStart, leg.arrivalEnd); const install=segmentHours(leg.installStart, leg.installEnd); const pauseHours=(leg.pause||0)/60; return arrival + Math.max(0, install-pauseHours); }
 function totalEnteredPause(shift) { return (shift.legs||[]).reduce(function(sum, leg){ return sum + (leg.pause||0); }, 0); }
 function grossShiftHours(shift) { const legsGross = (shift.legs||[]).reduce(function(sum, leg){ return sum + legGrossHours(leg); }, 0); return legsGross + segmentHours(shift.departureStart, shift.departureEnd); }
-function requiredBreakMinutes(grossHours) { if (grossHours>9) return 45; if (grossHours>6) return 30; return 0; }
+// Arbeitsanweisung Lely (gültig ab 01.02.2026): pauschal 45 Min. Pause pro Arbeitstag bei mehr als 6 Stunden Arbeitszeit.
+function requiredBreakMinutes(grossHours) { return grossHours>6 ? 45 : 0; }
 function paidShiftHours(shift) { if (shift.type!=='work') return 0; const legsPaid = (shift.legs||[]).reduce(function(sum, leg){ return sum + legPaidHours(leg); }, 0); const departure=segmentHours(shift.departureStart, shift.departureEnd); return legsPaid + departure; }
 function breakCheck(shift) { const gross=grossShiftHours(shift); const required=requiredBreakMinutes(gross); const entered=totalEnteredPause(shift); return { required: required, entered: entered, ok: entered>=required }; }
 function exceedsMaxDailyHours(shift, maxHours) { const limit = typeof maxHours==='number'?maxHours:10; return paidShiftHours(shift)>limit; }
@@ -1324,7 +1325,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // ob sein Gerät wirklich die neueste Version geladen hat.
 const LAST_UPDATED = '23.10.2026';
 // Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
-const APP_VERSION = 45;
+const APP_VERSION = 46;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -1441,7 +1442,7 @@ const I18N = {
     confirm_buro_title: 'Büro schon diese Woche?',
     confirm_buro_text: 'Für diese Woche ist bereits ein Büro-Eintrag vorhanden. Trotzdem einen weiteren hinzufügen?',
     holiday_warning: '{0} ist ein Feiertag ({1}). Trotzdem als Arbeitstag speichern?',
-    pause_warning: 'Bei {0}h Bruttodauer schreibt das ArbZG mindestens {1} Min. Pause vor, eingetragen sind {2} Min. BESTÄTIGEN übernimmt deine Eingabe trotzdem, ÜBERSPRINGEN korrigiert automatisch auf {1} Min.',
+    pause_warning: 'Bei {0}h Arbeitszeit schreibt die Arbeitsanweisung (ab 01.02.2026) {1} Min. Pause vor, eingetragen sind {2} Min. BESTÄTIGEN übernimmt deine Eingabe trotzdem, ÜBERSPRINGEN korrigiert automatisch auf {1} Min.',
     btn_buro_trotzdem: 'TROTZDEM HINZUFÜGEN',
     empty_keine_eintraege: 'Keine Einträge', empty_fuege_hinzu: 'Füge deine erste Schicht über ＋ hinzu',
     detail_art: 'Art', detail_typ_arbeit: 'Arbeit', detail_typ_krank: 'Krank', detail_typ_urlaub: 'Urlaub',
@@ -1606,7 +1607,7 @@ const I18N = {
     confirm_buro_title: 'Kancelář už tento týden?',
     confirm_buro_text: 'Pro tento týden už je záznam Kancelář vyplněný. Přesto přidat další?',
     holiday_warning: '{0} je svátek ({1}). Přesto uložit jako pracovní den?',
-    pause_warning: 'Při hrubé době {0}h předepisuje zákon minimálně {1} min přestávky, zadáno je {2} min. POTVRDIT ponechá tvůj zápis, PŘESKOČIT automaticky opraví na {1} min.',
+    pause_warning: 'Při době práce {0}h předepisuje pracovní pokyn firmy (od 01.02.2026) {1} min přestávky, zadáno je {2} min. POTVRDIT ponechá tvůj zápis, PŘESKOČIT automaticky opraví na {1} min.',
     btn_buro_trotzdem: 'PŘESTO PŘIDAT',
     empty_keine_eintraege: 'Žádné záznamy', empty_fuege_hinzu: 'Přidej první směnu přes ＋',
     detail_art: 'Typ', detail_typ_arbeit: 'Práce', detail_typ_krank: 'Nemoc', detail_typ_urlaub: 'Dovolená',
@@ -2279,8 +2280,8 @@ function updateAutoDepartureEnd() {
   endInput.value = String(Math.floor(endMin / 60)).padStart(2, '0') + ':' + String(endMin % 60).padStart(2, '0');
 }
 
-// ─── Live-Vorschlag: Pause der letzten Kunden-Karte nach ArbZG-Vorgabe
-// (>9h->45min, >6h->30min, sonst 0min; nur solange das Feld nicht manuell
+// ─── Live-Vorschlag: Pause der letzten Kunden-Karte nach Arbeitsanweisung
+// (>6h->45min, sonst 0min; nur solange das Feld nicht manuell
 // bearbeitet wurde — dataset.pauseAuto bleibt '1', bis der Nutzer selbst tippt) ─
 function updateAutoPause() {
   if (currentType !== 'work') return;
@@ -2874,7 +2875,7 @@ async function parseXLSX(buf) {
     const iso=xlDateToISO(c[0]);
     let pauseMin=0;
     if(typeof c[6]==='number') pauseMin=Math.round(c[6]*1440);
-    else { const gross=((c[2]||0)-(c[1]||0)+(c[5]||0)-(c[4]||0))*24; pauseMin=gross>9?45:gross>6?30:0; }
+    else { const gross=((c[2]||0)-(c[1]||0)+(c[5]||0)-(c[4]||0))*24; pauseMin=gross>6?45:0; }
     const leg={arrivalStart:fracToHHMM(c[1]),arrivalEnd:fracToHHMM(c[2]),
                installStart:fracToHHMM(c[4]),installEnd:fracToHHMM(c[5]),pause:pauseMin,
                note:typeof c[10]==='string'?c[10].trim():''};
