@@ -188,6 +188,7 @@ input.note-input, textarea.note-input, input.setting-input, input.name-input, in
 .badge-sick     { background: var(--red-dim);   color: var(--red); }
 .badge-vacation { background: var(--green-dim); color: var(--green); }
 .badge-holiday  { background: var(--amber-dim); color: var(--amber); }
+.badge-pause    { background: var(--amber-dim); color: var(--amber); }
 .badge-hotel    { background: var(--brand-dim);  color: var(--brand); }
 .day-right { text-align: right; flex-shrink: 0; }
 .day-hours { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; }
@@ -548,7 +549,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 <div class="sheet" id="sheet-export">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
-    <div class="sheet-title" data-i18n="sheet_export_title">Woche exportieren</div>
+    <div class="sheet-title" data-i18n="sheet_export_title">Exportieren</div>
     <button class="sheet-close" onclick="closeSheet('sheet-export')">✕</button>
   </div>
   <div class="sheet-body" id="export-body"></div>
@@ -961,18 +962,23 @@ function buildStyleRegistry(model) {
     xfKeyToId[key] = id;
     return id;
   }
-  const cellStyleId = {};
-  Object.keys(model.cells).forEach(function (ref) {
-    const c = model.cells[ref];
-    const font = c.font || { sz: 11, bold: false };
-    const border = c.border || {};
-    const align = c.align || {};
-    const numFmtId = c.type === 'date' ? 164 : (c.type === 'time' ? 165 : 0);
-    const fontId = getFontId(font.sz, font.bold);
-    const borderId = getBorderId(border);
-    cellStyleId[ref] = getXfId(fontId, borderId, numFmtId, align.h, align.v, align.wrap);
+  // Auch eine Liste von Modellen (mehrere Blätter) ist möglich — Fonts/Rahmen/Formate werden gemeinsam verwaltet.
+  const styleMaps = (Array.isArray(model) ? model : [model]).map(function (m) {
+    const cellStyleId = {};
+    Object.keys(m.cells).forEach(function (ref) {
+      const c = m.cells[ref];
+      const font = c.font || { sz: 11, bold: false };
+      const border = c.border || {};
+      const align = c.align || {};
+      const numFmtId = c.type === 'date' ? 164 : (c.type === 'time' ? 165 : 0);
+      const fontId = getFontId(font.sz, font.bold);
+      const borderId = getBorderId(border);
+      cellStyleId[ref] = getXfId(fontId, borderId, numFmtId, align.h, align.v, align.wrap);
+    });
+    return cellStyleId;
   });
-  return { fonts: fonts, borders: borders, xfs: xfs, cellStyleId: cellStyleId };
+
+  return { fonts: fonts, borders: borders, xfs: xfs, cellStyleId: styleMaps[0], styleMaps: styleMaps };
 }
 function buildStylesXml(registry) {
   const fontsXml = registry.fonts.map(function (f) {
@@ -1061,7 +1067,7 @@ function buildDrawingXml(anchor) {
     '</xdr:twoCellAnchor>' +
     '</xdr:wsDr>';
 }
-function buildSheetXml(model, registry) {
+function buildSheetXml(model, registry, styleMap) {
   const cellRefs = Object.keys(model.cells);
   let maxRow = 1, maxCol = 1;
   cellRefs.forEach(function (ref) { const p = parseCellRef(ref); if (p.row > maxRow) maxRow = p.row; if (p.col > maxCol) maxCol = p.col; });
@@ -1073,7 +1079,7 @@ function buildSheetXml(model, registry) {
     const heightAttr = (model.rowHeights && model.rowHeights[rowNum]) ? ' ht="' + model.rowHeights[rowNum] + '" customHeight="1"' : '';
     const cellsXml = cells.map(function (entry) {
       const c = entry.cell;
-      const s = registry.cellStyleId[entry.ref];
+      const s = (styleMap || registry.cellStyleId)[entry.ref];
       if (c.type === 'date') return '<c r="' + entry.ref + '" s="' + s + '"><v>' + excelDateSerial(c.value) + '</v></c>';
       if (c.type === 'time') return '<c r="' + entry.ref + '" s="' + s + '"><v>' + excelTimeFraction(c.value) + '</v></c>';
       if (c.type === 'str') return '<c r="' + entry.ref + '" s="' + s + '" t="inlineStr"><is><t xml:space="preserve">' + escapeXml(c.value) + '</t></is></c>';
@@ -1118,6 +1124,59 @@ function buildXlsxWorkbook(model) {
   }
   return buildZip(files);
 }
+
+// Mehrere Tabellen-Blätter in EINER Datei (je Modell ein Blatt, jedes mit eigenem Logo).
+// Bei nur einem Modell entsteht exakt dieselbe Datei wie buildXlsxWorkbook().
+function buildXlsxWorkbookMulti(models) {
+  if (models.length === 1) return buildXlsxWorkbook(models[0]);
+  const registry = buildStyleRegistry(models);
+  const n = models.length;
+  const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+  const hasImage = models.some(function (m) { return !!m.image; });
+  const names = models.map(function (m, i) { return m.sheetName || ('Tabelle' + (i + 1)); });
+  const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+
+  let types = head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    (hasImage ? '<Default Extension="jpeg" ContentType="image/jpeg"/>' : '') +
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>';
+  models.forEach(function (m, i) {
+    types += '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+    if (m.image) types += '<Override PartName="/xl/drawings/drawing' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>';
+  });
+  types += '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+
+  let wbRels = head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+  let sheets = '';
+  models.forEach(function (m, i) {
+    wbRels += '<Relationship Id="rId' + (i + 1) + '" Type="' + R + '/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>';
+    sheets += '<sheet name="' + escapeXml(names[i]) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>';
+  });
+  wbRels += '<Relationship Id="rId' + (n + 1) + '" Type="' + R + '/styles" Target="styles.xml"/></Relationships>';
+  const workbook = head + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="' + R + '"><sheets>' + sheets + '</sheets></workbook>';
+
+  const files = [
+    { name: '[Content_Types].xml', data: utf8Bytes(types) },
+    { name: '_rels/.rels', data: utf8Bytes(buildRootRelsXml()) },
+    { name: 'xl/workbook.xml', data: utf8Bytes(workbook) },
+    { name: 'xl/_rels/workbook.xml.rels', data: utf8Bytes(wbRels) },
+    { name: 'xl/styles.xml', data: utf8Bytes(buildStylesXml(registry)) }
+  ];
+  let mediaAdded = false;
+  models.forEach(function (m, i) {
+    const k = i + 1;
+    files.push({ name: 'xl/worksheets/sheet' + k + '.xml', data: utf8Bytes(buildSheetXml(m, registry, registry.styleMaps[i])) });
+    if (m.image) {
+      files.push({ name: 'xl/worksheets/_rels/sheet' + k + '.xml.rels', data: utf8Bytes(head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="' + R + '/drawing" Target="../drawings/drawing' + k + '.xml"/></Relationships>') });
+      files.push({ name: 'xl/drawings/drawing' + k + '.xml', data: utf8Bytes(buildDrawingXml(m.image)) });
+      files.push({ name: 'xl/drawings/_rels/drawing' + k + '.xml.rels', data: utf8Bytes(buildDrawingRelsXml()) });
+      if (!mediaAdded) { files.push({ name: 'xl/media/image1.jpeg', data: m.image.bytes }); mediaAdded = true; }
+    }
+  });
+  return buildZip(files);
+}
+
 
 // ─── export.js (eingebettet, siehe dev/export.js — dort mit Ground-Truth-
 //     Werten aus den echten Zeitentabellen-Vorlagen getestet) ─────────────
@@ -1196,6 +1255,48 @@ function hotelNoteLines(shifts, mondayIso, addressByStart) {
 }
 function weekFilename(lastName, mondayIso) {
   return 'Zeitentabelle_' + lastName + '_KW' + isoWeekNumber(mondayIso) + '.xlsx';
+}
+
+// ─── Dateinamen für Export von Tagen / Monaten + mehrere Wochen in einer Datei ─────────
+// Export ist immer Deutsch. Mehrere Wochen (Monat, oder Tage über mehrere Wochen) landen in EINER Datei,
+// je Woche ein Blatt (KW40, KW41 …) — jedes Blatt ist die unveränderte Wochentabelle.
+const FILENAME_MONTHS_DE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+function safeFilePart(s) { return String(s == null ? '' : s).replace(/[\\/:*?"<>|]/g, '_').trim(); }
+// Tage → "01.08., 02.-04.08., 05.08., 11.-17.08." (aufeinanderfolgende Tage als Bereich; Freitag→Montag zählt als lückenlos)
+function dayListLabel(sortedIsoDates) {
+  const DAY = 86400000;
+  const ms = function (iso) { const p = iso.split('-').map(Number); return Date.UTC(p[0], p[1] - 1, p[2]); };
+  const contiguous = function (a, b) {
+    for (let t = ms(a) + DAY; t < ms(b); t += DAY) { const dow = new Date(t).getUTCDay(); if (dow !== 0 && dow !== 6) return false; }
+    return true;
+  };
+  const groups = [];
+  sortedIsoDates.forEach(function (iso) {
+    const g = groups[groups.length - 1];
+    if (g && g.end === iso) return;
+    if (g && contiguous(g.end, iso)) g.end = iso; else groups.push({ start: iso, end: iso });
+  });
+  return groups.map(function (g) {
+    if (g.start === g.end) return fmtDayMonth(g.start);
+    return g.start.slice(5, 7) === g.end.slice(5, 7) ? (g.start.slice(8, 10) + '.-' + fmtDayMonth(g.end)) : (fmtDayMonth(g.start) + '-' + fmtDayMonth(g.end));
+  }).join(', ');
+}
+function dayExportFilename(lastName, sortedIsoDates) {
+  let label = dayListLabel(sortedIsoDates);
+  if (label.length > 100) label = fmtDayMonth(sortedIsoDates[0]) + '-' + fmtDayMonth(sortedIsoDates[sortedIsoDates.length - 1]);   // sehr lange Aufzählung → nur von-bis
+  return 'Zeitentabelle_' + safeFilePart(lastName) + '_' + label.replace(/\.$/, '') + '.xlsx';
+}
+function monthExportFilename(lastName, monthKeyStr, withYear) {
+  const p = monthKeyStr.split('-');
+  return 'Zeitentabelle_' + safeFilePart(lastName) + '_' + FILENAME_MONTHS_DE[parseInt(p[1], 10) - 1] + (withYear ? '_' + p[0] : '') + '.xlsx';
+}
+function exportSheetNames(mondays) {
+  const plain = mondays.map(function (m) { return 'KW' + isoWeekNumber(m); });
+  if (new Set(plain).size === plain.length) return plain;
+  return mondays.map(function (m, i) {   // gleiche KW in verschiedenen Jahren → Jahr anhängen
+    const d = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7) - 1, +m.slice(8, 10) + 3));
+    return plain[i] + ' ' + d.getUTCFullYear();
+  });
 }
 function minutesToHHMM(mins) { const h = Math.floor(mins/60), m = mins%60; return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0'); }
 
@@ -1310,6 +1411,17 @@ function buildWeekExportXlsx(shifts, mondayIso, person, hotelAddresses) {
   return buildXlsxWorkbook(buildWeekExportModel(shifts, mondayIso, person, hotelAddresses));
 }
 
+function buildWeeksExportXlsx(shifts, mondays, person, hotelAddresses) {
+  if (mondays.length === 1) return buildWeekExportXlsx(shifts, mondays[0], person, hotelAddresses);
+  const names = exportSheetNames(mondays);
+  const models = mondays.map(function (m, i) {
+    const model = buildWeekExportModel(shifts, m, person, hotelAddresses);
+    model.sheetName = names[i];
+    return model;
+  });
+  return buildXlsxWorkbookMulti(models);
+}
+
 // ─── Monats-/Wochentagsnamen ────────────────────────────────────────────
 // DE-Varianten bleiben die einzigen, die der Export benutzt (muss immer
 // Deutsch bleiben, unabhängig von der UI-Sprache) — siehe curDAYS()/
@@ -1325,7 +1437,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // ob sein Gerät wirklich die neueste Version geladen hat.
 const LAST_UPDATED = '23.10.2026';
 // Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
-const APP_VERSION = 46;
+const APP_VERSION = 47;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -1416,7 +1528,8 @@ const I18N = {
     btn_loeschen: 'Löschen', btn_kopieren: 'Kopieren', btn_bearbeiten: 'Bearbeiten',
     sheet_summary_title: 'Zusammenfassung',
     sheet_settings_title: 'Einstellungen',
-    sheet_export_title: 'Woche exportieren',
+    sheet_export_title: 'Exportieren',
+    export_scope_day: 'Tag', export_scope_week: 'Woche', export_scope_month: 'Monat', export_entries: 'Einträge: {0}',
     btn_ohne_adresse: 'Ohne Adresse', btn_exportieren: 'Exportieren',
     sheet_hotel_title: 'Hotel-Adresse',
     sheet_help_title: 'Zum Startbildschirm hinzufügen',
@@ -1483,6 +1596,7 @@ const I18N = {
     range_overwritten: ' Tage überschrieben',
     t_mindestens_zeitabschnitt: '⚠ Mindestens einen Zeitabschnitt eintragen',
     t_ueber_10h: '⚠ Über 10h/Tag (vertragliches Maximum) — trotzdem gespeichert',
+    badge_pause_short: 'Pause {0}/{1} Min.', detail_pause_short: 'nur {0} von {1} Min. (Arbeitsanweisung)',
     t_gespeichert_ersetzt: '✓ Gespeichert — bestehender Eintrag für dieses Datum wurde ersetzt',
     t_gespeichert: '✓ Gespeichert', t_hinzugefuegt: '✓ Hinzugefügt',
     t_geloescht: 'Gelöscht',
@@ -1496,7 +1610,7 @@ const I18N = {
     t_bitte_namen_settings: '⚠ Bitte zuerst Vor- und Nachname in den Einstellungen eintragen',
     t_heruntergeladen: '✓ Heruntergeladen: ',
     btn_export_selected: 'Exportieren ({0})',
-    t_keine_woche_gewaehlt: '⚠ Bitte mindestens eine Woche auswählen',
+    t_keine_woche_gewaehlt: '⚠ Bitte mindestens einen Eintrag auswählen',
     t_dateien_heruntergeladen_1: '✓ ', t_dateien_heruntergeladen_2: ' Dateien heruntergeladen',
     confirm_delete_entry: 'Diesen Eintrag löschen?', confirm_delete_really: 'Wirklich löschen?',
     copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Alle Rechte vorbehalten',
@@ -1581,7 +1695,8 @@ const I18N = {
     btn_loeschen: 'Smazat', btn_kopieren: 'Kopírovat', btn_bearbeiten: 'Upravit',
     sheet_summary_title: 'Souhrn',
     sheet_settings_title: 'Nastavení',
-    sheet_export_title: 'Exportovat týden',
+    sheet_export_title: 'Exportovat',
+    export_scope_day: 'Den', export_scope_week: 'Týden', export_scope_month: 'Měsíc', export_entries: 'Záznamů: {0}',
     btn_ohne_adresse: 'Bez adresy', btn_exportieren: 'Exportovat',
     sheet_hotel_title: 'Adresa hotelu',
     sheet_help_title: 'Přidat na plochu',
@@ -1648,6 +1763,7 @@ const I18N = {
     range_overwritten: ' dní přepsáno',
     t_mindestens_zeitabschnitt: '⚠ Zadej alespoň jeden časový úsek',
     t_ueber_10h: '⚠ Přes 10h/den (smluvní maximum) — přesto uloženo',
+    badge_pause_short: 'Přestávka {0}/{1} min', detail_pause_short: 'jen {0} z {1} min (pracovní pokyn)',
     t_gespeichert_ersetzt: '✓ Uloženo — existující záznam pro toto datum byl nahrazen',
     t_gespeichert: '✓ Uloženo', t_hinzugefuegt: '✓ Přidáno',
     t_geloescht: 'Smazáno',
@@ -1661,7 +1777,7 @@ const I18N = {
     t_bitte_namen_settings: '⚠ Nejdřív prosím vyplň jméno a příjmení v Nastavení',
     t_heruntergeladen: '✓ Staženo: ',
     btn_export_selected: 'Exportovat ({0})',
-    t_keine_woche_gewaehlt: '⚠ Vyber prosím alespoň jeden týden',
+    t_keine_woche_gewaehlt: '⚠ Vyber prosím alespoň jednu položku',
     t_dateien_heruntergeladen_1: '✓ Staženo ', t_dateien_heruntergeladen_2: ' souborů',
     confirm_delete_entry: 'Smazat tento záznam?', confirm_delete_really: 'Opravdu smazat?',
     copyright: '© 2026 Karel Baloun, k.baloun@eder-gmbh.de — Všechna práva vyhrazena',
@@ -1886,6 +2002,8 @@ function dayCardHtml(iso, shift) {
     if (legNotes.length) { timeStr = escHtml(legNotes.join(', ')); displayNote = span; }
     else { timeStr = span; displayNote = ''; }
     if (shift.stay === 'hotel') badges += `<span class="day-badge badge-hotel">${t('detail_hotel')}</span>`;
+    const pauseCheck = breakCheck(shift);
+    if (!pauseCheck.ok) badges += `<span class="day-badge badge-pause">${tf('badge_pause_short', pauseCheck.entered, pauseCheck.required)}</span>`;
   } else if (shift.type === 'sick') {
     badges += `<span class="day-badge badge-sick" style="margin-top:0">${t('detail_typ_krank')}</span>`;
   } else if (shift.type === 'vacation') {
@@ -2122,6 +2240,8 @@ function openDetail(id) {
       rows += `<div class="detail-row"><span class="detail-key">${label}: ${t('detail_pause')}</span><span class="detail-v">${leg.pause || 0} ${t('detail_min')}</span></div>`;
       if (leg.note) rows += `<div class="detail-row"><span class="detail-key">${label}: ${t('detail_notiz')}</span><span class="detail-v">${leg.note}</span></div>`;
     });
+    const pauseCheck = breakCheck(s);
+    if (!pauseCheck.ok) rows += `<div class="detail-row"><span class="detail-key" style="color:var(--amber)">⚠ ${t('detail_pause')}</span><span class="detail-v" style="color:var(--amber)">${tf('detail_pause_short', pauseCheck.entered, pauseCheck.required)}</span></div>`;
     if (s.departureStart) rows += `<div class="detail-row"><span class="detail-key">${t('detail_abfahrt')}</span><span class="detail-v">${s.departureStart}–${s.departureEnd} (${fmtHoursShort(segmentHours(s.departureStart, s.departureEnd))})</span></div>`;
     rows += `<div class="detail-row"><span class="detail-key">${t('detail_uebernachtung')}</span><span class="detail-v">${s.stay === 'hotel' ? t('detail_hotel') : t('detail_heimfahrt')}</span></div>`;
   }
@@ -3257,22 +3377,63 @@ function exportableWeeks() {
   return Object.keys(mondays).sort().reverse();
 }
 let exportMode = 'download';
+let exportScope = 'week';          // 'day' | 'week' | 'month' — was die Liste unten zum Ankreuzen zeigt
+let exportDateFilter = null;       // null = ganze Wochen; sonst Set der zu exportierenden Tage (bei Tag/Monat)
+function exportableDays() {
+  const days = {};
+  shifts.forEach(function (s) { days[s.date] = s; });
+  return Object.keys(days).sort().reverse().map(function (iso) { return days[iso]; });
+}
+function exportableMonths() {
+  const months = {};
+  shifts.forEach(function (s) { const k = monthKey(s.date); months[k] = (months[k] || 0) + 1; });
+  return Object.keys(months).sort().reverse().map(function (k) { return { key: k, count: months[k] }; });
+}
+function exportRowHtml(value, title, sub) {
+  return `<label class="week-export-row">
+        <input type="checkbox" class="week-export-check" value="${value}" onchange="updateExportButtonCount(); this.closest('.week-export-row').classList.toggle('selected', this.checked);">
+        <div><div class="week-export-kw">${title}</div><div class="week-export-range">${sub}</div></div>
+      </label>`;
+}
+function renderExportList() {
+  const list = document.getElementById('export-list');
+  if (!list) return;
+  document.querySelectorAll('#export-scope .seg-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.scope === exportScope); });
+  if (exportScope === 'day') {
+    list.innerHTML = exportableDays().map(function (s) {
+      const d = parseISODate(s.date);
+      const what = s.type === 'sick' ? t('detail_typ_krank') : s.type === 'vacation' ? t('detail_typ_urlaub')
+        : (s.legs || []).map(function (l) { return l.note; }).filter(Boolean).join(', ');
+      return exportRowHtml(s.date, curDAYS()[d.getDay()] + ' ' + fmtDayMonth(s.date) + d.getFullYear(), escHtml(what) || '&nbsp;');
+    }).join('');
+  } else if (exportScope === 'month') {
+    list.innerHTML = exportableMonths().map(function (m) {
+      const p = m.key.split('-');
+      return exportRowHtml(m.key, curMONTHS()[parseInt(p[1], 10) - 1] + ' ' + p[0], tf('export_entries', m.count));
+    }).join('');
+  } else {
+    list.innerHTML = exportableWeeks().map(function (mon) {
+      return exportRowHtml(mon, t('week_kw') + isoWeekNumber(mon), weekRangeLabel(mon));
+    }).join('');
+  }
+  updateExportButtonCount();
+}
+function setExportScope(scope) { exportScope = scope; renderExportList(); }
 function openExport(mode) {
   exportMode = mode || 'download';
-  const weeks = exportableWeeks();
   const body = document.getElementById('export-body');
   const actions = document.getElementById('export-actions');
-  if (!weeks.length) {
+  if (!shifts.length) {
     body.innerHTML = `<div class="empty-state"><span class="big">${t('export_keine_daten')}</span>${t('export_keine_schichten')}</div>`;
     actions.style.display = 'none';
   } else {
-    body.innerHTML = weeks.map(function (mon) {
-      return `<label class="week-export-row">
-        <input type="checkbox" class="week-export-check" value="${mon}" onchange="updateExportButtonCount(); this.closest('.week-export-row').classList.toggle('selected', this.checked);">
-        <div><div class="week-export-kw">${t('week_kw')}${isoWeekNumber(mon)}</div><div class="week-export-range">${weekRangeLabel(mon)}</div></div>
-      </label>`;
-    }).join('');
+    body.innerHTML = `<div class="seg-control" id="export-scope" style="margin-bottom:14px;">
+      <button class="seg-btn" data-scope="day" onclick="setExportScope('day')">${t('export_scope_day')}</button>
+      <button class="seg-btn" data-scope="week" onclick="setExportScope('week')">${t('export_scope_week')}</button>
+      <button class="seg-btn" data-scope="month" onclick="setExportScope('month')">${t('export_scope_month')}</button>
+    </div><div id="export-list"></div>`;
     actions.style.display = '';
+    renderExportList();
   }
   updateExportButtonCount();
   openSheet('sheet-export');
@@ -3282,12 +3443,31 @@ function updateExportButtonCount() {
   const btn = document.getElementById('export-confirm-btn');
   if (btn) btn.textContent = tf('btn_export_selected', count);
 }
+// Aus der Auswahl (Tage / Wochen / Monate) die zu exportierenden Wochen (Montage) bestimmen. Bei Tag/Monat wird
+// pro Woche nur der gewählte Teil in die Tabelle geschrieben (die Wochen-Tabelle selbst bleibt unverändert).
+let pendingExportValues = [];
+function exportSelectionToMondays(values) {
+  exportDateFilter = null;
+  pendingExportValues = values.slice();
+  if (exportScope === 'week') return values.slice().sort();
+  const dates = {};
+  shifts.forEach(function (s) {
+    if (exportScope === 'day' ? values.indexOf(s.date) >= 0 : values.indexOf(monthKey(s.date)) >= 0) dates[s.date] = true;
+  });
+  exportDateFilter = dates;
+  const mondays = {};
+  Object.keys(dates).forEach(function (iso) { mondays[mondayOf(iso)] = true; });
+  return Object.keys(mondays).sort();
+}
+function exportShiftList() {
+  return exportDateFilter ? shifts.filter(function (s) { return exportDateFilter[s.date]; }) : shifts;
+}
 let pendingExportMondays = [];
 function confirmExportSelectedWeeks() {
-  const checked = Array.from(document.querySelectorAll('.week-export-check:checked'))
-    .map(function (el) { return el.value; })
-    .sort();
-  if (!checked.length) { toast(t('t_keine_woche_gewaehlt')); return; }
+  const values = Array.from(document.querySelectorAll('.week-export-check:checked'))
+    .map(function (el) { return el.value; });
+  if (!values.length) { toast(t('t_keine_woche_gewaehlt')); return; }
+  const checked = exportSelectionToMondays(values);
   if (!config.firstName || !config.lastName) {
     toast(t('t_bitte_namen_settings'));
     return;
@@ -3301,7 +3481,7 @@ function confirmExportSelectedWeeks() {
 }
 function hotelStayRangesForWeeks(mondayList) {
   const all = [];
-  mondayList.forEach(function (mon) { all.push.apply(all, hotelStayRanges(shifts, mon)); });
+  mondayList.forEach(function (mon) { all.push.apply(all, hotelStayRanges(exportShiftList(), mon)); });
   return all;
 }
 // Adress-Historie fürs Hotel-Feld: anders als beim Kunden-Feld gibt es
@@ -3375,16 +3555,40 @@ function triggerDownload(blob, filename) {
 // Toast, und im Teilen-Modus EIN gemeinsames E-Mail-Fenster mit allen
 // Kalenderwochen im Betreff (300ms nach dem letzten Download — exakt das
 // bisherige Timing zwischen Download und mailto-Öffnen).
+// Welche Dateien entstehen? Woche: eine Datei je Woche (wie bisher). Tag: EINE Datei mit allen gewählten Tagen
+// (je Woche ein Blatt), Name = Tage. Monat: je Monat EINE Datei (je Woche ein Blatt), Name = Monat.
+function exportJobs(mondayList) {
+  const list = exportShiftList();
+  const mondaysOf = function (arr) {
+    const m = {};
+    arr.forEach(function (s) { m[mondayOf(s.date)] = true; });
+    return Object.keys(m).sort();
+  };
+  if (exportScope === 'day') {
+    const dates = Object.keys(exportDateFilter || {}).sort();
+    return [{ filename: dayExportFilename(config.lastName, dates), mondays: mondayList, shifts: list }];
+  }
+  if (exportScope === 'month') {
+    const keys = pendingExportValues.slice().sort();
+    const years = {};
+    keys.forEach(function (k) { const mo = k.slice(5, 7); years[mo] = (years[mo] || 0) + 1; });
+    return keys.map(function (k) {
+      const inMonth = list.filter(function (s) { return monthKey(s.date) === k; });
+      return { filename: monthExportFilename(config.lastName, k, years[k.slice(5, 7)] > 1), mondays: mondaysOf(inMonth), shifts: inMonth };
+    });
+  }
+  return mondayList.map(function (m) { return { filename: weekFilename(config.lastName, m), mondays: [m], shifts: list }; });
+}
 function finalizeMultiWeekExport(mondayList, hotelAddresses) {
-  mondayList.forEach(function (mondayIso, i) {
+  const jobs = exportJobs(mondayList);
+  jobs.forEach(function (job, i) {
     setTimeout(function () {
-      const buf = buildWeekExportXlsx(shifts, mondayIso, { firstName: config.firstName, lastName: config.lastName }, hotelAddresses);
+      const buf = buildWeeksExportXlsx(job.shifts, job.mondays, { firstName: config.firstName, lastName: config.lastName }, hotelAddresses);
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const filename = weekFilename(config.lastName, mondayIso);
-      triggerDownload(blob, filename);
-      if (i === mondayList.length - 1) {
+      triggerDownload(blob, job.filename);
+      if (i === jobs.length - 1) {
         closeSheet('sheet-export');
-        toast(t('t_dateien_heruntergeladen_1') + mondayList.length + t('t_dateien_heruntergeladen_2'));
+        toast(t('t_dateien_heruntergeladen_1') + jobs.length + t('t_dateien_heruntergeladen_2'));
         if (exportMode === 'share') {
           const subject = emailSubjectForWeeks(mondayList);
           const mailto = 'mailto:' + HR_EMAIL + '?cc=' + encodeURIComponent(HR_CC_EMAIL) + '&subject=' + encodeURIComponent(subject);
