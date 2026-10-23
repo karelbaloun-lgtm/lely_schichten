@@ -646,6 +646,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 </div>
 
 <datalist id="customer-history"></datalist>
+<datalist id="note-history"></datalist>
 <datalist id="hotel-address-history"></datalist>
 
 
@@ -1321,9 +1322,9 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // Muss bei JEDEM Deploy auf das aktuelle Datum aktualisiert werden (Format
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
-const LAST_UPDATED = '20.10.2026';
+const LAST_UPDATED = '23.10.2026';
 // Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
-const APP_VERSION = 44;
+const APP_VERSION = 45;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -1966,12 +1967,23 @@ function customerHistoryOptions() {
   });
   return Object.keys(lastSeen).sort(function (a, b) { return lastSeen[b].localeCompare(lastSeen[a]); });
 }
+// Dasselbe für das allgemeine Feld "Notiz" (wiederkehrende Texte, zuletzt benutzt zuerst).
+function noteHistoryOptions() {
+  const lastSeen = {};
+  shifts.forEach(function (s) {
+    const note = (s.note || '').trim();
+    if (note && (!lastSeen[note] || s.date > lastSeen[note])) lastSeen[note] = s.date;
+  });
+  return Object.keys(lastSeen).sort(function (a, b) { return lastSeen[b].localeCompare(lastSeen[a]); });
+}
 function renderCustomerHistory() {
+  const opts = function (list) {
+    return list.map(function (n) { return '<option value="' + n.replace(/"/g, '&quot;') + '"></option>'; }).join('');
+  };
   const dl = document.getElementById('customer-history');
-  if (!dl) return;
-  dl.innerHTML = customerHistoryOptions().map(function (n) {
-    return '<option value="' + n.replace(/"/g, '&quot;') + '"></option>';
-  }).join('');
+  if (dl) dl.innerHTML = opts(customerHistoryOptions());
+  const nl = document.getElementById('note-history');
+  if (nl) nl.innerHTML = opts(noteHistoryOptions());
 }
 
 // ─── Kunden-Übersicht: wann war ich bei welchem Kunden, wie lange? ─────────
@@ -2381,7 +2393,7 @@ function editBodyHtml() {
     </div>
     <div class="field">
       <label>${t('field_notiz_allgemein')}</label>
-      <input class="note-input" type="text" id="f-note" placeholder="${t('placeholder_notiz')}">
+      <input class="note-input" type="text" id="f-note" placeholder="${t('placeholder_notiz')}" list="note-history" autocomplete="off">
     </div>`;
 }
 
