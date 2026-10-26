@@ -348,6 +348,19 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
 .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 14px; font-family: var(--mono); cursor: pointer; color: var(--muted); touch-action: manipulation; position: relative; }
 .cal-day.today { color: var(--brand); font-weight: 600; }
 .cal-day.selected { background: var(--brand); color: #fff; font-weight: 600; }
+.cal-day.in-range { background: var(--brand-dim); border-radius: 0; }
+.cal-hint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px; }
+.cal-hint:empty { display: none; }
+.hotelreq-dates { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.hotelreq-dates .date-tile { padding: 12px 14px; gap: 10px; min-width: 0; }
+.hotelreq-dates .date-tile-val { font-size: 14px; }
+.hr-tile-txt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.hr-tile-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.hr-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.chip { min-height: 40px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border2); background: var(--s2); color: var(--muted); font-size: 14px; font-weight: 500; cursor: pointer; touch-action: manipulation; }
+.chip.on { background: var(--brand-dim); border-color: var(--brand); color: var(--text); }
+.hr-addrow { display: flex; gap: 8px; margin-top: 8px; }
+.hr-addrow .btn-main { flex: 0 0 auto; width: auto; padding-left: 16px; padding-right: 16px; }
 .cal-day.other-month { opacity: 0.25; }
 .cal-day.has-shift::after { content: ''; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 3px; height: 3px; border-radius: 50%; background: var(--green); }
 .cal-day.holiday::before { content: ''; position: absolute; top: 3px; left: 50%; transform: translateX(-50%); width: 3px; height: 3px; border-radius: 50%; background: var(--amber); }
@@ -571,6 +584,21 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
   </div>
 </div>
 
+<div class="sheet" id="sheet-hotelreq">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+      <span style="display:flex;color:var(--brand-text);"><svg class="ic" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 7v11m0 -4h18m0 4v-8a2 2 0 0 0 -2 -2h-8v6"/><path d="M7 10m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg></span>
+      <div class="sheet-title" data-i18n="hotelreq_title">Hotel anfragen</div>
+    </div>
+    <button class="sheet-close" onclick="closeSheet('sheet-hotelreq')">✕</button>
+  </div>
+  <div class="sheet-body" id="hotelreq-body"></div>
+  <div class="sheet-actions">
+    <button class="btn-main primary" style="width:100%;" onclick="sendHotelRequest()" data-i18n="hotelreq_send">Senden</button>
+  </div>
+</div>
+
 <div class="sheet" id="sheet-help">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
@@ -606,6 +634,7 @@ input[type="time"]::-webkit-calendar-picker-indicator { display: none; }
       <button class="cal-nav" onclick="calMove(1)">›</button>
     </div>
     <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-hint" id="cal-hint"></div>
     <div class="cal-footer">
       <button class="btn-main secondary" onclick="closeCal()" data-i18n="btn_abbrechen">Abbrechen</button>
       <button class="btn-main primary" onclick="confirmCal()">OK</button>
@@ -1233,6 +1262,42 @@ function monthExportFilename(lastName, monthKeyStr, withYear) {
   const p = monthKeyStr.split('-');
   return 'Zeitentabelle_' + safeFilePart(lastName) + '_' + FILENAME_MONTHS_DE[parseInt(p[1], 10) - 1] + (withYear ? '_' + p[0] : '') + '.xlsx';
 }
+// ─── Hotel-Anfrage: E-Mail an die Hotelbuchung (immer Deutsch) ──────────────────────────
+const HOTEL_MAIL_TO = 'a.biomonte@eder-gmbh.de';
+const HOTEL_MAIL_CC = 'R.Schweiger@eder-gmbh.de';
+// Zeitraum: "27.-29.10." (gleicher Monat), "30.10.-02.11." (über die Monatsgrenze), "27.10." (ein Tag)
+function hotelDateLabel(startIso, endIso) {
+  if (!endIso || endIso === startIso) return fmtDayMonth(startIso);
+  if (startIso.slice(0, 7) === endIso.slice(0, 7)) return startIso.slice(8, 10) + '.-' + fmtDayMonth(endIso);
+  return fmtDayMonth(startIso) + '-' + fmtDayMonth(endIso);
+}
+function hotelMailSubject(startIso) { return 'Hotel KW ' + isoWeekNumber(startIso); }
+// Kunde: "Name, PLZ Ort" in einem Feld + optional Straße → Zeile 1 = Name, Zeile 2 = [Straße, ]PLZ Ort
+function hotelKundeLines(kunde, street) {
+  const k = String(kunde || '').trim(), s = String(street || '').trim();
+  const i = k.indexOf(',');
+  const name = (i >= 0 ? k.slice(0, i) : k).trim();
+  const place = i >= 0 ? k.slice(i + 1).trim() : '';
+  const lines = [name];
+  const second = [s, place].filter(Boolean).join(', ');
+  if (second) lines.push(second);
+  return lines;
+}
+function hotelMailBody(req) {
+  const persons = (req.ich ? ['Ich'] : []).concat(req.others || []).join(', ');
+  return [
+    'Hallo Andrea,', '',
+    'ich bitte um Hilfe bei der Suche nach einem Hotel.', '',
+    'Termin: ' + hotelDateLabel(req.start, req.end), '',
+    'Personen: ' + persons, '',
+    'Kunde heißt:'
+  ].concat(hotelKundeLines(req.kunde, req.street), ['', 'Vielen Dank.']).join('\r\n');
+}
+function hotelMailto(req) {
+  return 'mailto:' + HOTEL_MAIL_TO + '?cc=' + encodeURIComponent(HOTEL_MAIL_CC) +
+    '&subject=' + encodeURIComponent(hotelMailSubject(req.start)) + '&body=' + encodeURIComponent(hotelMailBody(req));
+}
+
 function minutesToHHMM(mins) { const h = Math.floor(mins/60), m = mins%60; return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0'); }
 
 const EXPORT_FONT = {
@@ -1381,9 +1446,9 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // Muss bei JEDEM Deploy auf das aktuelle Datum aktualisiert werden (Format
 // TT.MM.JJJJ) — Karel nutzt dieses Feld in den Einstellungen, um zu sehen,
 // ob sein Gerät wirklich die neueste Version geladen hat.
-const LAST_UPDATED = '23.10.2026';
+const LAST_UPDATED = '26.10.2026';
 // Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
-const APP_VERSION = 48;
+const APP_VERSION = 49;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -1476,6 +1541,12 @@ const I18N = {
     sheet_settings_title: 'Einstellungen',
     sheet_export_title: 'Exportieren',
     export_scope_day: 'Tag', export_scope_week: 'Woche', export_scope_month: 'Monat', export_entries: 'Einträge: {0}',
+    hotelreq_btn: 'Hotel anfragen', hotelreq_title: 'Hotel anfragen', hotelreq_termin: 'Termin', hotelreq_von: 'Von', hotelreq_bis: 'Bis', hotelreq_pick: 'Datum wählen',
+    hotelreq_personen: 'Personen', hotelreq_ich: 'Ich', hotelreq_add_person: 'Person hinzufügen …', hotelreq_other_name: 'Anderer Name', hotelreq_add: 'Hinzufügen',
+    hotelreq_kunde: 'Kunde', hotelreq_kunde_ph: 'Name, PLZ Ort', hotelreq_street_ph: 'Straße und Nr. (optional)', hotelreq_send: 'Senden',
+    hotelreq_hint: 'Öffnet dein E-Mail-Programm. Dort kannst du alles noch prüfen und absenden.',
+    hotelreq_need_dates: '⚠ Bitte Zeitraum wählen', hotelreq_need_persons: '⚠ Bitte mindestens eine Person wählen', hotelreq_need_kunde: '⚠ Bitte Kunde eintragen (Name, PLZ Ort)',
+    cal_hint_range: 'Erster Tipp = Von, zweiter Tipp = Bis',
     btn_ohne_adresse: 'Ohne Adresse', btn_exportieren: 'Exportieren',
     sheet_hotel_title: 'Hotel-Adresse',
     sheet_help_title: 'Zum Startbildschirm hinzufügen',
@@ -1643,6 +1714,12 @@ const I18N = {
     sheet_settings_title: 'Nastavení',
     sheet_export_title: 'Exportovat',
     export_scope_day: 'Den', export_scope_week: 'Týden', export_scope_month: 'Měsíc', export_entries: 'Záznamů: {0}',
+    hotelreq_btn: 'Poptat hotel', hotelreq_title: 'Poptávka hotelu', hotelreq_termin: 'Termín', hotelreq_von: 'Od', hotelreq_bis: 'Do', hotelreq_pick: 'Vybrat datum',
+    hotelreq_personen: 'Osoby', hotelreq_ich: 'Já', hotelreq_add_person: 'Přidat osobu …', hotelreq_other_name: 'Jiné jméno', hotelreq_add: 'Přidat',
+    hotelreq_kunde: 'Zákazník', hotelreq_kunde_ph: 'Jméno, PSČ město', hotelreq_street_ph: 'Ulice a číslo (nepovinné)', hotelreq_send: 'Odeslat',
+    hotelreq_hint: 'Otevře tvůj e-mailový program. Tam vše ještě zkontroluješ a odešleš.',
+    hotelreq_need_dates: '⚠ Vyber prosím termín', hotelreq_need_persons: '⚠ Vyber prosím alespoň jednu osobu', hotelreq_need_kunde: '⚠ Vyplň prosím zákazníka (jméno, PSČ město)',
+    cal_hint_range: 'První klepnutí = Od, druhé = Do',
     btn_ohne_adresse: 'Bez adresy', btn_exportieren: 'Exportovat',
     sheet_hotel_title: 'Adresa hotelu',
     sheet_help_title: 'Přidat na plochu',
@@ -2737,11 +2814,23 @@ function deleteCurrentShift() {
 }
 
 // ─── Kalender ───────────────────────────────────────────────────────────
-let calYear, calMonth, calSelected, calTarget;
+let calYear, calMonth, calSelected, calTarget, calRangeStart = '', calRangeEnd = '';
 // target: 'end' öffnet den Kalender für das "bis"-Feld der Zeitraum-
 // Eingabe (siehe späterer Task); alles andere (auch kein Argument)
 // verhält sich exakt wie bisher und bearbeitet das normale f-date-Feld.
 function openCal(target) {
+  if (target === 'hotel') {
+    // Bereichsmodus für die Hotel-Anfrage: erster Tipp = Von, zweiter Tipp = Bis
+    calTarget = 'hotel';
+    calRangeStart = hotelReq.start; calRangeEnd = hotelReq.end; calSelected = null;
+    const hd = parseISODate(hotelReq.start || new Date().toISOString().slice(0, 10));
+    calYear = hd.getFullYear(); calMonth = hd.getMonth();
+    document.getElementById('cal-hint').textContent = t('cal_hint_range');
+    renderCal();
+    document.getElementById('cal-overlay').classList.add('open');
+    return;
+  }
+  document.getElementById('cal-hint').textContent = '';
   calTarget = target === 'end' ? 'end' : 'start';
   const fieldId = calTarget === 'end' ? 'f-date-end' : 'f-date';
   const cur = document.getElementById(fieldId).value || new Date().toISOString().slice(0, 10);
@@ -2752,6 +2841,11 @@ function openCal(target) {
 }
 function closeCal() { document.getElementById('cal-overlay').classList.remove('open'); }
 function confirmCal() {
+  if (calTarget === 'hotel') {
+    if (calRangeStart) { hotelReq.start = calRangeStart; hotelReq.end = calRangeEnd || calRangeStart; renderHotelDates(); }
+    closeCal();
+    return;
+  }
   if (calSelected) {
     const fieldId = calTarget === 'end' ? 'f-date-end' : 'f-date';
     const labelId = calTarget === 'end' ? 'date-tile-end-val' : 'date-tile-val';
@@ -2761,7 +2855,16 @@ function confirmCal() {
   closeCal();
 }
 function calMove(dir) { calMonth += dir; if (calMonth > 11) { calMonth = 0; calYear++; } if (calMonth < 0) { calMonth = 11; calYear--; } renderCal(); }
-function calSelectDay(iso) { calSelected = iso; renderCal(); }
+function calSelectDay(iso) {
+  if (calTarget === 'hotel') {
+    if (!calRangeStart || calRangeEnd) { calRangeStart = iso; calRangeEnd = ''; }   // neuer Beginn
+    else if (iso < calRangeStart) { calRangeStart = iso; }                           // früheres Datum → neuer Beginn
+    else { calRangeEnd = iso; }                                                      // zweiter Tipp = Ende
+    renderCal();
+    return;
+  }
+  calSelected = iso; renderCal();
+}
 function renderCal() {
   document.getElementById('cal-label').textContent = curMONTHS()[calMonth] + ' ' + calYear;
   const today = new Date().toISOString().slice(0, 10);
@@ -2779,7 +2882,10 @@ function renderCal() {
     const iso = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     let cls = 'cal-day';
     if (iso === today) cls += ' today';
-    if (iso === calSelected) cls += ' selected';
+    if (calTarget === 'hotel') {
+      if (iso === calRangeStart || iso === calRangeEnd) cls += ' selected';
+      else if (calRangeStart && calRangeEnd && iso > calRangeStart && iso < calRangeEnd) cls += ' in-range';
+    } else if (iso === calSelected) cls += ' selected';
     if (shiftDates.has(iso)) cls += ' has-shift';
     if (isHoliday(iso)) cls += ' holiday';
     html += `<div class="${cls}" onclick="calSelectDay('${iso}')">${d}</div>`;
@@ -3224,6 +3330,9 @@ function renderSettings() {
       </div>
     </div>
     <div style="margin-top:20px;">
+      <button class="btn-main secondary" style="width:100%;" onclick="openHotelReq()"><span style="display:inline-flex;align-items:center;justify-content:center;gap:10px;">${formIcon('bed', 20)}${t('hotelreq_btn')}</span></button>
+    </div>
+    <div style="margin-top:10px;">
       <button class="btn-main secondary" style="width:100%;" onclick="openExport('download')">${t('btn_export_excel')}</button>
     </div>
     ${locked ? '' : `<div style="margin-top:10px;">
@@ -3547,6 +3656,94 @@ function finalizeMultiWeekExport(mondayList, hotelAddresses) {
         }
       }
     }, i * 400);
+  });
+}
+
+// ─── Hotel anfragen (E-Mail an die Hotelbuchung) ─────────────────────────────────────────
+// Formular: Termin (Von/Bis über Kalender), Personen (Ich + Kollegen), Kunde → öffnet die vorbereitete E-Mail.
+let hotelReq = { start: '', end: '', ich: true, others: [] };
+let hotelColleagues = [];
+function openHotelReq() {
+  hotelReq = { start: '', end: '', ich: true, others: [] };
+  byId('hotelreq-body').innerHTML = `
+    <div class="field"><label>${t('hotelreq_termin')}</label><div class="hotelreq-dates" id="hr-dates"></div></div>
+    <div class="field"><label>${t('hotelreq_personen')}</label>
+      <div class="hr-chips" id="hr-chips"></div>
+      <select class="note-input" id="hr-select" onchange="hotelAddFromSelect()"></select>
+      <div class="hr-addrow">
+        <input class="note-input" id="hr-other" type="text" placeholder="${t('hotelreq_other_name')}" autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false" onkeydown="if (event.key === 'Enter') { event.preventDefault(); hotelAddOther(); }">
+        <button class="btn-main secondary" type="button" onclick="hotelAddOther()">${t('hotelreq_add')}</button>
+      </div>
+    </div>
+    <div class="field"><label>${t('hotelreq_kunde')}</label>
+      <input class="note-input" id="hr-kunde" type="text" list="customer-history" autocomplete="off" autocorrect="off" placeholder="${t('hotelreq_kunde_ph')}">
+      <input class="note-input" id="hr-street" type="text" autocomplete="off" autocorrect="off" style="margin-top:8px;" placeholder="${t('hotelreq_street_ph')}">
+    </div>
+    <div class="auth-hint">${t('hotelreq_hint')}</div>`;
+  renderHotelDates();
+  renderHotelPersons();
+  closeSheet('sheet-settings');
+  openSheet('sheet-hotelreq');
+  loadColleagues();
+}
+function renderHotelDates() {
+  byId('hr-dates').innerHTML = ['start', 'end'].map(function (k) {
+    return `<div class="date-tile" onclick="openCal('hotel')">
+      <span class="date-tile-icon">${formIcon('calendar', 22)}</span>
+      <span class="hr-tile-txt"><span class="hr-tile-lbl">${t(k === 'start' ? 'hotelreq_von' : 'hotelreq_bis')}</span><span class="date-tile-val">${hotelReq[k] ? fmtDateDE(hotelReq[k]) : t('hotelreq_pick')}</span></span>
+    </div>`;
+  }).join('');
+}
+function renderHotelPersons() {
+  const chips = ['<button type="button" class="chip' + (hotelReq.ich ? ' on' : '') + '" onclick="hotelToggleIch()">' + t('hotelreq_ich') + '</button>'];
+  hotelReq.others.forEach(function (n, i) {
+    chips.push('<button type="button" class="chip on" onclick="hotelRemovePerson(' + i + ')">' + escHtml(n) + ' ✕</button>');
+  });
+  byId('hr-chips').innerHTML = chips.join('');
+  const sel = byId('hr-select');
+  const avail = hotelColleagues.filter(function (n) { return hotelReq.others.indexOf(n) < 0; });
+  sel.innerHTML = '<option value="">' + t('hotelreq_add_person') + '</option>' + avail.map(function (n) { return '<option value="' + escHtml(n) + '">' + escHtml(n) + '</option>'; }).join('');
+  sel.style.display = avail.length ? '' : 'none';
+}
+function hotelToggleIch() { hotelReq.ich = !hotelReq.ich; renderHotelPersons(); }
+function hotelRemovePerson(i) { hotelReq.others.splice(i, 1); renderHotelPersons(); }
+function hotelAddFromSelect() {
+  const sel = byId('hr-select');
+  if (sel.value && hotelReq.others.indexOf(sel.value) < 0) hotelReq.others.push(sel.value);
+  renderHotelPersons();
+}
+function hotelAddOther() {
+  const inp = byId('hr-other');
+  const n = inp.value.replace(/\s+/g, ' ').trim();
+  if (n && hotelReq.others.indexOf(n) < 0) hotelReq.others.push(n);
+  inp.value = '';
+  renderHotelPersons();
+}
+// Namen der Kollegen (nur Namen): zuerst aus dem Zwischenspeicher, dann vom Server aktualisieren.
+async function loadColleagues() {
+  const key = userKey('monteur_colleagues');
+  try { hotelColleagues = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { hotelColleagues = []; }
+  if (byId('hr-select')) renderHotelPersons();
+  if (!auth) return;
+  try {
+    const r = await apiCall({ action: 'colleagues' });
+    if (r.ok && r.body && Array.isArray(r.body.colleagues)) {
+      hotelColleagues = r.body.colleagues;
+      try { localStorage.setItem(key, JSON.stringify(hotelColleagues)); } catch (e) {}
+      if (byId('hr-select')) renderHotelPersons();
+    }
+  } catch (e) {}
+}
+function sendHotelRequest() {
+  const pending = byId('hr-other').value.trim();
+  if (pending) hotelAddOther();   // noch nicht bestätigter Name im Feld "Anderer Name"
+  const kunde = byId('hr-kunde').value.trim();
+  if (!hotelReq.start) { toast(t('hotelreq_need_dates')); return; }
+  if (!hotelReq.ich && !hotelReq.others.length) { toast(t('hotelreq_need_persons')); return; }
+  if (!kunde) { toast(t('hotelreq_need_kunde')); return; }
+  window.location.href = hotelMailto({
+    start: hotelReq.start, end: hotelReq.end || hotelReq.start, ich: hotelReq.ich, others: hotelReq.others,
+    kunde: kunde, street: byId('hr-street').value.trim()
   });
 }
 

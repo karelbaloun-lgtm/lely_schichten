@@ -417,6 +417,17 @@ await test('Name in einem Feld: "Vorname Nachname" oder "Nachname, Vorname"; Kom
   assert.deepEqual((await api.call({ action: 'activationInfo', code })).body.names, []);   // beide haben jetzt ein Konto
 });
 
+await test('colleagues: any logged-in user gets names only (roster + profiles), own name left out, sorted by last name; anonymous refused', async () => {
+  const api = await withAdmin(); await withUser(api);   // Jan Novak = Benutzer
+  await api.call({ action: 'setRoster', roster: ['Petr Svoboda', 'Jan Novak', 'van Berg, Anna', 'petr svoboda'] }, api.admin);
+  const r = await api.call({ action: 'colleagues' }, api.user);
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.colleagues, ['Karel Baloun', 'Petr Svoboda', 'Anna van Berg']);   // Admin-Profil zählt als Kollege; nach Nachname sortiert
+  assert.ok(!r.body.colleagues.includes('Jan Novak'), 'eigener Name fehlt');
+  assert.ok(!JSON.stringify(r.body).includes('@'), 'keine E-Mail-Adressen');
+  assert.equal((await api.call({ action: 'colleagues' })).status, 401);
+});
+
 await test('Versionsnummer: APP_VERSION in der App = Zahl in CACHE_VERSION von sw.js', async () => {
   const { readFileSync, existsSync } = await import('node:fs');
   if (!existsSync(new URL('../lely-schichten.html', import.meta.url)) || !existsSync(new URL('../sw.js', import.meta.url))) return;   // z. B. im Deploy-Repo
