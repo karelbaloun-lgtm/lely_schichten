@@ -851,10 +851,12 @@ function paidHoursForDate(iso, shiftsMap) { const s=shiftsMap[iso]; if (s) retur
 function weekTotalHours(mondayIso, shiftsMap) { return weekDates(mondayIso).reduce(function(sum, iso){ return sum + paidHoursForDate(iso, shiftsMap); }, 0); }
 function overtimeFromTotal(totalHours, weeklyNorm) { return Math.max(0, totalHours-weeklyNorm); }
 function monthOvertimeHours(shifts, monthKey, weeklyNorm) { const shiftsMap=shiftsByDate(shifts); const dim=daysInMonth(monthKey); const countedMondays={}; let total=0; for (let d=1; d<=dim; d++){ const iso=monthKey+'-'+String(d).padStart(2,'0'); const monday=mondayOf(iso); if (monday.slice(0,7)===monthKey && !countedMondays[monday]){ countedMondays[monday]=true; total+=overtimeFromTotal(weekTotalHours(monday, shiftsMap), weeklyNorm); } } return total; }
+// Änderung des Überstundenkontos im Monat (Wochen-Überstunden minus 8 h je Abbau-Tag; Wochen nach ihrem Montag gezählt wie bei monthOvertimeHours).
+function monthAccountChange(shifts, monthKey, weeklyNorm) { const shiftsMap=shiftsByDate(shifts); const dim=daysInMonth(monthKey); const countedMondays={}; let total=0; for (let d=1; d<=dim; d++){ const iso=monthKey+'-'+String(d).padStart(2,'0'); const monday=mondayOf(iso); if (monday.slice(0,7)===monthKey && !countedMondays[monday]){ countedMondays[monday]=true; const abbau=weekDates(monday).filter(function(x){ return shiftsMap[x] && shiftsMap[x].type==='otoff'; }).length; total+=overtimeFromTotal(weekTotalHours(monday, shiftsMap), weeklyNorm)-8*abbau; } } return total; }
 // Überstundenkonto: Wochen-Überstunden (wie in der Wochenübersicht) minus 8 h je Überstundenabbau-Tag plus Anfangsstand; ab der Woche von startDate.
 function overtimeAccount(shifts, weeklyNorm, startHours, startDate) { const shiftsMap=shiftsByDate(shifts); const firstMonday=startDate?mondayOf(startDate):''; const mondays={}; let taken=0; shifts.forEach(function(s){ const m=mondayOf(s.date); if (firstMonday && m<firstMonday) return; mondays[m]=true; if (s.type==='otoff') taken+=8; }); let earned=0; Object.keys(mondays).forEach(function(m){ earned+=overtimeFromTotal(weekTotalHours(m, shiftsMap), weeklyNorm); }); return (Number(startHours)||0)+earned-taken; }
 function autoHolidayDatesInMonth(shifts, monthKey) { const shiftsMap=shiftsByDate(shifts); const dim=daysInMonth(monthKey); const result=[]; for (let d=1; d<=dim; d++){ const iso=monthKey+'-'+String(d).padStart(2,'0'); if (isWorkdayHoliday(iso) && !shiftsMap[iso]) result.push(iso); } return result; }
-function monthSummary(shifts, monthKey, weeklyNorm) { const ms=shifts.filter(function(s){ return s.date.slice(0,7)===monthKey; }); const manualHours=ms.reduce(function(sum,s){ return sum+paidHoursForDay(s); },0); const autoHolidayHours=autoHolidayDatesInMonth(shifts, monthKey).length*8; const overtimeHours=monthOvertimeHours(shifts, monthKey, weeklyNorm); const auslöseTotal=ms.reduce(function(sum,s){ return sum+auslöseForShift(s); },0); const sickDays=ms.filter(function(s){ return s.type==='sick'; }).length; const vacationDays=ms.filter(function(s){ return s.type==='vacation'; }).length; const otoffDays=ms.filter(function(s){ return s.type==='otoff'; }).length; return { totalHours: manualHours+autoHolidayHours, overtimeHours: overtimeHours, auslöseTotal: auslöseTotal, sickDays: sickDays, vacationDays: vacationDays, otoffDays: otoffDays }; }
+function monthSummary(shifts, monthKey, weeklyNorm) { const ms=shifts.filter(function(s){ return s.date.slice(0,7)===monthKey; }); const manualHours=ms.reduce(function(sum,s){ return sum+paidHoursForDay(s); },0); const autoHolidayHours=autoHolidayDatesInMonth(shifts, monthKey).length*8; const overtimeHours=monthOvertimeHours(shifts, monthKey, weeklyNorm); const auslöseTotal=ms.reduce(function(sum,s){ return sum+auslöseForShift(s); },0); const sickDays=ms.filter(function(s){ return s.type==='sick'; }).length; const vacationDays=ms.filter(function(s){ return s.type==='vacation'; }).length; const otoffDays=ms.filter(function(s){ return s.type==='otoff'; }).length; return { totalHours: manualHours+autoHolidayHours, overtimeHours: overtimeHours, auslöseTotal: auslöseTotal, sickDays: sickDays, vacationDays: vacationDays, otoffDays: otoffDays, accountChange: monthAccountChange(shifts, monthKey, weeklyNorm) }; }
 
 // ─── xlsx-writer.js (eingebettet, siehe dev/xlsx-writer.js — dort getestet,
 //     inkl. echtem openpyxl-Rundlauf mit Rahmen/Font/Bild) ──────────────────
@@ -1454,7 +1456,7 @@ const MONTHS_SHORT_CS = ['led','úno','bře','dub','kvě','čvn','čvc','srp','z
 // ob sein Gerät wirklich die neueste Version geladen hat.
 const LAST_UPDATED = '17.11.2026';
 // Nummer der App-Version (= Zahl in CACHE_VERSION von sw.js). Bei jedem Deploy beide gemeinsam erhöhen.
-const APP_VERSION = 51;
+const APP_VERSION = 52;
 
 // ─── Sprache (UI) ───────────────────────────────────────────────────────
 // uiLang (Anzeigesprache dieses Geräts) steuert NUR die Anzeige (Buttons, Labels, Meldungen).
@@ -1538,7 +1540,7 @@ const I18N = {
     confirm_sync_title: 'Daten unterscheiden sich',
     confirm_sync_text: 'Die Daten auf diesem Gerät unterscheiden sich von denen auf dem Server. Welche Version soll gelten?',
     btn_sync_remote: 'SERVER', btn_sync_local: 'DIESES GERÄT',
-    fab_krank: 'Krank', fab_urlaub: 'Urlaub', fab_abbau: 'Überstundenabbau', seg_abbau: 'Überstundenabbau', detail_typ_abbau: 'Überstundenabbau', sum_line_abbau: 'Abbau', summary_konto: 'Überstundenkonto', summary_abbau: 'Abbau (Tage)', setting_ot_start: 'Überstundenkonto', setting_ot_start_sub: 'Anfangsstand (Std.) und gültig ab Woche von', fab_schicht: 'Schicht', fab_buero: 'Büro (1h)',
+    fab_krank: 'Krank', fab_urlaub: 'Urlaub', fab_abbau: 'Überstundenabbau', seg_abbau: 'Überstundenabbau', detail_typ_abbau: 'Überstundenabbau', sum_line_konto: 'Konto', summary_konto: 'Überstundenkonto', summary_abbau: 'Abbau (Tage)', setting_ot_start: 'Überstundenkonto', setting_ot_start_sub: 'Anfangsstand (Std.) und gültig ab Woche von', fab_schicht: 'Schicht', fab_buero: 'Büro (1h)',
     edit_title_add: 'Schicht hinzufügen', edit_title_edit: 'Eintrag bearbeiten',
     btn_abbrechen: 'Abbrechen', btn_speichern: 'Speichern',
     sheet_detail_title: 'Detail',
@@ -1711,7 +1713,7 @@ const I18N = {
     confirm_sync_title: 'Data se liší',
     confirm_sync_text: 'Data v tomto zařízení se liší od dat na serveru. Která verze má platit?',
     btn_sync_remote: 'SERVER', btn_sync_local: 'TOTO ZAŘÍZENÍ',
-    fab_krank: 'Nemoc', fab_urlaub: 'Dovolená', fab_abbau: 'Volno za přesčasy', seg_abbau: 'Volno za přesčasy', detail_typ_abbau: 'Volno za přesčasy', sum_line_abbau: 'volno', summary_konto: 'Přesčasové konto', summary_abbau: 'Volno za přesčasy (dny)', setting_ot_start: 'Přesčasové konto', setting_ot_start_sub: 'počáteční stav (hod.) a platnost od týdne', fab_schicht: 'Směna', fab_buero: 'Kancelář (1h)',
+    fab_krank: 'Nemoc', fab_urlaub: 'Dovolená', fab_abbau: 'Volno za přesčasy', seg_abbau: 'Volno za přesčasy', detail_typ_abbau: 'Volno za přesčasy', sum_line_konto: 'Konto', summary_konto: 'Přesčasové konto', summary_abbau: 'Volno za přesčasy (dny)', setting_ot_start: 'Přesčasové konto', setting_ot_start_sub: 'počáteční stav (hod.) a platnost od týdne', fab_schicht: 'Směna', fab_buero: 'Kancelář (1h)',
     edit_title_add: 'Přidat směnu', edit_title_edit: 'Upravit záznam',
     btn_abbrechen: 'Zrušit', btn_speichern: 'Uložit',
     sheet_detail_title: 'Detail',
@@ -1994,10 +1996,10 @@ function renderMonthSum() {
   if (!(sm.totalHours > 0) && !sm.sickDays && !sm.vacationDays && !sm.otoffDays) { el.innerHTML = ''; return; }
   const parts = ['<span><b>' + fmtH(sm.totalHours) + '</b></span>'];
   if (sm.auslöseTotal > 0) parts.push('<span>' + t('sum_line_diet') + ' <b>' + sm.auslöseTotal + ' €</b></span>');
-  if (sm.overtimeHours > 0) parts.push('<span class="ot">+' + fmtH(sm.overtimeHours) + ' ' + t('sum_line_ot') + '</span>');
+  if (sm.otoffDays) parts.push('<span' + (sm.accountChange > 0 ? ' class="ot"' : '') + '>' + t('sum_line_konto') + ' <b>' + (sm.accountChange > 0 ? '+' : '') + fmtH(sm.accountChange) + '</b></span>');
+  else if (sm.overtimeHours > 0) parts.push('<span class="ot">+' + fmtH(sm.overtimeHours) + ' ' + t('sum_line_ot') + '</span>');
   if (sm.vacationDays) parts.push('<span>' + t('sum_line_vac') + ' <b>' + sm.vacationDays + '</b></span>');
   if (sm.sickDays) parts.push('<span>' + t('sum_line_sick') + ' <b>' + sm.sickDays + '</b></span>');
-  if (sm.otoffDays) parts.push('<span>' + t('sum_line_abbau') + ' <b>' + sm.otoffDays + '</b></span>');
   el.innerHTML = '<div class="ms-parts">' + parts.join('') + '</div><span class="ms-icon" aria-label="' + t('nav_uebersicht') + '"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M4 20h14"/></svg></span>';
 }
 function selectMonth(m) { activeMonth = m; renderMonthBar(); renderTimeline(); }
