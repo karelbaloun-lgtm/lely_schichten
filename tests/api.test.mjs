@@ -428,6 +428,16 @@ await test('colleagues: any logged-in user gets names only (roster + profiles), 
   assert.equal((await api.call({ action: 'colleagues' })).status, 401);
 });
 
+await test('Überstundenabbau: Tagestyp otoff erlaubt; Konto-Startwerte in der Config nur gültig (Zahl, Datum)', () => {
+  const s = sanitizeShifts([shift('a', '2026-10-23', 'otoff')]);
+  assert.equal(s[0].type, 'otoff');
+  const c = sanitizeConfig({ otStartHours: 12.345, otStartDate: '2026-11-01', evil: 1 });
+  assert.deepEqual(c, { otStartHours: 12.35, otStartDate: '2026-11-01' });
+  assert.deepEqual(sanitizeConfig({ otStartHours: 'x', otStartDate: '1.11.2026' }), {});
+  assert.deepEqual(sanitizeConfig({ otStartHours: 99999, otStartDate: 5 }), {});
+  assert.deepEqual(sanitizeConfig({ otStartHours: -7.5 }), { otStartHours: -7.5 });
+});
+
 await test('Versionsnummer: APP_VERSION in der App = Zahl in CACHE_VERSION von sw.js', async () => {
   const { readFileSync, existsSync } = await import('node:fs');
   if (!existsSync(new URL('../lely-schichten.html', import.meta.url)) || !existsSync(new URL('../sw.js', import.meta.url))) return;   // z. B. im Deploy-Repo
